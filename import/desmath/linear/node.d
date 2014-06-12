@@ -24,19 +24,59 @@ The MIT License (MIT)
 
 module desmath.linear.node;
 
+public import desmath.linear.vector;
 public import desmath.linear.matrix;
 
 interface Node
 {
-    @property mat4 self() const;
-    @property Node parent();
+    const @property
+    {
+        /+ local to parent transform +/
+        mat4 self();
+        const(Node) parent();
+
+        final
+        {
+            vec3 baseX() { return vec3( self.col!(0).data[0 .. 3] ); }
+            vec3 baseY() { return vec3( self.col!(1).data[0 .. 3] ); }
+            vec3 baseZ() { return vec3( self.col!(2).data[0 .. 3] ); }
+            /+ in parent system +/
+            vec3 basePoint() { return vec3( self.col!(3).data[0 .. 3] ); }
+        }
+    }
+}
+
+final class DimmyNode : Node
+{
+private:
+    Node owner;
+    mat4 mtr;
+
+public:
+    this( Node own = null ) { owner = own; }
+
+    @property
+    {
+        mat4 self() const { return mtr; }
+        mat4 self( in mat4 m ) { mtr = m; return mtr; }
+        const(Node) parent() const { return owner; }
+    }
+
+    void setParent( Node par ) { owner = par; }
+
+    void setPosition( in vec3 p )
+    {
+        mtr[0,3] = p.x;
+        mtr[1,3] = p.y;
+        mtr[2,3] = p.z;
+    }
 }
 
 class Resolver
 {
-    mat4 opCall( Node obj, Node cam )
+    mat4 opCall( const(Node) obj, const(Node) cam ) const
     {
-        Node[] obj_branch, cam_branch;
+        const(Node)[] obj_branch, cam_branch;
         obj_branch ~= obj;
         cam_branch ~= cam;
 
@@ -50,20 +90,18 @@ class Resolver
             foreach( obi, objparents; obj_branch )
                 if( camparents == objparents )
                 {
-                    cam_branch = cam_branch[0 .. cbi+1];
-                    obj_branch = obj_branch[0 .. obi+1];
+                    cam_branch = cam_branch[0 .. cbi];
+                    obj_branch = obj_branch[0 .. obi];
                     break top;
                 }
 
         mat4 obj_mtr, cam_mtr;
 
         foreach( node; obj_branch )
-            if( node ) obj_mtr = node.self * obj_mtr;
-            else break;
+            obj_mtr = node.self * obj_mtr;
 
         foreach( node; cam_branch )
-            if( node ) cam_mtr = cam_mtr * node.self.speedTransformInv;
-            else break;
+            cam_mtr = cam_mtr * node.self.speedTransformInv;
 
         return cam_mtr * obj_mtr;
     }

@@ -65,3 +65,36 @@ struct lim_t(T) if( isNumeric!T )
         return nval >= minimum ? ( nval < maximum ? nval : maximum ) : minimum;
     }
 }
+
+interface ExternalMemoryManager
+{
+    protected @property final static string getMixinChildEMM()
+    {
+        return `private ExternalMemoryManager[] chemm;
+                protected final ref ExternalMemoryManager[] childEMM() { return chemm; }`;
+    }
+
+    protected
+    {
+        @property ref ExternalMemoryManager[] childEMM();
+        void selfDestroy();
+    }
+
+    final
+    {
+        T registerChildEMM(T)( T obj )
+            if( is( T == class ) || is( T == interface ) )
+        {
+            auto cemm = cast(ExternalMemoryManager)obj;
+            if( cemm ) childEMM ~= cemm; 
+            return obj;
+        }
+
+        void destroy()
+        {
+            foreach( cemm; childEMM )
+                cemm.destroy();
+            selfDestroy();
+        }
+    }
+}
