@@ -1,0 +1,8 @@
+{
+    "name": "test",
+    "targetPath": "bin",
+    "targetType": "executable",
+    "dflags": [ "-unittest" ],
+    "sourcePaths": [ ".", "../import/" ],
+    "importPaths": [ "../import/" ]
+}
