@@ -1,0 +1,9 @@
+{
+	"name": "descore",
+    "description": "D Extended Set Core",
+    "authors": ["Oleg Butko(deviator)", "Anton Akzhigitov(Akzwar)"],
+    "license": "MIT",
+	"targetType": "sourceLibrary",
+	"importPaths": [ "import" ],
+	"sourcePaths": [ "import" ]
+}
