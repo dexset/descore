@@ -85,12 +85,12 @@ private:
     {
         if( client is null )
         {
-            log( "client is null" );
+            version(socketlog) log( "client is null" );
             auto set = new SocketSet;
             set.add( server );
             if( Socket.select(set,null,null,dur!"msecs"(500) ) > 0 && set.isSet(server) )
             {
-                log( "locking" );
+                version(socketlog) log( "locking" );
                 server.blocking(true);
                 client = server.accept();
                 server.blocking(false);
@@ -115,12 +115,12 @@ public:
 
     void step()
     {
-        log("step");
+        version(socketlog) log("step");
         checkClient();
 
         if( client is null )
             return;
-        log("   client not null");
+        version(socketlog) log("   client not null");
 
 
         auto set = new SocketSet;
@@ -133,7 +133,7 @@ public:
             client = null;
             return;
         }
-        log("   data recived");
+        version(socketlog) log("   data recived");
         if( cb !is null )
         {
             auto send_data = cb( data );
@@ -201,7 +201,5 @@ unittest
     ll.setReceiveCB( cb );
     ss.send( data );
     ll.step();
-    import std.stdio;
-    writeln( "send" );
     assert( data == rdata );
 }
