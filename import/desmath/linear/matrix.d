@@ -380,6 +380,7 @@ struct mat( size_t H, size_t W, E=float )
 
     static if( W == H )
     {
+        // TODO: первый элемент не должен быть нулём 
         @property auto rowReduceInv() const
         {
             E[W][H] orig;
@@ -741,4 +742,21 @@ unittest
         rs += v;
 
     assert( abs(rs-k.h) < 2e-6 );
+}
+
+unittest
+{
+    auto k = mat!(5,5)( 1, 3, 9, 8, 2,
+                        3, 2, 6, 2, 1,
+                        4, 8, 8, 7, 5,
+                        9, 2, 7, 0, 2,
+                        2, 1, 4, 2, 1 );
+
+    auto r = k * k.rowReduceInv;
+
+    double rs = 0;
+    foreach( v; r.data )
+        rs += v;
+
+    assert( abs(rs-k.h) < 2e-5 );
 }
