@@ -760,3 +760,9 @@ unittest
 
     assert( abs(rs-k.h) < 2e-5 );
 }
+
+unittest
+{
+    assert( hasDataFieldArray!mat4 );
+    assert( equal(mat4(),mat4()) );
+}

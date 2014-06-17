@@ -358,6 +358,23 @@ private pure nothrow
     ( vec!(N,E,AS) ) if( is( E : T ) ) {}
 }
 
+@property bool hasDataFieldArray(T)()
+{
+    import std.traits;
+    return isArray!(typeof(T.init.data));
+}
+
+bool equal(A,B)( in A a, in B b, real eps=float.epsilon )
+    if( hasDataFieldArray!A && hasDataFieldArray!B )
+{
+    import std.algorithm;
+    import std.range;
+    import std.math;
+
+    return eps >= reduce!((a,b)=>a+=abs(b[0]-b[1]))(0.0,zip(a.data.dup,b.data.dup)) 
+               && a.data.length == b.data.length;
+}
+
 @property bool isVector(T)() { return is( typeof( isVectorImpl( T.init ) ) ); }
 
 @property bool isCompVector(size_t N,T,E)()
@@ -676,6 +693,13 @@ alias vec!(4,int,"xyzw") ivec4;
 
 alias vec!( 2, float, "nf" ) z_vec; 
 alias vec!( 2, float, "wh" ) sz_vec; 
+
+unittest
+{
+    assert( hasDataFieldArray!vec3 );
+    assert(  equal( vec3(1,2,3), vec3(1,2,3) ) );
+    assert( !equal( vec3(1,2,3), vec3(2,2,3) ) );
+}
 
 unittest 
 { 
