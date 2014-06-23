@@ -74,6 +74,12 @@ interface ExternalMemoryManager
                 protected final ref ExternalMemoryManager[] childEMM() { return chemm; }`;
     }
 
+    protected @property final static string getMixinAllEMMFuncs()
+    {
+        return getMixinChildEMM ~ `
+            protected void selfDestroy() {}`;
+    }
+
     protected
     {
         @property ref ExternalMemoryManager[] childEMM();
