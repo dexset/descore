@@ -148,6 +148,9 @@ class BaseCamera: Camera
 public:
     this( Node par=null, Resolver R=null ) { super(par,R); }
 
+    void look( in vec3 pos, in vec3 to, in vec3 up=vec3(0,0,1) )
+    { mtr = _lookAt( pos, to, up ); }
+
     final @property
     {
         override const
@@ -183,15 +186,11 @@ protected:
     { prj = _perspective( pangle, aspect, clip[0], clip[1] ); }
 
 public:
-
     this( Node par=null, Resolver R=null ) 
     { 
         super( par, R ); 
         recalcPerspective();
     }
-
-    void look( in vec3 pos, in vec3 to, in vec3 up=vec3(0,0,1) )
-    { mtr = _lookAt( pos, to, up ); }
 
     void setPerspective( float AR, float PA, float ZN, float ZF )
     {
@@ -233,5 +232,42 @@ public:
 
         mat4 projection() const { return prj; }
         void projection( in mat4 pp ) { prj = pp; }
+    }
+}
+
+class OrthoCamera: BaseCamera
+{
+protected:
+    mat4 ortho;
+
+    sz_vec wsize;
+
+    void recalcOrtho()
+    { 
+        ortho = mat4([ 2/wsize.w, 0,      0,   0,
+                       0,      2/wsize.h, 0,   0,
+                       0,      0,      1,   0,
+                       0,      0,      0,   1 ]);
+    }
+
+public:
+
+    this( Node par=null, Resolver R=null ) 
+    { 
+        super( par, R ); 
+        recalcOrtho();
+    }
+
+    override mat4 opCall( const(Node) obj ) const
+    { return ortho * super.opCall(obj); }
+
+    @property
+    {
+        sz_vec winSize() const { return wsize; }
+        void winSize( sz_vec ws )
+        {
+            wsize = ws;
+            recalcOrtho();
+        }
     }
 }
