@@ -244,8 +244,8 @@ protected:
 
     void recalcOrtho()
     { 
-        ortho = mat4([ 2/sz.w, 0,      0,   0,
-                       0,      2/sz.h, 0,   0,
+        ortho = mat4([ 2/wsize.w, 0,      0,   0,
+                       0,      2/wsize.h, 0,   0,
                        0,      0,      1,   0,
                        0,      0,      0,   1 ]);
     }
