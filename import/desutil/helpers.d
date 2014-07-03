@@ -66,7 +66,7 @@ struct lim_t(T) if( isNumeric!T )
     }
 }
 
-struct ValueHandler(size_t CNT,T=float) 
+struct ValueHandler(size_t CNT,T=float)
 if( CNT > 0 && isFloatingPoint!T )
 {
 protected:
@@ -156,7 +156,7 @@ protected:
 
 unittest
 {
-    auto vh = ValueHandler!(2,float);
+    auto vh = ValueHandler!(2,float)();
 
     vh.minLimit = 0;
     vh.maxLimit = 10;
@@ -175,7 +175,7 @@ unittest
 
 unittest
 {
-    auto vh = ValueHandler!2;
+    auto vh = ValueHandler!2();
 
     vh.minLimit = 0;
     vh.maxLimit = 10;
@@ -191,8 +191,10 @@ unittest
     assert( vh.get(0) == 8 );
     assert( vh.get(1) == 8 );
 
-    assert( vh.getNorm(0) == .8 );
-    assert( vh.getNorm(1) == .8 );
+    import std.math;
+
+    assert( abs( vh.getNorm(0) - .8 ) < float.epsilon * 2 );
+    assert( abs( vh.getNorm(1) - .8 ) < float.epsilon * 2 );
 }
 
 interface ExternalMemoryManager
