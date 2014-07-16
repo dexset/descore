@@ -165,6 +165,14 @@ public:
     }
     void setReceiveCB( callback _cb ){ cb = _cb; }
 
+    void reconnect( Address addr = null )
+    {
+        auto taddr = addr;
+        if( taddr is null )
+            taddr = address;
+        sender.connect( taddr );
+    }
+
     this( ushort port ) { this( new InternetAddress(port) ); }
 
     void step()
