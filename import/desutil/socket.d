@@ -4,6 +4,7 @@ public import std.socket;
 import std.socketstream;
 
 import desutil.pdata;
+import desutil.helpers;
 
 void log(string file=__FILE__, size_t line=__LINE__, Args...)( Args args )
 { 
@@ -50,7 +51,7 @@ protected:
             buffer.length = bs == -1 || full_size == -1 ? int.sizeof : bs;
 
             auto receive = func( buffer );
-            if( receive == 0 )
+            if( receive <= 0 )
                 return [];
 
             if( full_size == -1 )
@@ -73,8 +74,11 @@ protected:
     }
 }
 
-class SListener : DSocket
+class SListener : DSocket, ExternalMemoryManager
 {
+mixin( getMixinChildEMM );
+protected override void selfDestroy()
+{ server.close(); }
 private:
     Socket server;
     Socket client;
@@ -143,8 +147,11 @@ public:
     }
 }
 
-class SSender : DSocket
+class SSender : DSocket, ExternalMemoryManager
 {
+mixin( getMixinChildEMM );
+protected override void selfDestroy()
+{ sender.close(); }
 private:
     Socket sender;
     int bs = 128;
@@ -157,11 +164,10 @@ public:
     this( Address addr )
     {
         sender = new TcpSocket();
-        //sender.setOption( SocketOptionLevel.TCP, SocketOption.TCP_NODELAY, true );
         address = addr;
         sender.connect( address );
         ss = new SocketStream( sender );
-        sender.blocking(false);
+        sender.blocking = false;
     }
     void setReceiveCB( callback _cb ){ cb = _cb; }
 
@@ -169,7 +175,11 @@ public:
 
     void step()
     {
-        auto data = formReceive(( void[] data ) { return sender.receiveFrom(data, address); });
+        auto data = formReceive(( void[] data ) 
+        { 
+            auto ptr = sender.receiveFrom(data, address);
+            return ptr; 
+        });
         if( cb !is null )
             cb( data );
     }
