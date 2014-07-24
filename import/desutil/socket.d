@@ -5,6 +5,7 @@ import std.socketstream;
 
 import desutil.pdata;
 import desutil.helpers;
+import desutil.emm;
 
 void log(string file=__FILE__, size_t line=__LINE__, Args...)( Args args )
 { 
