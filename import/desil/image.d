@@ -325,7 +325,7 @@ struct Image(size_t N) if( N > 0 )
                     ret.data[c..d] = data[a..b];
                 }
             `;
-            mixin( indexForeachString( "crop.pos", "crop.lim", "ind", fbody, 1 ) );
+            mixin( indexForeachString( "crop.pos", "crop.lim", "ind", fbody, 0 ) );
 
             return ret;
         }
@@ -355,22 +355,62 @@ struct Image(size_t N) if( N > 0 )
                     data[a..b] = im.data[c..d];
                 }
                 `;
-            mixin( indexForeachString( "crop.pos", "crop.lim", "ind", fbody, 1 ) );
+            mixin( indexForeachString( "crop.pos", "crop.lim", "ind", fbody, 0 ) );
         }
 
         private static string indexForeachString( string start, string end,
-                                  string ind, string fbody, size_t start_dim )
+                                  string ind, string fbody, size_t[] without... )
         {
             string[] ret;
 
             ret ~= format( `vec!(N,size_t) %s = %s;`, ind, start );
 
-            foreach( i; start_dim .. N )
+            foreach( i; 0 .. N )
+            {
+                if( canFind(without,i) ) continue;
                 ret ~= format( `for( %2$s[%1$d] = %3$s[%1$d]; %2$s[%1$d] < %4$s[%1$d]; %2$s[%1$d]++ ){`, 
                                       i, ind, start, end );
+            }
+
             ret ~= fbody;
-            foreach( i; start_dim .. N ) ret ~= "}";
+
+            foreach( i; 0 .. N )
+            {
+                if( canFind(without,i) ) continue;
+                ret ~= "}";
+            }
+
             return ret.join("\n");
+        }
+
+
+        static if( N > 1 )
+        {
+            @property Image!(N-1) histoConv(size_t K,T)() const if( K < N )
+            {
+                if( T.sizeof != type.bpp )
+                    throw new ImageException( "type size uncompatible with elem size" );
+                
+                vec!(N-1,size_t) ret_size;
+                foreach( i; 0 .. N )
+                    if( i != K )
+                        ret_size[i-cast(size_t)(i>K)] = size[i];
+
+                auto ret = Image!(N-1)( ret_size, type );
+
+                enum fbody = `
+
+                    vec!(N-1,size_t) rind;
+                    foreach( i; 0 .. N ) if( i != K )
+                        rind[i-cast(size_t)(i>K)] = ind[i];
+
+                    for( ind[K] = 0; ind[K] < size[K]; ind[K]++ )
+                        ret.mapAs!(T)[ret.index(rind)] += mapAs!(T)[index(ind)];
+                    `;
+                mixin( indexForeachString( "vec!(N,size_t).init", "size", "ind", fbody, K ) );
+
+                return ret;
+            }
         }
     }
 }
@@ -676,4 +716,109 @@ unittest
 
     //test({ img.pixel_vec3[ 5, 5 ]; }, "out of image size" );
     //test({ img.pixel_col3[ 1, 4 ]; }, "out of image size" );
+}
+
+unittest
+{
+    ubyte[] dt =
+        [
+        0,0,0,0,
+        0,0,0,0,
+        0,0,0,0,
+        0,0,0,0,
+        
+        0,0,0,0,
+        0,1,2,0,
+        0,3,4,0,
+        0,0,0,0,
+
+        0,0,0,0,
+        0,5,6,0,
+        0,7,8,0,
+        0,0,0,0,
+
+        0,0,0,0,
+        0,0,0,0,
+        0,0,0,0,
+        0,0,0,0
+        ];
+
+    ubyte[] cp = 
+        [
+        1,2,1,2,
+        3,4,3,4,
+        1,2,1,2,
+        3,4,3,4,
+
+        5,6,5,6,
+        7,8,7,8,
+        5,6,5,6,
+        7,8,7,8,
+
+        1,2,1,2,
+        3,4,3,4,
+        1,2,1,2,
+        3,4,3,4,
+
+        5,6,5,6,
+        7,8,7,8,
+        5,6,5,6,
+        7,8,7,8,
+        ];
+
+    ubyte[] rs = 
+        [
+            8,7,
+            6,5,
+            4,3,
+            2,1
+        ];
+
+    ubyte[] nnd = [ 0,0, 0,0, 0,0, 0,8 ];
+
+    auto a = Image3d( ivec3(4,4,4), PixelType( ComponentType.UBYTE,1 ), dt );
+    auto b = Image3d( ivec3(4,4,4), PixelType( ComponentType.UBYTE,1 ), cp );
+    auto c = Image3d( ivec3(4,4,4), PixelType( ComponentType.UBYTE,1 ) );
+
+    auto part = a.copy(iregion3d(ivec3(1,1,1), ivec3(2,2,2)));
+
+    c.paste( ivec3(0,0,0), part );
+    c.paste( ivec3(0,2,0), part );
+    c.paste( ivec3(2,0,0), part );
+    c.paste( ivec3(2,2,0), part );
+    
+    c.paste( ivec3(0,0,2), part );
+    c.paste( ivec3(0,2,2), part );
+    c.paste( ivec3(2,0,2), part );
+    c.paste( ivec3(2,2,2), part );
+
+    assert( b == c );
+
+    auto part2 = b.copy(iregion3d(ivec3(1,1,1), ivec3(2,2,2)));
+    auto rr = Image3d( ivec3(2,2,2), PixelType( ComponentType.UBYTE,1 ), rs );
+    assert( rr == part2 );
+
+    auto nn = rr.copy( iregion3d( ivec3(-1,-1,-1), ivec3(2,2,2) ) );
+    auto nndi = Image3d( ivec3(2,2,2), PixelType( ComponentType.UBYTE,1 ), nnd );
+
+    assert( nn == nndi );
+}
+
+unittest
+{
+    ubyte[] img_data =
+        [
+            1,2,5,8,
+            4,3,1,1
+        ];
+
+    ubyte[] hi_x_data = [ 16, 9 ];
+    ubyte[] hi_y_data = [ 5, 5, 6, 9 ];
+
+    auto img = Image2d( ivec2(4,2), PixelType( ComponentType.UBYTE, 1 ), img_data );
+    auto hi_x = Image1d( vec!(1,size_t)(2), PixelType( ComponentType.UBYTE, 1 ), hi_x_data );
+    auto hi_y = Image1d( vec!(1,size_t)(4), PixelType( ComponentType.UBYTE, 1 ), hi_y_data );
+
+    assert( img.histoConv!(0,ubyte) == hi_x );
+    assert( img.histoConv!(1,ubyte) == hi_y );
 }
