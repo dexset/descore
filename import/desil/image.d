@@ -108,21 +108,6 @@ struct Image(size_t N) if( N > 0 )
 {
     alias Image!N selftype;
 
-    /+
-    static if( N < 4 )
-    {
-        alias vec!(N,size_t,"whd"[0..N]) imsize_t;
-        alias vec!(N,size_t,"xyz"[0..N]) imcrd_t;
-        alias vec!(N,ptrdiff_t,"xyz"[0..N]) imdiff_t;
-    }
-    else
-    {
-        alias vec!(N,size_t) imsize_t;
-        alias vec!(N,size_t) imcrd_t;
-        alias vec!(N,ptrdiff_t) imdiff_t;
-    }
-    +/
-
     alias vec!(N,size_t,N<4?("whd"[0..N]):"") imsize_t;
     alias vec!(N,size_t,N<4?("xyz"[0..N]):"") imcrd_t;
     alias vec!(N,ptrdiff_t,N<4?("xyz"[0..N]):"") imdiff_t;
@@ -136,7 +121,19 @@ struct Image(size_t N) if( N > 0 )
     pure
     {
         this(this) { data = data.dup; }
-        this( in Image img ) { allocate(img.size, img.type, img.data); }
+        this( in Image!N img ) { allocate(img.size, img.type, img.data); }
+
+        static if( N > 1 )
+        {
+            this( in Image!(N-1) img, size_t dim=N-1 )
+            {
+                imsize_t sz;
+                foreach( i; 0 .. N )
+                    if( i == dim ) sz[i] = 1;
+                    else sz[i] = img.size[i-(i>dim)];
+                allocate( sz, img.type, img.data );
+            }
+        }
 
         this(V)( in V sz, in PixelType tp, in void[] dt=null )
             if( isCompVector!(N,size_t,V) )
@@ -174,7 +171,8 @@ struct Image(size_t N) if( N > 0 )
         void resize(V)( in V sz ) if( isCompVector!(N,size_t,V) )
         in
         {
-            enforce( all!"a>0"(sz.data.dup), new ImageException( "resize components must be > 0" ) );
+            enforce( all!"a>0"(sz.data.dup),
+                    new ImageException( "resize components must be > 0" ) );
         }
         body
         {
@@ -296,13 +294,6 @@ struct Image(size_t N) if( N > 0 )
             }`, type, t1, t2, t3 );
         }
 
-    // TODO (
-    }
-
-    public
-    {
-    // REMOVE )
-
         auto copy(T)( in region!(N,T) r ) const if( isIntegral!T )
         {
             auto ret = selftype( imsize_t(r.size), this.type );
@@ -382,7 +373,6 @@ struct Image(size_t N) if( N > 0 )
 
             return ret.join("\n");
         }
-
 
         static if( N > 1 )
         {
@@ -821,4 +811,48 @@ unittest
 
     assert( img.histoConv!(0,ubyte) == hi_x );
     assert( img.histoConv!(1,ubyte) == hi_y );
+}
+
+unittest
+{
+    ubyte[] src_data =
+        [
+        1,2,3,
+        4,5,6,
+        7,8,9
+        ];
+
+    ubyte[] dst1_data =
+        [
+        0,0,0,
+        0,0,0,
+        0,0,0,
+        1,2,3,
+        4,5,6,
+        7,8,9,
+        0,0,0,
+        0,0,0,
+        0,0,0
+        ];
+
+    ubyte[] dst2_data =
+        [
+        0,1,0,
+        0,2,0,
+        0,3,0,
+        0,4,0,
+        0,5,0,
+        0,6,0,
+        0,7,0,
+        0,8,0,
+        0,9,0
+        ];
+
+    auto src = Image2d( ivec2(3,3), PixelType( ComponentType.UBYTE, 1 ), src_data );
+    auto dst = Image3d( ivec3(3,3,3), PixelType( ComponentType.UBYTE, 1 ) );
+    dst.paste( ivec3(0,0,1), Image3d( src ) );
+    assert( dst.data == dst1_data );
+    dst.clear();
+    dst.paste( ivec3(1,0,0), Image3d(src,0) );
+    assert( dst.data == dst2_data );
 }
