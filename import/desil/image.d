@@ -27,24 +27,35 @@ module desil.image;
 import std.exception;
 
 public import desmath.linear.vector;
-import desil.rect;
+import desil.region;
+import std.algorithm;
+import std.string;
+import std.exception;
+import std.range;
+import std.traits;
 
-alias vec!(2,size_t,"wh") imsize_t;
-alias vec!(2,size_t,"xy") imcrd_t;
-
-enum ImCompType
+enum ComponentType
 {
-    RAWBYTE,
+    BYTE,
     UBYTE,
+    RAWBYTE,
+
+    SHORT,
+    USHORT,
+
+    INT,
+    UINT,
+
     FLOAT,
     NORM_FLOAT,
+
     DOUBLE,
     NORM_DOUBLE
 }
 
-struct ImageType
+struct PixelType
 {
-    pure this( ImCompType ict, size_t ch )
+    pure this( ComponentType ict, size_t ch )
     {
         comp = ict;
         channels = ch;
@@ -52,24 +63,36 @@ struct ImageType
 
     pure this( size_t ch )
     {
-        comp = ImCompType.RAWBYTE;
+        comp = ComponentType.RAWBYTE;
         channels = ch;
     }
 
-    ImCompType comp;
+    ComponentType comp;
     size_t channels;
 
     @safe pure nothrow size_t bpp() const
     {
         final switch( comp )
         {
-            case ImCompType.RAWBYTE: case ImCompType.UBYTE:
-                return ubyte.sizeof * channels;
+            case ComponentType.BYTE:
+            case ComponentType.UBYTE:
+            case ComponentType.RAWBYTE:
+                return byte.sizeof * channels;
 
-            case ImCompType.FLOAT: case ImCompType.NORM_FLOAT:
+            case ComponentType.SHORT:
+            case ComponentType.USHORT:
+                return short.sizeof * channels;
+
+            case ComponentType.INT:
+            case ComponentType.UINT:
+                return int.sizeof * channels;
+
+            case ComponentType.FLOAT:
+            case ComponentType.NORM_FLOAT:
                 return float.sizeof * channels;
 
-            case ImCompType.DOUBLE: case ImCompType.NORM_DOUBLE:
+            case ComponentType.DOUBLE:
+            case ComponentType.NORM_DOUBLE:
                 return double.sizeof * channels;
         }
     }
@@ -81,225 +104,407 @@ class ImageException : Exception
     { super( msg, file, line ); } 
 }
 
-struct Image
+struct Image(size_t N) if( N > 0 )
 {
-    // TODO: сделать приватными поля
-    ubyte[] data;
+    alias Image!N selftype;
+
+    alias vec!(N,size_t,N<4?("whd"[0..N]):"") imsize_t;
+    alias vec!(N,size_t,N<4?("xyz"[0..N]):"") imcrd_t;
+    alias vec!(N,ptrdiff_t,N<4?("xyz"[0..N]):"") imdiff_t;
+
+    alias region!(N,ptrdiff_t) imregion_t;
+
+    void[] data;
     imsize_t size;
-    ImageType type;
+    PixelType type;
 
     pure
     {
         this(this) { data = data.dup; }
-        this( in Image img ) { allocate(img.size, img.type, img.data); }
+        this( in Image!N img ) { allocate(img.size, img.type, img.data); }
 
-        this( in imsize_t sz, in ImageType tp, in ubyte[] dt=null )
+        static if( N > 1 )
+        {
+            this( in Image!(N-1) img, size_t dim=N-1 )
+            {
+                imsize_t sz;
+                foreach( i; 0 .. N )
+                    if( i == dim ) sz[i] = 1;
+                    else sz[i] = img.size[i-(i>dim)];
+                allocate( sz, img.type, img.data );
+            }
+        }
+
+        this(V)( in V sz, in PixelType tp, in void[] dt=null )
+            if( isCompVector!(N,size_t,V) )
         { allocate( sz, tp, dt ); }
 
-        this(T)( in imsize_t sz, in T[] dt=null )
+        this(V,T)( in V sz, in T[] dt=null )
+            if( isCompVector!(N,size_t,V) )
         { allocate( sz, dt ); }
 
-        immutable(ubyte[]) serialize() const
-        { return ( cast(ubyte[])[size].dup ~ cast(ubyte[])[type].dup ~ data ).idup; }
+        immutable(void[]) serialize() const
+        { return ( cast(void[])[size].dup ~ cast(void[])[type].dup ~ data ).idup; }
 
-        static Image deserialize( immutable(ubyte[]) rawdata )
+        static Image deserialize( immutable(void[]) rawdata )
         {
             size_t offset = 0, dsize = imsize_t.sizeof;
             auto imsz = (cast(imsize_t[])rawdata[ offset .. offset + dsize ])[0];
             offset += dsize;
-            dsize = ImageType.sizeof;
-            auto imtp = (cast(ImageType[])rawdata[ offset .. offset + dsize ])[0];
+            dsize = PixelType.sizeof;
+            auto imtp = (cast(PixelType[])rawdata[ offset .. offset + dsize ])[0];
             offset += dsize;
             return Image( imsz, imtp, rawdata[offset .. $] );
         }
 
         // TODO под вопросом, нет тестов, desil.access не поддерживает
-        void retype( in ImageType tp )
+        void retype( in PixelType ntp )
         {
-            if( tp.bpp != type.bpp ) throw new ImageException( "retype fails" );
-            type = tp;
+            if( ntp.bpp != type.bpp )
+                throw new ImageException( "retype fails" );
+            type = ntp;
         }
 
-        void clear() { data = new ubyte[size.w * size.h * type.bpp]; }
+        @property size_t pixelCount() const
+        { return reduce!((a,b)=>(a*=b))(1UL,size.data); }
 
-        void allocate( in imsize_t sz, in ImageType tp, in ubyte[] dt=null )
+        void resize(V)( in V sz ) if( isCompVector!(N,size_t,V) )
+        in
         {
-            size = sz;
+            enforce( all!"a>0"(sz.data.dup),
+                    new ImageException( "resize components must be > 0" ) );
+        }
+        body
+        {
+            if( size != sz )
+            {
+                size = sz;
+                data = new void[](pixelCount * type.bpp);
+            }
+        }
+
+        void clear() { fill( cast(ubyte[])data, cast(ubyte)0 ); }
+
+        void allocate(V)( in V sz, in PixelType tp, in void[] dt=[] )
+            if( isCompVector!(N,size_t,V) )
+        {
             type = tp;
+            resize( sz );
 
             if( dt is null || dt.length == 0 ) clear();
             else
             {
-                if( dt.length != size.w * size.h * type.bpp )
+                if( dt.length != pixelCount * type.bpp )
                     throw new ImageException( "bad data size" );
                 data = dt.dup;
             }
         }
 
-        void allocate(T)( in imsize_t sz, in T[] dt=null )
-        {
-            size = sz;
-            type.comp = ImCompType.RAWBYTE;
-            type.channels = cast(ubyte)T.sizeof;
-
-            if( dt is null || dt.length == 0 ) clear();
-            else
-            {
-                if( dt.length != size.w * size.h )
-                    throw new ImageException( "bad data length" );
-
-                data = cast(ubyte[])dt.dup;
-            }
-        }
+        void allocate(T,V)( in V sz, in T[] dt=[] )
+            if( isCompVector!(N,size_t,V) )
+        { allocate( sz, PixelType( cast(ubyte)T.sizeof ), cast(void[])dt ); }
 
         const @property
         {
-            auto dup() { return Image( this ); }
-            auto idup() { return immutable(Image)( this ); }
+            auto dup() { return selftype( this ); }
+            auto idup() { return immutable(selftype)( this ); }
         }
 
-        @property T[] copyData(T)() const
-        { 
-            if( T.sizeof != type.bpp )
-                throw new ImageException( "type size uncompatible with elem size" );
-            return cast(T[])data.dup; 
-        }
-
-        void set(T)( in T[] dt )
-        {
-            if( dt.length * T.sizeof != size.w * size.h * type.bpp )
-                throw new ImageException( "bad data size" );
-
-            data = cast(ubyte[])dt.dup;
-        }
-
-        ref T access(T)( in imcrd_t pos ) { return access!T( pos.x, pos.y ); }
-        ref T access(T)( size_t x, size_t y ) 
-        { 
-            if( T.sizeof != type.bpp )
-                throw new ImageException( "type size uncompatible with elem size" );
-            if( x >= size.w || y >= size.h )
-                throw new ImageException( "out of image size" );
-
-            return (cast(T[])(data))[ size.w * y + x ];
-        }
-
-        T read(T)( in imcrd_t pos ) const { return read!T( pos.x, pos.y ); }
-        T read(T)( size_t x, size_t y ) const
+        @property T[] mapAs(T)()
         {
             if( T.sizeof != type.bpp )
                 throw new ImageException( "type size uncompatible with elem size" );
-            if( x >= size.w || y >= size.h )
-                throw new ImageException( "out of image size" );
-
-            return (cast(T[])(data))[ size.w * y + x ];
+            return cast(T[])data; 
         }
 
-        Image copy( in irect r ) const
+        @property const(T)[] mapAs(T)() const
         {
-            auto ret = Image( imsize_t(r.size), this.type );
+            if( T.sizeof != type.bpp )
+                throw new ImageException( "type size uncompatible with elem size" );
+            return cast(const(T)[])data; 
+        }
 
-            auto cr = irect( 0, 0, size ).overlapLocal( r );
+        size_t index( size_t[N] crd... ) const { return indexCalc( size.data, crd ); }
 
-            auto rp = cr.pos - r.pos;
-            auto op = cr.pos;
+        size_t index(V)( in V crd ) const if( isCompVector!(N,size_t,V) )
+        in
+        {
+            enforce( all!"a>=0"(crd.data.dup),
+                    new ImageException( "index components must be > 0" ) );
 
-            auto opx_s = op.x;
-            auto opx_e = op.x + cr.size.x;
+            enforce( all!"a[0]<a[1]"(zip(crd.data.dup,size.data.dup)),
+                    new ImageException( format( "index out of range => index:%s, size:%s", crd.data, size.data ) ) );
+        }
+        body { return index( cast(size_t[N])(array(map!(a=>cast(size_t)a)(crd.data.dup))[0..N]) ); }
 
-            auto rpx_s = rp.x;
-            auto rpx_e = rp.x + cr.size.x;
-
-            auto k = type.bpp;
-
-            foreach( uint y; 0 .. cr.size.y )
+        static size_t indexCalc( size_t[N] imsize, size_t[N] crd )
+        {
+            size_t ret;
+            foreach( i; 0 .. N )
             {
-                auto rpy = rp.y + y;
-                auto opy = op.y + y;
-
-                auto rpyy = rpy * r.size.x;
-                auto opyy = opy * size.w;
-
-                ret.data[ (rpyy+rpx_s)*k .. (rpyy+rpx_e)*k ] = data[ (opyy+opx_s)*k .. (opyy+opx_e)*k ];
+                auto v = reduce!((a,b)=>(a*=b))(1,imsize[0..i]);
+                ret += crd[i] * v;
             }
             return ret;
         }
 
-        void paste( in ivec2 pos, in Image im )
+        @property auto opDispatch(string method)() 
+            if( method.split("_")[0] == "pixel" )
+        {
+            enum dtype = method.split("_")[1..$].join("_");
+            mixin( checkTypeSize( dtype ) );
+            mixin( pixelAccessorString( dtype ) );
+            return PixelAccessor( data, size );
+        }
+
+        @property auto opDispatch(string method)() const
+            if( method.split("_")[0] == "pixel" )
+        {
+            enum dtype = method.split("_")[1..$].join("_");
+            mixin( checkTypeSize( dtype ) );
+            mixin( pixelAccessorString( dtype, true ) );
+            return PixelAccessor( data, size );
+        }
+
+        private static string checkTypeSize( string type )
+        {
+            return format( `if( %s.sizeof != type.bpp )
+                throw new ImageException( "type size uncompatible with elem size" );
+                    `, type );
+        }
+
+        private static string pixelAccessorString( string type, bool isconst=false )
+        {
+            string t1,t2,t3;
+
+            if(isconst) { t1 = "const("; t2 = ")"; t3 = "const"; }
+
+            return format(`
+            struct PixelAccessor
+            {
+                %2$svoid%3$s[] data;
+                imsize_t size;
+
+                ref %2$s%1$s%3$s opIndex( size_t[N] crd... ) %4$s
+                { return (cast(%2$s%1$s%3$s[])data)[indexCalc(size.data,crd)]; }
+
+                ref %2$s%1$s%3$s opIndex(V)( in V crd ) %4$s
+                if( isCompVector!(N,size_t,V) )
+                { return opIndex( array(map!(a=>cast(size_t)(a))(crd.data) ) ); }
+            }`, type, t1, t2, t3 );
+        }
+
+        auto copy(T)( in region!(N,T) r ) const if( isIntegral!T )
+        {
+            auto ret = selftype( imsize_t(r.size), this.type );
+
+            auto crop = imregion_t( imsize_t(), size ).overlapLocal( r );
+            auto bpp = type.bpp;
+
+            auto line_size = crop.size[0];
+
+            enum fbody = `
+                auto pp = ind - r.pos;
+                if( all!"a[0]>=0&&a[0]<a[1]"(zip(pp.data.dup,ret.size.data.dup)) )
+                {
+                    auto o1 = index(ind);
+                    auto a = o1 * bpp;
+                    auto b = (o1 + line_size) * bpp;
+                    auto o2 = ret.index(pp);
+                    auto c = o2 * bpp;
+                    auto d = (o2 + line_size) * bpp;
+                    ret.data[c..d] = data[a..b];
+                }
+            `;
+            mixin( indexForeachString( "crop.pos", "crop.lim", "ind", fbody, 0 ) );
+
+            return ret;
+        }
+
+        void paste(V)( in V pos, in Image!N im )
+            if( isCompVector!(N,size_t,V) )
         {
             if( im.type != this.type )
                 throw new ImageException( "Image type is not good for paste." );
 
-            auto r = irect( pos, im.size );
-            auto cr = irect( 0, 0, size ).overlapLocal( r );
+            auto crop = imregion_t( imregion_t.ptype.init, size ).overlapLocal( imregion_t(pos,im.size) );
 
-            auto rp = cr.pos - r.pos;
-            auto op = cr.pos;
+            auto bpp = type.bpp;
 
-            auto opx_s = op.x;
-            auto opx_e = op.x + cr.size.x;
+            auto line_size = crop.size[0];
 
-            auto rpx_s = rp.x;
-            auto rpx_e = rp.x + cr.size.x;
+            enum fbody = `
+                auto pp = ind - pos;
+                if( all!"a[0]>=0&&a[0]<a[1]"(zip(pp.data.dup,im.size.data.dup)) )
+                {
+                    auto o1 = index(ind);
+                    auto a = o1 * bpp;
+                    auto b = (o1 + line_size) * bpp;
+                    auto o2 = im.index(pp);
+                    auto c = o2 * bpp;
+                    auto d = (o2 + line_size) * bpp;
+                    data[a..b] = im.data[c..d];
+                }
+                `;
+            mixin( indexForeachString( "crop.pos", "crop.lim", "ind", fbody, 0 ) );
+        }
 
-            auto k = type.bpp;
+        private static string indexForeachString( string start, string end,
+                                  string ind, string fbody, size_t[] without... )
+        {
+            string[] ret;
 
-            foreach( uint y; 0 .. cr.size.y )
+            ret ~= format( `vec!(N,size_t) %s = %s;`, ind, start );
+
+            foreach( i; 0 .. N )
             {
-                auto rpy = rp.y + y;
-                auto opy = op.y + y;
+                if( canFind(without,i) ) continue;
+                ret ~= format( `for( %2$s[%1$d] = %3$s[%1$d]; %2$s[%1$d] < %4$s[%1$d]; %2$s[%1$d]++ ){`, 
+                                      i, ind, start, end );
+            }
 
-                auto rpyy = rpy * r.size.x;
-                auto opyy = opy * size.w;
-                data[ (opyy+opx_s)*k .. (opyy+opx_e)*k ] = im.data[ (rpyy+rpx_s)*k .. (rpyy+rpx_e)*k ];
+            ret ~= fbody;
+
+            foreach( i; 0 .. N )
+            {
+                if( canFind(without,i) ) continue;
+                ret ~= "}";
+            }
+
+            return ret.join("\n");
+        }
+
+        static if( N > 1 )
+        {
+            @property Image!(N-1) histoConv(size_t K,T)() const if( K < N )
+            {
+                if( T.sizeof != type.bpp )
+                    throw new ImageException( "type size uncompatible with elem size" );
+                
+                vec!(N-1,size_t) ret_size;
+                foreach( i; 0 .. N )
+                    if( i != K )
+                        ret_size[i-cast(size_t)(i>K)] = size[i];
+
+                auto ret = Image!(N-1)( ret_size, type );
+
+                enum fbody = `
+
+                    vec!(N-1,size_t) rind;
+                    foreach( i; 0 .. N ) if( i != K )
+                        rind[i-cast(size_t)(i>K)] = ind[i];
+
+                    for( ind[K] = 0; ind[K] < size[K]; ind[K]++ )
+                        ret.mapAs!(T)[ret.index(rind)] += mapAs!(T)[index(ind)];
+                    `;
+                mixin( indexForeachString( "vec!(N,size_t).init", "size", "ind", fbody, K ) );
+
+                return ret;
             }
         }
     }
 }
 
+alias Image!1 Image1d;
+alias Image!2 Image2d;
+alias Image!3 Image3d;
+
 unittest
 {
-    Image img;
-    assert( img.data is null );
-    assert( img.size == imsize_t(0,0) );
+    auto a = Image1d(vec!(1,size_t)(5), PixelType(ComponentType.FLOAT,2));
+    a.opDispatch!("pixel_vec2")[3] = vec2(1,1);
+    a.pixel_vec2[4] = vec2(2,2);
+    auto b = a.copy( Image1d.imregion_t(3,2) );
+    assert( b.pixel_vec2[0] == a.pixel_vec2[3] );
+    assert( b.pixel_vec2[1] == a.pixel_vec2[4] );
+}
 
-    img.allocate( imsize_t(3,3), ImageType( ImCompType.NORM_FLOAT, 3 ) );
+unittest
+{
+    auto a = Image2d(ivec2(3,3),PixelType(ComponentType.FLOAT,2));
+
+    assert( a.index(1,2) == 7 );
+    assert( a.index(ivec2(1,2)) == 7 );
+
+    a.mapAs!(vec2)[a.index(1,2)] = vec2(1,1);
+    assert( a.opDispatch!"pixel_vec2"[1,2] == vec2(1,1) );
+
+    a.pixel_vec2[1,2] = vec2(2,2);
+    assert( a.pixel_vec2[1,2] == vec2(2,2) );
+}
+
+unittest
+{
+    auto a = Image3d(ivec3(3,3,3),PixelType(ComponentType.FLOAT,2));
+
+    assert( a.index(1,2,1) == 16 );
+
+    a.mapAs!(vec2)[a.index(1,2,1)] = vec2(1,1);
+    assert( a.pixel_vec2[1,2,1] == vec2(1,1) );
+
+    a.pixel_vec2[1,2,1] = vec2(2,2);
+    assert( a.pixel_vec2[1,2,1] == vec2(2,2) );
+
+    auto b = a.copy( a.imregion_t(1,2,1,1,1,1) );
+    assert( b.pixel_vec2[0,0,0] == vec2(2,2) );
+}
+
+unittest
+{
+    pure vec2 sum( in Image2d img )
+    {
+        auto buf = img.mapAs!vec2;
+        return reduce!((a,b)=>(a+=b))(vec2(0,0),buf);
+    }
+
+    auto a = Image2d(ivec2(3,3),PixelType(ComponentType.FLOAT,2));
+
+    a.pixel_vec2[0,0] = vec2(1,2);
+    a.pixel_vec2[1,2] = vec2(2,2);
+
+    assert( sum(a) == vec2(3,4) );
+}
+
+unittest
+{
+    Image2d img;
+    assert( img.data is null );
+    assert( img.size == Image2d.imsize_t(0,0) );
+
+    img.allocate( ivec2(3,3), PixelType( ComponentType.NORM_FLOAT, 3 ) );
+
     assert( img.data.length == 27 * float.sizeof );
     assert( img.type.bpp == 3 * float.sizeof );
-    img.access!col3( 0,1 ) = col3( 1,0,0.4 );
-    assert( img.read!vec3(0,1) == vec3(1,0,0.4) );
 
-    img.access!vec3( 1,0 ) = col3( .2,.1,.3 );
-    assert( img.read!vec3(1,0) == vec3(.2,.1,.3) );
+    img.pixel_col3[0,1] = col3( .2,.1,.3 );
+    assert( img.pixel_vec3[0,1] == vec3(.2,.1,.3) );
 
-    auto di = Image.deserialize( img.serialize );
+    auto di = Image2d.deserialize( img.serialize );
     assert( di.size == img.size );
     assert( di.type == img.type );
     assert( di.data == img.data );
 
-    auto ii = immutable(Image)( img );
+    auto ii = immutable(Image2d)( img );
     assert( ii.size == img.size );
     assert( ii.type == img.type );
     assert( ii.data == img.data );
 
-    assert( !__traits( compiles, ii.access!vec3(1,0) ) );
-    assert( __traits( compiles, ii.read!vec3(1,0) ) );
-    assert( ii.read!vec3(1,0) == vec3(.2,.1,.3) );
+    assert( ii.opDispatch!"pixel_vec3"[0,1] == vec3(.2,.1,.3) );
 
-    auto dii = immutable(Image).deserialize( ii.serialize );
-    static assert( is( typeof(dii) == Image ) );
+    auto dii = immutable(Image2d).deserialize( ii.serialize );
+    static assert( is( typeof(dii) == Image2d ) );
     assert( dii.size == img.size );
     assert( dii.type == img.type );
     assert( dii.data == img.data );
 
     auto dd = ii.dup;
-    static assert( is( typeof(dd) == Image ) );
+    static assert( is( typeof(dd) == Image2d ) );
     assert( dd.size == img.size );
     assert( dd.type == img.type );
     assert( dd.data == img.data );
 
     auto ddi = ii.idup;
-    static assert( is( typeof(ddi) == immutable(Image) ) );
+    static assert( is( typeof(ddi) == immutable(Image2d) ) );
     assert( ddi.size == img.size );
     assert( ddi.type == img.type );
     assert( ddi.data == img.data );
@@ -307,8 +512,8 @@ unittest
 
 unittest
 {
-    Image img;
-    img.allocate!vec3( imsize_t(3,3) );
+    Image2d img;
+    img.allocate!vec3( Image2d.imsize_t(3,3) );
     assert( img.data.length == float.sizeof * 3 * 9 );
 }
 
@@ -373,27 +578,27 @@ unittest
         0, 0, 0, 0 
     ];
 
-    auto orig = Image( imsize_t( 5, 5 ), data );
-    auto im = orig.copy( irect( 0, 0, 5, 5 ) );
+    auto orig = Image2d( ivec2( 5, 5 ), data );
+    auto im = orig.copy( iregion2d( 0, 0, 5, 5 ) );
     assert( orig == im );
     
-    auto imv1 = Image( imsize_t( 7, 7 ), datav1 );
-    assert( orig.copy( irect( -1, -1, 7, 7 ) ) == imv1 );
+    auto imv1 = Image2d( ivec2( 7, 7 ), datav1 );
+    assert( orig.copy( iregion2d( -1, -1, 7, 7 ) ) == imv1 );
 
-    auto imv2 = Image( imsize_t( 3, 3 ), datav2 );
-    assert( orig.copy( irect( 1, 1, 3, 3 ) ) == imv2 );
+    auto imv2 = Image2d( ivec2( 3, 3 ), datav2 );
+    assert( orig.copy( iregion2d( 1, 1, 3, 3 ) ) == imv2 );
 
-    auto imv3 = Image( imsize_t( 4, 4 ), datav3 );
-    assert( orig.copy( irect( -1, -1, 4, 4 ) ) == imv3 );
+    auto imv3 = Image2d( ivec2( 4, 4 ), datav3 );
+    assert( orig.copy( iregion2d( -1, -1, 4, 4 ) ) == imv3 );
 
-    auto imv4 = Image( imsize_t( 4, 4 ), datav4 );
-    assert( orig.copy( irect( 2, -1, 4, 4 ) ) == imv4 );
+    auto imv4 = Image2d( ivec2( 4, 4 ), datav4 );
+    assert( orig.copy( iregion2d( 2, -1, 4, 4 ) ) == imv4 );
 
-    auto imv5 = Image( imsize_t( 4, 4 ), datav5 );
-    assert( orig.copy( irect( -1, 2, 4, 4 ) ) == imv5 );
+    auto imv5 = Image2d( ivec2( 4, 4 ), datav5 );
+    assert( orig.copy( iregion2d( -1, 2, 4, 4 ) ) == imv5 );
 
-    auto imv6 = Image( imsize_t( 4, 4 ), datav6 );
-    assert( orig.copy( irect( 2, 2, 4, 4 ) ) == imv6 );
+    auto imv6 = Image2d( ivec2( 4, 4 ), datav6 );
+    assert( orig.copy( iregion2d( 2, 2, 4, 4 ) ) == imv6 );
 }
 
 unittest 
@@ -430,14 +635,14 @@ unittest
     ];
 
 
-    auto orig = Image( imsize_t( 7, 7 ), ImageType( ImCompType.RAWBYTE, 1 ) );
-    auto im = Image( imsize_t( 5, 5 ), data );
+    auto orig = Image2d( ivec2( 7, 7 ), PixelType( ComponentType.RAWBYTE, 1 ) );
+    auto im = Image2d( ivec2( 5, 5 ), data );
 
-    auto res = Image(orig);
+    auto res = Image2d(orig);
     res.paste( ivec2(-1,-1), im );
     assert( res.data == datav1 );
 
-    res = Image(orig);
+    res = Image2d(orig);
     res.paste( ivec2(1,1), im );
     assert( res.data == datav2 );
 }
@@ -447,31 +652,31 @@ unittest
     auto data = 
     [
         vec2( 1, 2 ), vec2( 3, 4 ), vec2( 5, 6 ),
-        vec2( 7, 8 ), vec2( 9, 0 ), vec2( 1, 2 ),
+        vec2( 7, 8 ), vec2( 9, 1 ), vec2( 1, 2 ),
         vec2( 2, 3 ), vec2( 4, 5 ), vec2( 6, 7 )
     ];
 
-    auto img = Image( imsize_t(3,3), data );
+    auto img = Image2d( ivec2(3,3), data );
 
-    assert( img.size == imsize_t(3,3) );
+    assert( img.size == ivec2(3,3) );
     assert( img.type.bpp == 2 * float.sizeof );
 
-    assert( img.read!vec2(1,1) == vec2(9,0) );
-    assert( img.type.comp == ImCompType.RAWBYTE );
+    assert( img.pixel_vec2[1,1] == vec2(9,1) );
+    assert( img.type.comp == ComponentType.RAWBYTE );
 
-    auto imdata = img.copyData!vec2;
+    auto imdata = img.mapAs!vec2;
     assert( data == imdata );
 
     img.clear();
-    assert( img.read!vec2(1,1) == vec2(0,0) );
+    assert( img.pixel_vec2[1,1] == vec2(0,0) );
 
-    img.set( data );
-    imdata = img.copyData!vec2;
+    img.mapAs!(vec2)[] = data[];
+    imdata = img.mapAs!vec2;
     assert( data == imdata );
 
-    auto constdata = img.idup.copyData!vec2;
+    auto constdata = img.idup.mapAs!vec2;
     assert( constdata == imdata );
-    assert( is( typeof(constdata) == vec2[] ) );
+    assert( is( typeof(constdata) == const(vec2)[] ) );
 }
 
 unittest
@@ -482,26 +687,172 @@ unittest
         try exceptionFunc();
         catch( ImageException ie )
         {
-            assert( ie.msg == msg );
             except = true;
         }
         import std.string;
         assert( except, format( "exceptionFunc not throw exception (line %d)", LINE ) );
     }
 
-    test({ Image( imsize_t(3,3), ImageType( ImCompType.UBYTE, 3 ), [ 1, 2, 3 ] ); }, "bad data size" );
+    test({ Image2d( ivec2(3,3), PixelType( ComponentType.UBYTE, 3 ), [ 1, 2, 3 ] ); }, "bad data size" );
 
     auto dt = [ vec2(1,0), vec2(0,1) ];
-    test({ Image( imsize_t(3,3), dt ); }, "bad data length" );
+    test({ Image2d( ivec2(3,3), dt ); }, "bad data length" );
 
-    auto img = Image( imsize_t(3,3), ImageType( ImCompType.NORM_FLOAT, 3 ) );
-    test({ auto d = img.copyData!vec2; }, "type size uncompatible with elem size" );
-    test({ img.set( dt ); }, "bad data size" );
+    auto img = Image2d( ivec2(3,3), PixelType( ComponentType.NORM_FLOAT, 3 ) );
+    test({ auto d = img.mapAs!vec2; }, "type size uncompatible with elem size" );
 
     alias vec!(3,ubyte,"rgb") bcol3;
-    test({ img.access!bcol3( 1, 0 ); }, "type size uncompatible with elem size" );
-    test({ img.read!bcol3( 1, 0 ); }, "type size uncompatible with elem size" );
+    test({ img.pixel_bcol3[ 1, 0 ] = bcol3(1,1,1); }, "type size uncompatible with elem size" );
 
-    test({ img.access!vec3( 5, 5 ); }, "out of image size" );
-    test({ img.read!col3( 1, 4 ); },   "out of image size" );
+    //test({ img.pixel_vec3[ 5, 5 ]; }, "out of image size" );
+    //test({ img.pixel_col3[ 1, 4 ]; }, "out of image size" );
+}
+
+unittest
+{
+    ubyte[] dt =
+        [
+        0,0,0,0,
+        0,0,0,0,
+        0,0,0,0,
+        0,0,0,0,
+        
+        0,0,0,0,
+        0,1,2,0,
+        0,3,4,0,
+        0,0,0,0,
+
+        0,0,0,0,
+        0,5,6,0,
+        0,7,8,0,
+        0,0,0,0,
+
+        0,0,0,0,
+        0,0,0,0,
+        0,0,0,0,
+        0,0,0,0
+        ];
+
+    ubyte[] cp = 
+        [
+        1,2,1,2,
+        3,4,3,4,
+        1,2,1,2,
+        3,4,3,4,
+
+        5,6,5,6,
+        7,8,7,8,
+        5,6,5,6,
+        7,8,7,8,
+
+        1,2,1,2,
+        3,4,3,4,
+        1,2,1,2,
+        3,4,3,4,
+
+        5,6,5,6,
+        7,8,7,8,
+        5,6,5,6,
+        7,8,7,8,
+        ];
+
+    ubyte[] rs = 
+        [
+            8,7,
+            6,5,
+            4,3,
+            2,1
+        ];
+
+    ubyte[] nnd = [ 0,0, 0,0, 0,0, 0,8 ];
+
+    auto a = Image3d( ivec3(4,4,4), PixelType( ComponentType.UBYTE,1 ), dt );
+    auto b = Image3d( ivec3(4,4,4), PixelType( ComponentType.UBYTE,1 ), cp );
+    auto c = Image3d( ivec3(4,4,4), PixelType( ComponentType.UBYTE,1 ) );
+
+    auto part = a.copy(iregion3d(ivec3(1,1,1), ivec3(2,2,2)));
+
+    c.paste( ivec3(0,0,0), part );
+    c.paste( ivec3(0,2,0), part );
+    c.paste( ivec3(2,0,0), part );
+    c.paste( ivec3(2,2,0), part );
+    
+    c.paste( ivec3(0,0,2), part );
+    c.paste( ivec3(0,2,2), part );
+    c.paste( ivec3(2,0,2), part );
+    c.paste( ivec3(2,2,2), part );
+
+    assert( b == c );
+
+    auto part2 = b.copy(iregion3d(ivec3(1,1,1), ivec3(2,2,2)));
+    auto rr = Image3d( ivec3(2,2,2), PixelType( ComponentType.UBYTE,1 ), rs );
+    assert( rr == part2 );
+
+    auto nn = rr.copy( iregion3d( ivec3(-1,-1,-1), ivec3(2,2,2) ) );
+    auto nndi = Image3d( ivec3(2,2,2), PixelType( ComponentType.UBYTE,1 ), nnd );
+
+    assert( nn == nndi );
+}
+
+unittest
+{
+    ubyte[] img_data =
+        [
+            1,2,5,8,
+            4,3,1,1
+        ];
+
+    ubyte[] hi_x_data = [ 16, 9 ];
+    ubyte[] hi_y_data = [ 5, 5, 6, 9 ];
+
+    auto img = Image2d( ivec2(4,2), PixelType( ComponentType.UBYTE, 1 ), img_data );
+    auto hi_x = Image1d( vec!(1,size_t)(2), PixelType( ComponentType.UBYTE, 1 ), hi_x_data );
+    auto hi_y = Image1d( vec!(1,size_t)(4), PixelType( ComponentType.UBYTE, 1 ), hi_y_data );
+
+    assert( img.histoConv!(0,ubyte) == hi_x );
+    assert( img.histoConv!(1,ubyte) == hi_y );
+}
+
+unittest
+{
+    ubyte[] src_data =
+        [
+        1,2,3,
+        4,5,6,
+        7,8,9
+        ];
+
+    ubyte[] dst1_data =
+        [
+        0,0,0,
+        0,0,0,
+        0,0,0,
+        1,2,3,
+        4,5,6,
+        7,8,9,
+        0,0,0,
+        0,0,0,
+        0,0,0
+        ];
+
+    ubyte[] dst2_data =
+        [
+        0,1,0,
+        0,2,0,
+        0,3,0,
+        0,4,0,
+        0,5,0,
+        0,6,0,
+        0,7,0,
+        0,8,0,
+        0,9,0
+        ];
+
+    auto src = Image2d( ivec2(3,3), PixelType( ComponentType.UBYTE, 1 ), src_data );
+    auto dst = Image3d( ivec3(3,3,3), PixelType( ComponentType.UBYTE, 1 ) );
+    dst.paste( ivec3(0,0,1), Image3d( src ) );
+    assert( dst.data == dst1_data );
+    dst.clear();
+    dst.paste( ivec3(1,0,0), Image3d(src,0) );
+    assert( dst.data == dst2_data );
 }

@@ -34,6 +34,7 @@ struct Signal(Args...)
 
     /++ "список дел" +/
     slottype[] slots; 
+    void clear() { slots.length = 0; }
 
     /++ добавляет в список делегат +/
     void connect( slottype f )
@@ -84,6 +85,7 @@ struct NamedSignal( TName, Args... )
 {
     alias void delegate(Args) slottype;
     slottype[TName] slots;
+    void clear() { slots.clear(); }
 
     /++ добавляет в список делегат с определённым именем +/
     void connect( TName name, slottype f )
@@ -165,6 +167,12 @@ struct SignalBox(Args...)
     slottype[] begin;
     slottype[] end;
     slottype[] list;
+    void clear() 
+    { 
+        begin.length = 0; 
+        list.length = 0; 
+        end.length = 0; 
+    }
 
     /++ добавляет пару делегатов +/
     void addPair( slottype b, slottype e )
@@ -272,6 +280,14 @@ struct ConditionSignal(Args...)
     slottype[] always;
     slottype[] slots;
     slottype[] altslots;
+
+    void clear()
+    {
+        conds.length = 0;
+        always.length = 0;
+        slots.length = 0;
+        altslots.length = 0;
+    }
 
     /++ добавляет условие в список
         Params:

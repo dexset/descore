@@ -136,6 +136,15 @@ struct mat( size_t H, size_t W, E=float )
         {
             static if( W == 4 )
             {
+                static auto fromBasisAndStart(X,Y,Z,O)( X x, Y y, Z z, O o )
+                    if( isCompVectors!(3,E,X,Y,Z,O) )
+                {
+                    return selftype( x.x, y.x, z.x, -(o.x * x.x + o.y * y.x + o.z * z.x),
+                                     x.y, y.y, z.y, -(o.x * x.y + o.y * y.y + o.z * z.y),
+                                     x.z, y.z, z.z, -(o.x * x.z + o.y * y.z + o.z * z.z),
+                                       0,   0,   0,   1 );
+                }
+
                 static auto fromQuatPos(U,V)( vec!(4,U,"ijka") q, in V pos )
                     if( isCompVector!(3,E,V) )
                 {
@@ -168,6 +177,14 @@ struct mat( size_t H, size_t W, E=float )
             }
             else static if( W == 3 )
             {
+                static auto fromBasis(X,Y,Z)( X x, Y y, Z z )
+                    if( isCompVectors!(3,E,X,Y,Z) )
+                {
+                    return selftype( x.x, y.x, z.x,
+                                     x.y, y.y, z.y,
+                                     x.z, y.z, z.z );
+                }
+
                 static auto fromQuat(U)( vec!(4,U,"ijka") q )
                 {
                     q /= q.len2;
@@ -380,6 +397,7 @@ struct mat( size_t H, size_t W, E=float )
 
     static if( W == H )
     {
+        // TODO: первый элемент не должен быть нулём 
         @property auto rowReduceInv() const
         {
             E[W][H] orig;
@@ -741,4 +759,43 @@ unittest
         rs += v;
 
     assert( abs(rs-k.h) < 2e-6 );
+}
+
+unittest
+{
+    auto k = mat!(5,5)( 1, 3, 9, 8, 2,
+                        3, 2, 6, 2, 1,
+                        4, 8, 8, 7, 5,
+                        9, 2, 7, 0, 2,
+                        2, 1, 4, 2, 1 );
+
+    auto r = k * k.rowReduceInv;
+
+    double rs = 0;
+    foreach( v; r.data )
+        rs += v;
+
+    assert( abs(rs-k.h) < 2e-5 );
+}
+
+unittest
+{
+    assert( hasDataFieldArray!mat4 );
+    assert( equal(mat4(),mat4()) );
+}
+
+unittest
+{
+    auto x = vec3(-1,0,0);
+    auto y = vec3(0,-1,0);
+    auto z = vec3(0,0,1);
+    auto offset = vec3(10,0,0);
+
+    auto mtr = mat4.fromBasisAndStart( x, y, z, offset );
+
+    auto orig = vec3( 7,1,1 );
+
+    auto res = (mtr * vec4(orig,1.0)).xyz;
+
+    assert( equal(res,vec3(3,-1,1)) );
 }

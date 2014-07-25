@@ -22,49 +22,47 @@ The MIT License (MIT)
     THE SOFTWARE.
 +/
 
-module desmath.linear.node;
+module desmath.linear.view.transform;
 
+public import desmath.linear.vector;
 public import desmath.linear.matrix;
 
-interface Node
+interface Transform { @property mat4 matrix() const; }
+
+class TransformList : Transform
 {
-    @property mat4 self() const;
-    @property Node parent();
+    Transform[] list;
+
+    @property mat4 matrix() const
+    {
+        mat4 buf;
+        foreach( tr; list )
+            buf = tr.matrix * buf;
+        return buf;
+    }
 }
 
-class Resolver
+class CachedTransform : Transform
 {
-    mat4 opCall( Node obj, Node cam )
+protected:
+    mat4 mtr;
+    Transform tform;
+
+public:
+
+    this( Transform ntr ) { setTransform( ntr ); }
+
+    void setTransform( Transform ntr )
     {
-        Node[] obj_branch, cam_branch;
-        obj_branch ~= obj;
-        cam_branch ~= cam;
-
-        while( obj_branch[$-1] )
-            obj_branch ~= obj_branch[$-1].parent;
-        while( cam_branch[$-1] )
-            cam_branch ~= cam_branch[$-1].parent;
-
-        top: 
-        foreach( cbi, camparents; cam_branch )
-            foreach( obi, objparents; obj_branch )
-                if( camparents == objparents )
-                {
-                    cam_branch = cam_branch[0 .. cbi+1];
-                    obj_branch = obj_branch[0 .. obi+1];
-                    break top;
-                }
-
-        mat4 obj_mtr, cam_mtr;
-
-        foreach( node; obj_branch )
-            if( node ) obj_mtr = node.self * obj_mtr;
-            else break;
-
-        foreach( node; cam_branch )
-            if( node ) cam_mtr = cam_mtr * node.self.speedTransformInv;
-            else break;
-
-        return cam_mtr * obj_mtr;
+        tform = ntr;
+        recalc();
     }
+
+    void recalc()
+    {
+        if( tform !is null ) mtr = tform.matrix;
+        else mtr = mat4.init;
+    }
+
+    @property mat4 matrix() const { return mtr; }
 }

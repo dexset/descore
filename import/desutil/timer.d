@@ -24,6 +24,7 @@ class Timer
 {
     StopWatch sw;
     double time=0;
+    double all_time=0;
     size_t cbindex=0;
 
     TimerCallback[string] callback;
@@ -52,6 +53,14 @@ class Timer
         return r;
     }
 
+    double hard_reset()
+    {
+        auto r = all_time;
+        all_time = 0;
+        reset();
+        return r;
+    }
+
     double cycle()
     {
         sw.stop();
@@ -59,6 +68,7 @@ class Timer
         sw.reset();
         sw.start();
         time += dt;
+        all_time += dt;
         foreach( cb; callback ) cb.update( dt );
         return dt;
     }
