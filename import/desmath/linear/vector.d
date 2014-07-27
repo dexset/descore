@@ -27,35 +27,31 @@ module desmath.linear.vector;
 import std.math;
 import std.traits;
 import std.algorithm;
+import std.range;
 
-private import std.string, std.conv;
+import std.string;
+import std.conv;
 
 /++ work with access string +/
 private static pure {
 
-    @property bool failFunc( string ctmsg="", int ln=__LINE__ )()
-    { 
-        version(unittest) enum UTEST = true;
-        else enum UTEST = false;
+    version(unittest) enum __UNITTEST__ = true;
+    else enum __UNITTEST__ = false;
 
-        debug enum DEBUG = true;
-        else enum DEBUG = false;
+    debug enum __DEBUG__ = true;
+    else enum __DEBUG__ = false;
 
-        static if( UTEST && DEBUG && ln >= 0 ) 
-            pragma( msg, format( "fails at line %d : %s", ln, ctmsg ) );
-
-        return false; 
-    }
-
-    nothrow string toStr( ptrdiff_t x )
+    @property bool staticCheck( bool result, string msg="__no_message__", string file=__FILE__, size_t line=__LINE__ )()
     {
-        enum ch = [ "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" ];
-        string buf = x>=0?"":"-";
-        x = x>0?x:-x;
-        if( x < 10 ) buf ~= ch[x];
-        else buf ~= toStr(x/10) ~ ch[x%10];
-        return buf;
+        static if( !result && __DEBUG__ && !__UNITTEST__ )
+            pragma(msg, format( "fails at %s:%d : %s", file, line, msg ));
+        return result;
     }
+
+    @property bool failFunc( string ctmsg="", size_t ln=__LINE__ )()
+    { return staticCheck!(false,ctmsg,__FILE__,ln); }
+
+    string toStr( ptrdiff_t x ) { return format( "%d", x ); }
 
     unittest
     {
@@ -170,7 +166,7 @@ private static pure {
     {
         static if( v.length == 0 ) return "";
         static if( v.length == 1 )
-            return "data[" ~ toStr( getIndex!(S,v[0]) ) ~ "]";
+            return format( "data[%d]", getIndex!(S,v[0]) );
         else
             return dataComp!( S, v[0 .. 1] ) ~ "," ~ dataComp!( S, v[1 .. $] );
     }
@@ -240,24 +236,18 @@ package{
 
     pure auto getStaticData(string src, string dst, T, E) ( ref size_t S, size_t N )
     {
-        //import std.string : format;
         enum string typename = T.stringof;
         static if( isNumeric!E ) 
         {
-            // OLOLO!! format is not pure
-            //return [ format( "%s[%d] = %s%s[%d]", 
-            //        dst, S, is(E==T)?"":"cast("~typename~")", src, N ) ];
-            return dst ~ "[" ~ toStr(S++) ~ "] = " ~ ( is(E==T) ? "" : "cast("~typename~")" ) ~ src ~ "[" ~ toStr(N) ~ "]";
+            return [ format( "%s[%d] = %s%s[%d]",
+                    dst, S++, is(E==T)?"":"cast("~typename~")", src, N ) ];
         }
         else static if( isStaticArray!E ) 
         {
             string[] buf;
             enum string ncast = is( typeof(E[0]) == T )?"":"cast("~typename~")";
             foreach( i; 0 .. E.length )
-                // OLOLO!! format is not pure
-                //buf ~= format( "%s[%d] = %s%s[%d][%d]", 
-                //        dst, S+i, ncast, src, N, i );
-                buf ~= dst ~ "[" ~ toStr(S+i) ~ "] = " ~ ncast ~ src ~ "[" ~ toStr(N) ~ "][" ~ toStr(i) ~ "]";
+                buf ~= format( "%s[%d] = %s%s[%d][%d]", dst, S+i, ncast, src, N, i );
             S+=E.length;
             return buf;
         }
@@ -266,10 +256,7 @@ package{
             string[] buf;
             enum string ncast = is( typeof(E.data[0]) == T )?"":"cast("~typename~")";
             foreach( i; 0 .. E.length )
-                // OLOLO!! format is not pure
-                //buf ~= format( "%s[%d] = %s%s[%d].data[%d]", 
-                //        dst, S+i, ncast, src, N, i );
-                buf ~= dst ~ "[" ~ toStr(S+i) ~ "] = " ~ ncast ~ src ~ "[" ~ toStr(N) ~ "].data[" ~ toStr(i) ~ "]";
+                buf ~= format( "%s[%d] = %s%s[%d].data[%d]", dst, S+i, ncast, src, N, i );
             S+=E.length;
             return buf;
         }
@@ -334,13 +321,20 @@ package{
 private static {
     @property string chVecWithVecOpStr( string data, string bvec, string op, size_t N )()
     {
-        import std.string : format;
         string buf;
         foreach( i; 0 .. N )
         {
-            auto ind = "[" ~ toStr(i) ~ "]";
-            buf ~= data ~ ind ~ op ~ bvec ~ "." ~ data ~ ind ~ ";\n";
+            auto sd = format( "%s[%d]", data, i );
+            buf ~= format( "%s%s%s.%s;\n", sd, op, bvec, sd );
         }
+        return buf;
+    }
+
+    @property string chVecWithArrOpStr( string data, string arr, string op, size_t N )()
+    {
+        string buf;
+        foreach( i; 0 .. N )
+            buf ~= format( "%s[%d]%s%s[%d];\n", data, i, op, arr, i );
         return buf;
     }
 
@@ -354,28 +348,25 @@ private static {
 private pure nothrow
 {
     void isVectorImpl( size_t N, T, string AS)( vec!(N,T,AS) ){}
+    //void isVectorImpl( size_t N, T)( VectorData!(N,T) ){}
     void isCompVectorImpl( size_t N, T, E, string AS)
     ( vec!(N,E,AS) ) if( is( E : T ) ) {}
 }
 
+@property bool isVector(T)() { return is( typeof( isVectorImpl( T.init ) ) ); }
+
 @property bool hasDataFieldArray(T)()
 {
-    import std.traits;
     return isArray!(typeof(T.init.data));
 }
 
 bool equal(A,B)( in A a, in B b, real eps=float.epsilon )
     if( hasDataFieldArray!A && hasDataFieldArray!B )
 {
-    import std.algorithm;
-    import std.range;
-    import std.math;
 
     return eps >= reduce!((a,b)=>a+=abs(b[0]-b[1]))(0.0,zip(a.data.dup,b.data.dup)) 
                && a.data.length == b.data.length;
 }
-
-@property bool isVector(T)() { return is( typeof( isVectorImpl( T.init ) ) ); }
 
 @property bool isCompVector(size_t N,T,E)()
 { return is( typeof( isCompVectorImpl!(N,T)( E.init ) ) ); }
@@ -435,10 +426,11 @@ struct vec( size_t N, T=float, string AS="" )
     alias N length;
     alias AS accessString;
 
-    pure this(E, string bs)( in vec!(N,E,bs) b ) if( is( E : T ) )
+pure:
+    this(E, string bs)( in vec!(N,E,bs) b ) if( is( E : T ) )
     { mixin( chVecWithVecOpStr!( "data","b","=",N ) ); }
 
-    pure this(E...)( in E ext ) 
+    this(E...)( in E ext ) 
     {
         static if( isStaticCompatibleArgs!(N,T,E) )
             mixin( getAllStaticData!("ext","data",T,E) );
@@ -455,14 +447,14 @@ struct vec( size_t N, T=float, string AS="" )
         }
     }
 
-    pure auto opAssign(E, string bs)( in vec!(N,E,bs) b )
+    auto opAssign(E, string bs)( in vec!(N,E,bs) b )
         if( is( E : T ) )
     {
         mixin( chVecWithVecOpStr!( "data", "b", "=", N ) );
         return this;
     }
 
-    @trusted pure auto opUnary(string op)() const 
+    auto opUnary(string op)() const 
         if( op == "-" && is( typeof( T.init * (-1) ) : T ) )
     {
         selftype ret;
@@ -470,7 +462,7 @@ struct vec( size_t N, T=float, string AS="" )
         return ret;
     }
 
-    @trusted auto elem(string op, E, string bs)( in vec!(N,E,bs) b ) const
+    auto elem(string op, E, string bs)( in vec!(N,E,bs) b ) const
         if( op == "*" || op == "/" || op == "^^" )    
     {
         selftype ret;
@@ -478,13 +470,13 @@ struct vec( size_t N, T=float, string AS="" )
         return ret;
     }
 
-    @trusted auto mlt(E, string bs)( in vec!(N,E,bs) b ) const
+    auto mlt(E, string bs)( in vec!(N,E,bs) b ) const
     { return this.elem!"*"(b); }
 
-    @trusted auto div(E, string bs)( in vec!(N,E,bs) b ) const
+    auto div(E, string bs)( in vec!(N,E,bs) b ) const
     { return this.elem!"/"(b); }
 
-    @trusted auto opBinary(string op, E, string bs)( in vec!(N,E,bs) b ) const
+    auto opBinary(string op, E, string bs)( in vec!(N,E,bs) b ) const
         if( op == "+" || op == "-" )
     {
         selftype ret;
@@ -492,7 +484,7 @@ struct vec( size_t N, T=float, string AS="" )
         return ret;
     }
 
-    @trusted auto opBinary(string op, E)( in E b ) const
+    auto opBinary(string op, E)( in E b ) const
         if( !isVector!E && ( op == "*" || op == "/" || op == "^^" ) && is( generalType!(T,E) ) )
     {
         selftype ret;
@@ -535,7 +527,6 @@ struct vec( size_t N, T=float, string AS="" )
     E opCast(E)() const if( isCompVector!(N,T,E) ) { return E(this); }
 
     bool opEquals(E,string bs)( in vec!(N,E,bs) b ) const
-        if( is( generalType!(T,E) ) )
     {
         foreach( i, val; data )
             if( val != b.data[i] ) return false;
@@ -549,12 +540,9 @@ struct vec( size_t N, T=float, string AS="" )
         if( N == 3 && op == "*" && is( generalType!(T,E) ) )
     {
         alias this a;
-        //return vec!(N,generalType!(T,E),AS)( 
-        return selftype( 
-                b[2] * a[1] - a[2] * b[1],
-                b[0] * a[2] - a[0] * b[2],
-                b[1] * a[0] - a[1] * b[0]
-                );
+        return selftype( b[2] * a[1] - a[2] * b[1],
+                         b[0] * a[2] - a[0] * b[2],
+                         b[1] * a[0] - a[1] * b[0] );
     }
 
     static if( N == 2 )
@@ -613,19 +601,17 @@ struct vec( size_t N, T=float, string AS="" )
     {
         @property ref T opDispatch(string v)()
             if( v.length == 1 && getIndex!(AS,v[0]) >= 0 )
-        { mixin( "return data[" ~ toStr(getIndex!(AS,v[0])) ~ "];" ); }
+        { mixin( format( "return data[%d];", getIndex!(AS,v[0]) ) ); }
 
         @property T opDispatch(string v)() const
             if( v.length == 1 && getIndex!(AS,v[0]) >= 0 )
-        { mixin( "return data[" ~ toStr(getIndex!(AS,v[0])) ~ "];" ); }
+        { mixin( format( "return data[%d];", getIndex!(AS,v[0]) ) ); }
 
         @property auto opDispatch(string v)() const
             if( v.length > 1 && checkIndexAll!(AS,v) )
-        { 
-            static if( trueAccessString!(v,-1) )
-                mixin( "return vec!(v.length,T,v)( " ~ dataComp!(AS,v) ~ " );" );
-            else
-                mixin( "return vec!(v.length,T)( " ~ dataComp!(AS,v) ~ " );" );
+        {
+            mixin( format( "return vec!(v.length,T%s)(%s);",
+                        trueAccessString!(v,-1)?",v":"", dataComp!(AS,v) ) );
         }
     }
 
@@ -666,7 +652,6 @@ struct vec( size_t N, T=float, string AS="" )
             auto inv() const { return con / norm; }
         }
     }
-
 }
 
 alias vec!(2,float,"xy") vec2;
@@ -735,7 +720,6 @@ unittest
     assert( v3.x == 1 && v3.y == 2 && v3.z == 3 );
 }
 
-///
 unittest
 {
     auto a = vec!3( [1,2,3] );
@@ -769,7 +753,6 @@ unittest
     assert( (-a).data == [ -1, -2, -3 ] );
 }
 
-///
 unittest
 {
     auto a = vec!3( 1,2,3 );
@@ -795,13 +778,8 @@ unittest
     assert( b.data == [ 0, 1, 0 ] );
 }
 
-///
 unittest
 {
-    /+
-        if unittest in struct body:
-            Error: forward reference to inferred return type of function call b.opBinary(2.00000)
-        +/
     auto a = vec!(3,float)( 1,2,3 );
     auto b = vec!(3,int)( 3,4,5 );
     auto c = a + b;
@@ -814,7 +792,6 @@ unittest
     assert( c.data == [ 6, 8, 10 ] );
 
     auto d = b * 2.0f;
-    //assert( is( typeof(d) == vec!(3,float) ) );
     assert( is( typeof(d) == vec!(3,int) ) );
     assert( d.data == [ 6, 8, 10 ] );
 
@@ -835,7 +812,6 @@ unittest
     assert( x == 100 );
 }
 
-///
 unittest
 {
     auto a = vec!3( 1,2,3 );
@@ -843,7 +819,6 @@ unittest
     assert( abs( a.e.len - 1 ) < float.epsilon );
 }
 
-///
 unittest
 {
     vec!3 a;
@@ -855,7 +830,6 @@ unittest
     assert( a[0] is float.nan );
 }
 
-///
 unittest
 {
     auto x = vec!3( 1, 0, 0 );
@@ -881,11 +855,6 @@ unittest
 
 unittest
 {
-    /+
-        if unittest in struct body:
-            dmd: struct.c:741: virtual void StructDeclaration::semantic(Scope*): Assertion `type->ty != Tstruct || ((TypeStruct *)type)->sym == this' failed.
-        +/
-
     auto pos = vec3( 1, 2, 10 );
     auto pxy = pos.xy;
     assert( is( typeof( pxy ) == vec!(2,float,"xy") ) );
@@ -922,7 +891,6 @@ unittest
     assert( g.x == 1 && g.y == 2 );
 }
 
-///
 unittest
 {
     auto a = vec3( 1,2,3 );
@@ -938,7 +906,6 @@ unittest
     assert( is( typeof(e) == vec3 ) );
 
     auto f = b.elem!"/"( a );
-    //assert( is( typeof(f) == vec3 ) );
     assert( is( typeof(f) == ivec3 ) );
 
     auto g = b * 2;
