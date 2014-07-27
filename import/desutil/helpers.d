@@ -24,21 +24,6 @@ The MIT License (MIT)
 
 module desutil.helpers;
 
-pure nothrow string toDString( const(char*) c_str )
-{
-    string buf;
-    char *ch = cast(char*)c_str;
-    while( *ch != '\0' ) buf ~= *(ch++);
-    return buf;
-}
-
-pure nothrow string toDStringFix(size_t S)( const(char[S]) c_buf )
-{
-    string buf;
-    foreach( c; c_buf ) buf ~= c;
-    return buf;
-}
-
 import core.runtime, std.file, std.path;
 
 string appPath( string[] elems... ) 
