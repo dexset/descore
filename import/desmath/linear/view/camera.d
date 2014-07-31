@@ -114,7 +114,7 @@ class PerspectiveTransform : Transform
 {
     float fov = 70;
     float aspect = 4.0f / 3.0f;
-    float near = 1e-5;
+    float near = 1e-3;
     float far = 1e5;
 
     @property mat4 matrix() const
