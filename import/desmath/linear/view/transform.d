@@ -27,7 +27,17 @@ module desmath.linear.view.transform;
 public import desmath.linear.vector;
 public import desmath.linear.matrix;
 
-interface Transform { @property mat4 matrix() const; }
+interface Transform
+{
+    @property mat4 matrix() const;
+
+    protected final static mat4 getMatrix( const(Transform) tr )
+    {
+        if( tr !is null )
+            return tr.matrix;
+        return mat4.init;
+    }
+}
 
 class TransformList : Transform
 {

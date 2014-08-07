@@ -61,16 +61,16 @@ public:
     @property
     {
         mat4 matrix() const { return _matrix; }
-        mat4 matrix( in mat4 m ) { _matrix = m; return _matrix; }
+        ref mat4 matrix() { return _matrix; }
         const(Node) parent() const { return _parent; }
         void parent( Node par ) { _parent = par; }
     }
 
     void setOffset( vec3 pnt )
     {
-        matrix[0,3] = pnt.x;
-        matrix[1,3] = pnt.y;
-        matrix[2,3] = pnt.z;
+        _matrix[0,3] = pnt.x;
+        _matrix[1,3] = pnt.y;
+        _matrix[2,3] = pnt.z;
     }
 }
 
