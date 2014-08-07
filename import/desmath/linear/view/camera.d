@@ -50,20 +50,11 @@ public:
         mat4 resolve( const(Node) obj ) { return resolver(obj, this); }
 
         mat4 opCall( const(Node) obj )
-        {
-            auto prj = projection !is null ? projection.matrix : mat4.init;
-            return prj * resolve(obj);
-        }
+        { return getMatrix( projection ) * resolve(obj); }
 
         @property
         {
-            mat4 matrix()
-            {
-                if( transform !is null )
-                    return transform.matrix;
-                else return mat4.init;
-            }
-
+            mat4 matrix() { return getMatrix( transform ); }
             const(Node) parent() { return _parent; }
         }
     }
