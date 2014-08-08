@@ -25,8 +25,13 @@ The MIT License (MIT)
 module desmath.method.approx.interp;
 
 public import desmath.basic.traits;
+
 import std.algorithm;
 import std.exception;
+import std.math;
+import std.traits;
+
+import desmath.combin;
 
 struct InterpolateTableData(T) if( hasBasicMathOp!T ) { float key; T val; }
 
@@ -99,4 +104,35 @@ unittest
     assert( line_interpolate( tbl, 0 ) == col3(1,0,0) );
     assert( line_interpolate( tbl, 0.5 ) == col3(0.5,0.5,0) );
     assert( line_interpolate( tbl, 3 ) == col3(0,0,1) );
+}
+
+pure nothrow auto bezierInterpolation(T,F=float)( in T[] pts, F t )
+if( is( typeof( T.init * F.init + T.init * F.init ) == T ) && isFloatingPoint!F )
+in
+{
+    assert( t >= 0 && t <= 1 );
+    assert( pts.length > 0 );
+}
+body
+{
+    auto N = pts.length-1;
+    auto omt = 1.0 - t;
+    T res = pts[0] * pow(omt,N) + pts[$-1] * pow(t,N);
+    for( auto i=1; i < N; i++ )
+        res = res + pts[i] * pow(t,i) * pow(omt,N-i) * combination(N,i);
+    return res;
+}
+
+unittest
+{
+    import desmath.linear.vector;
+
+    auto pts =
+    [
+        vec2(0,0),
+        vec2(2,2),
+        vec2(4,0)
+    ];
+
+    assert( bezierInterpolation( pts, 0.5 ) == vec2(2,1) );
 }
