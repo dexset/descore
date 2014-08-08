@@ -35,7 +35,7 @@ import desmath.combin;
 
 struct InterpolateTableData(T) if( hasBasicMathOp!T ) { float key; T val; }
 
-auto line_interpolate(T)( in InterpolateTableData!T[] tbl, float k, bool line_end=false )
+auto lineInterpolate(T)( in InterpolateTableData!T[] tbl, float k, bool line_end=false )
     if( hasBasicMathOp!T )
 {
     enforce( tbl.length > 1 );
@@ -68,11 +68,11 @@ unittest
         TT( 55, 25 )
         ];
 
-    assert( line_interpolate( tbl, 0 ) == 10 );
-    assert( line_interpolate( tbl, 5 ) == 14 );
-    assert( line_interpolate( tbl, 10 ) == 18 );
-    assert( line_interpolate( tbl, -10 ) == 10 );
-    assert( line_interpolate( tbl, 80 ) == 25 );
+    assert( lineInterpolate( tbl, 0 ) == 10 );
+    assert( lineInterpolate( tbl, 5 ) == 14 );
+    assert( lineInterpolate( tbl, 10 ) == 18 );
+    assert( lineInterpolate( tbl, -10 ) == 10 );
+    assert( lineInterpolate( tbl, 80 ) == 25 );
 }
 
 unittest
@@ -85,8 +85,8 @@ unittest
         TD( 2, 3 ),
         TD( 3, 4 )
         ];
-    assert( line_interpolate( tbl, 5, true ) == 6 );
-    assert( line_interpolate( tbl, -3, true ) == -3 );
+    assert( lineInterpolate( tbl, 5, true ) == 6 );
+    assert( lineInterpolate( tbl, -3, true ) == -3 );
 }
 
 unittest
@@ -100,10 +100,10 @@ unittest
         TC( 2, col3(0,0,1) )
         ];
 
-    assert( line_interpolate( tbl, -1 ) == col3(1,0,0) );
-    assert( line_interpolate( tbl, 0 ) == col3(1,0,0) );
-    assert( line_interpolate( tbl, 0.5 ) == col3(0.5,0.5,0) );
-    assert( line_interpolate( tbl, 3 ) == col3(0,0,1) );
+    assert( lineInterpolate( tbl, -1 ) == col3(1,0,0) );
+    assert( lineInterpolate( tbl, 0 ) == col3(1,0,0) );
+    assert( lineInterpolate( tbl, 0.5 ) == col3(0.5,0.5,0) );
+    assert( lineInterpolate( tbl, 3 ) == col3(0,0,1) );
 }
 
 pure nothrow auto bezierInterpolation(T,F=float)( in T[] pts, F t )
