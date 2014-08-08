@@ -126,13 +126,6 @@ body
 unittest
 {
     import desmath.linear.vector;
-
-    auto pts =
-    [
-        vec2(0,0),
-        vec2(2,2),
-        vec2(4,0)
-    ];
-
+    auto pts = [ vec2(0,0), vec2(2,2), vec2(4,0) ];
     assert( bezierInterpolation( pts, 0.5 ) == vec2(2,1) );
 }

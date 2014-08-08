@@ -35,8 +35,6 @@ in { assert( k > 0 ); } body
 
 unittest
 {
-    import desmath.combin.factorial;
-
     static pure nothrow long comb2( long n, long k )
     { return fact(n) / ( fact(k) * fact( n-k ) ); }
 
@@ -59,8 +57,6 @@ in { assert( k > 0 ); } body
 
 unittest
 {
-    import desmath.combin.factorial;
-
     static pure nothrow long perm2( long n, long k )
     { return fact(n) / fact( n-k ); }
 
