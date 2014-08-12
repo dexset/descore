@@ -106,8 +106,11 @@ unittest
     assert( lineInterpolate( tbl, 3 ) == col3(0,0,1) );
 }
 
+@property bool canBezierInterpolate(T,F)()
+{ return is( typeof( T.init * F.init + T.init * F.init ) == T ) && isNumeric!F; }
+
 pure nothrow auto bezierInterpolation(T,F=float)( in T[] pts, F t )
-if( is( typeof( T.init * F.init + T.init * F.init ) == T ) && isFloatingPoint!F )
+if( canBezierInterpolate!(T,F) )
 in
 {
     assert( t >= 0 && t <= 1 );
@@ -128,4 +131,147 @@ unittest
     import desmath.linear.vector;
     auto pts = [ vec2(0,0), vec2(2,2), vec2(4,0) ];
     assert( bezierInterpolation( pts, 0.5 ) == vec2(2,1) );
+}
+
+pure nothrow auto fixBezierSpline(T,F=float)( in T[] pts, size_t steps )
+{
+    auto step = cast(F)(1.0) / cast(F)(steps-1);
+    auto res = new T[](steps);
+    for( auto i=0; i < steps; i++ )
+        res[i] = bezierInterpolation( pts, step * i );
+    return res;
+}
+
+interface BezierSplineInterpolator(T,F=float)
+if( canBezierInterpolate!(T,F) )
+{ T[] opCall( in T[] ); }
+
+class FixStepsBezierSplineInterpolator(T,F=float) : BezierSplineInterpolator!(T,F)
+{
+    size_t steps;
+    this( size_t steps ) { this.steps = steps; }
+
+    T[] opCall( in T[] pts )
+    { return fixBezierSpline!(T,F)( pts, steps ); }
+}
+
+unittest
+{
+    import desmath.linear.vector;
+    enum size_t len = 100;
+    auto fbi = new FixStepsBezierSplineInterpolator!(vec2)(len);
+    auto pts = [ vec2(0,0), vec2(2,2), vec2(4,0) ];
+    auto res = fbi( pts );
+    assert( res.length == len );
+}
+
+import std.stdio;
+
+/+ функция критеря должна быть функцией хевисада +/
+auto criteriaBezierSpline(T,F=float)( in T[] pts, bool delegate(in T[], in T) criteria, F min_step=1e-5 )
+if( canBezierInterpolate!(T,F) )
+in
+{
+    assert( pts.length > 1 );
+    assert( criteria !is null );
+    assert( min_step > 0 );
+    assert( min_step < cast(F)(1.0) / cast(F)(pts.length-1) );
+}
+body
+{
+    F step = cast(F)(.25) / cast(F)(pts.length-1);
+
+    auto ret = [ bezierInterpolation( pts, 0 ), bezierInterpolation( pts, min_step ) ];
+
+    auto t = min_step;
+    auto o = step;
+
+    while( true )
+    {
+        if( 1-t < o ) o = 1-t;
+        auto buf = bezierInterpolation( pts, t+o );
+
+        if( criteria( ret, buf ) )
+        {
+            t += o;
+            if( t >= 1 ) return ret ~ bezierInterpolation( pts, 1 );
+            continue;
+        }
+        else
+        {
+            o /= 2.0;
+            if( o > min_step ) continue;
+            else t += o;
+        }
+
+        buf = bezierInterpolation( pts, t );
+
+        if( t > 1 ) return ret ~ bezierInterpolation( pts, 1 );
+
+        ret ~= buf;
+        o = step;
+    }
+}
+
+/+ функция критеря должна быть функцией хевисада +/
+auto filterBezierSpline(T,F=float)( in T[] pts, bool delegate(in T[], in T) criteria )
+if( canBezierInterpolate!(T,F) )
+in
+{
+    assert( pts.length > 1 );
+    assert( criteria !is null );
+}
+body
+{
+    auto ret = [ pts[0] ];
+
+    for( auto i = 1; i < pts.length; i++ )
+    {
+        while( i < pts.length && criteria(ret, pts[i]) ) i++;
+
+        if( ret[$-1] == pts[i-1] )
+            ret ~= pts[i];
+        else
+            ret ~= pts[i-1];
+    }
+    return ret;
+}
+
+version(unittest)
+{
+    import desmath.linear;
+    import std.math;
+
+    auto angleCriteria( float angle )
+    {
+        auto cos_angle = cos( angle );
+        return ( in vec2[] accepted, in vec2 newpoint )
+        {
+            if( accepted.length < 2 ) return false;
+
+            auto cc = [ accepted[$-2], accepted[$-1], newpoint ];
+
+            auto a = (cc[1]-cc[0]).e;
+            auto b = (cc[2]-cc[1]).e;
+
+            return ( a.x * b.x + a.y * b.y ) >= cos_angle;
+        };
+    }
+
+    auto lengthCriteria( float len )
+    {
+        return ( in vec2[] accepted, in vec2 newpoint )
+        { return (accepted[$-1] - newpoint).len2 <= len*len; };
+    }
+}
+
+unittest
+{
+    auto pts = [ vec2(0,0), vec2(5,2), vec2(-1,2), vec2(4,0) ];
+    //auto pp = criteriaBezierSpline( pts, lengthCriteria(0.2), 1e-3 );
+    //auto pp = criteriaBezierSpline( pts, angleCriteria(0.05), 1e-3 );
+    auto pp = filterBezierSpline( fixBezierSpline( pts, 1000 ), angleCriteria(0.05) );
+
+    foreach( p; pp )
+        writeln( p.x, " ", p.y );
 }
