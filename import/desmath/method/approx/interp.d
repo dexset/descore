@@ -31,6 +31,8 @@ import std.exception;
 import std.math;
 import std.traits;
 
+version(unittest) import desmath.linear;
+
 import desmath.combin;
 
 struct InterpolateTableData(T) if( hasBasicMathOp!T ) { float key; T val; }
@@ -91,7 +93,6 @@ unittest
 
 unittest
 {
-    import desmath.linear.vector;
     alias InterpolateTableData!col3 TC;
     auto tbl =
         [
@@ -128,7 +129,6 @@ body
 
 unittest
 {
-    import desmath.linear.vector;
     auto pts = [ vec2(0,0), vec2(2,2), vec2(4,0) ];
     assert( bezierInterpolation( pts, 0.5 ) == vec2(2,1) );
 }
@@ -157,15 +157,12 @@ class FixStepsBezierSplineInterpolator(T,F=float) : BezierSplineInterpolator!(T,
 
 unittest
 {
-    import desmath.linear.vector;
     enum size_t len = 100;
     auto fbi = new FixStepsBezierSplineInterpolator!(vec2)(len);
     auto pts = [ vec2(0,0), vec2(2,2), vec2(4,0) ];
     auto res = fbi( pts );
     assert( res.length == len );
 }
-
-import std.stdio;
 
 /+ функция критеря должна быть функцией хевисада +/
 auto criteriaBezierSpline(T,F=float)( in T[] pts, bool delegate(in T[], in T) criteria, F min_step=1e-5 )
@@ -175,7 +172,7 @@ in
     assert( pts.length > 1 );
     assert( criteria !is null );
     assert( min_step > 0 );
-    assert( min_step < cast(F)(1.0) / cast(F)(pts.length-1) );
+    assert( min_step < cast(F)(.25) / cast(F)(pts.length-1) );
 }
 body
 {
@@ -234,44 +231,54 @@ body
         else
             ret ~= pts[i-1];
     }
+
+    if( ret[$-1] != pts[$-1] )
+        ret ~= pts[$-1];
+
     return ret;
 }
 
-version(unittest)
+auto angleSplineCriteria(T)( float angle )
+    if( isCompVector!(2,float,T) || isCompVector!(3,float,T) )
 {
-    import desmath.linear;
-    import std.math;
-
-    auto angleCriteria( float angle )
+    auto cos_angle = cos( angle );
+    return ( in T[] accepted, in T newpoint )
     {
-        auto cos_angle = cos( angle );
-        return ( in vec2[] accepted, in vec2 newpoint )
-        {
-            if( accepted.length < 2 ) return false;
+        if( accepted.length < 2 ) return false;
 
-            auto cc = [ accepted[$-2], accepted[$-1], newpoint ];
+        auto cc = [ accepted[$-2], accepted[$-1], newpoint ];
 
-            auto a = (cc[1]-cc[0]).e;
-            auto b = (cc[2]-cc[1]).e;
+        auto a = (cc[1]-cc[0]).e;
+        auto b = (cc[2]-cc[1]).e;
 
-            return ( a.x * b.x + a.y * b.y ) >= cos_angle;
-        };
-    }
+        return (a ^ b) >= cos_angle;
+    };
+}
 
-    auto lengthCriteria( float len )
-    {
-        return ( in vec2[] accepted, in vec2 newpoint )
-        { return (accepted[$-1] - newpoint).len2 <= len*len; };
-    }
+auto lengthSplineCriteria(T)( float len )
+if( isCompVector!(2,float,T) || isCompVector!(3,float,T) )
+in{ assert( len > 0 ); } body
+{
+    return ( in T[] accepted, in T newpoint )
+    { return (accepted[$-1] - newpoint).len2 <= len*len; };
 }
 
 unittest
 {
     auto pts = [ vec2(0,0), vec2(5,2), vec2(-1,2), vec2(4,0) ];
-    //auto pp = criteriaBezierSpline( pts, lengthCriteria(0.2), 1e-3 );
-    //auto pp = criteriaBezierSpline( pts, angleCriteria(0.05), 1e-3 );
-    auto pp = filterBezierSpline( fixBezierSpline( pts, 1000 ), angleCriteria(0.05) );
+    auto pp = criteriaBezierSpline( pts, angleSplineCriteria!vec2(0.05) );
 
-    foreach( p; pp )
-        writeln( p.x, " ", p.y );
+    assert( pp.length > pts.length );
+    assert( pp[0] == pts[0] );
+    assert( pp[$-1] == pts[$-1] );
+}
+
+unittest
+{
+    auto pts = [ vec2(0,0), vec2(5,2), vec2(-1,2), vec2(4,0) ];
+    auto pp = filterBezierSpline( fixBezierSpline( pts, 1000 ), lengthSplineCriteria!vec2(0.05) );
+
+    assert( pp.length > pts.length );
+    assert( pp[0] == pts[0] );
+    assert( pp[$-1] == pts[$-1] );
 }
