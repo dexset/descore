@@ -37,7 +37,7 @@ template Graph(NIC, LIC)
 
     interface Link
     {
-        @property 
+        @property
         {
             ref LinkInfoCore info();
             ref const(LinkInfoCore) info() const;
@@ -292,4 +292,3 @@ unittest
     assert( ln2.pads[0].destr );
     assert( ln2.pads[1].destr );
 }
-

@@ -112,7 +112,6 @@ unittest
         mixin( BasicMathOp!"pos vel" );
     }
 
-
     auto v1 = Point( vec3(10,3,1), vec3(5,4,3) );
     auto v2 = Point( vec3(10,3,1), vec3(5,4,3) );
     assert( v1 + v2 == Point( vec3(20,6,2), vec3(10,8,6) ) );

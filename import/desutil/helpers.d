@@ -28,6 +28,7 @@ import core.runtime, std.file, std.path;
 
 string appPath( string[] elems... ) 
 { return buildNormalizedPath( dirName( thisExePath ) ~ elems ); }
+
 string bnPath( string[] elems... ) 
 { return buildNormalizedPath( elems ); }
 
