@@ -53,7 +53,7 @@ class Timer
         return r;
     }
 
-    double hard_reset()
+    double hardReset()
     {
         auto r = all_time;
         all_time = 0;
