@@ -1,11 +1,11 @@
-module desneiro.layer.structure;
+module desisys.neiro.layer.structure;
 
 import std.traits;
 import std.conv;
 
-import desneiro.func;
-import desneiro.neiron;
-import desneiro.layer.neiron;
+import desisys.neiro.func;
+import desisys.neiro.neiron;
+import desisys.neiro.layer.neiron;
 
 class BPLayer(T) if( isFloatingPoint!T )
 {
@@ -39,7 +39,7 @@ interface NetWeight(T)
 
 class RandomWeight(T) : NetWeight!T
 {
-    import desneiro.layer.rand;
+    import desisys.neiro.layer.rand;
     T lim, gap;
 
     this( T lim=0.2, T gap=0.1 )

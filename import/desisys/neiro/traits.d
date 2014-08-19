@@ -1,4 +1,4 @@
-module desneiro.traits;
+module desisys.neiro.traits;
 
 public import std.traits;
 

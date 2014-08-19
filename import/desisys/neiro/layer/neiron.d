@@ -1,12 +1,12 @@
-module desneiro.layer.neiron;
+module desisys.neiro.layer.neiron;
 
 import std.math;
 import std.algorithm;
 import std.traits;
 import std.conv;
 
-import desneiro.neiron;
-import desneiro.func;
+import desisys.neiro.neiron;
+import desisys.neiro.func;
 
 abstract class BPLink(T) : WeightLink!(T,T)
     if( isFloatingPoint!T )

@@ -1,8 +1,11 @@
-module desneiro.layer.rand;
+module desisys.neiro.layer.rand;
 
 public import std.random;
 import std.traits;
 import std.math;
+
+import desisys.neiro.layer.neiron;
+import desisys.neiro.layer.structure;
 
 T symmetry_uniform(T)( T lim ) 
     if( isNumeric!T )
@@ -14,9 +17,6 @@ auto gap_symmetry_uniform(T,G)( T lim, G gap )
     auto u = symmetry_uniform( lim );
     return u + gap * sgn(u);
 }
-
-import desneiro.layer.neiron;
-import desneiro.layer.structure;
 
 void rndLayers(T)( BPLayer!T[] layers )
 { foreach( layer; layers ) rndLayer(layer); }

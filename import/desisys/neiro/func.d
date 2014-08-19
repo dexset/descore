@@ -1,8 +1,8 @@
-module desneiro.func;
+module desisys.neiro.func;
 
 import std.math;
 
-import desneiro.traits;
+import desisys.neiro.traits;
 
 interface Function(X,Y) { Y opCall( X x ) const; }
 

@@ -1,8 +1,8 @@
-module desneiro.neiron;
+module desisys.neiro.neiron;
 
 import std.algorithm;
 
-import desneiro.traits;
+import desisys.neiro.traits;
 
 interface Neiron(T)
 {

@@ -1,4 +1,4 @@
-module desneiro.layer.net;
+module desisys.neiro.layer.net;
 
 import std.math;
 import std.conv;
@@ -6,11 +6,11 @@ import std.range;
 import std.traits;
 import std.algorithm;
 
-import desneiro.neiron;
-import desneiro.func;
+import desisys.neiro.neiron;
+import desisys.neiro.func;
 
-import desneiro.layer.neiron;
-import desneiro.layer.structure;
+import desisys.neiro.layer.neiron;
+import desisys.neiro.layer.structure;
 
 version(unittest) import std.stdio;
 
