@@ -191,7 +191,7 @@ private
     {
         string ret;
         foreach( f; fields )
-            ret ~= format("static assert( hasBasicMathOp!(typeof(%1$s)), \"member (%1$s) has not basic math ops\" );", f );
+            ret ~= format(`static assert( hasBasicMathOp!(typeof(%1$s)), "member '%1$s' hasn't basic math ops" );`, f );
         return ret;
     }
 }
