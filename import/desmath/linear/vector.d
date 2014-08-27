@@ -10,7 +10,7 @@ import std.string;
 import desutil.testsuite;
 
 import desmath.util.accessstring;
-import desmath.util.accessdata;
+import desmath.util.flatdata;
 
 version(unittest) import std.stdio;
 
