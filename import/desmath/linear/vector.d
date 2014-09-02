@@ -8,17 +8,31 @@ import std.exception;
 import std.string;
 
 import desutil.testsuite;
-
-import desmath.util.accessstring;
-import desmath.util.flatdata;
+import desutil.accessstring;
+import desutil.flatdata;
 
 version(unittest) import std.stdio;
 
 private pure void isVectorImpl(size_t N,T,alias string AS)( in Vector!(N,T,AS) ) {}
 pure bool isVector(E)() { return is( typeof(isVectorImpl(E.init)) ); }
 
-pure bool isStaticVector(E)() { return isVector!E && E.isStatic; }
-pure bool isDynamicVector(E)() { return isVector!E && E.isDynamic; }
+pure bool isStaticVector(E)()
+{
+    static if( !isVector!E ) return false;
+    else return E.isStatic;
+}
+
+pure bool isDynamicVector(E)()
+{
+    static if( !isVector!E ) return false;
+    else return E.isDynamic;
+}
+
+unittest
+{
+    static assert( !isStaticVector!float );
+    static assert( !isDynamicVector!float );
+}
 
 pure bool isCompatibleVector(size_t N,T,E)() if( isVector!E )
 { return E.init.length == N && is( E.datatype : T ); }
@@ -29,7 +43,7 @@ pure bool isValidOp(string op,T,E,K=T)()
 pure bool hasCompMltAndSum(T,E)()
 { return is( typeof( T(T.init * E.init) ) ) && is( typeof( T.init + T.init ) == T ); }
 
-private enum SEP = ",";
+private enum SEP = " ";
 
 struct Vector( size_t N, T, alias string AS="")
     if( isCompatibleArrayAccessString(N,AS,SEP) || AS.length == 0 )
@@ -75,6 +89,16 @@ pure:
 
     static if( isStatic ) this(E)( in E val ) if( is(typeof(T(val))) ) { data[] = T(val); }
 
+    static if( isDynamic ) this(this) { data = this.data.dup; }
+
+    auto opAssign( size_t K, E, alias string oas )( in Vector!(K,E,oas) b )
+        if( (K==N||K==0||N==0) && is( typeof(T(E.init)) ) )
+    {
+        static if( isDynamic ) length = b.length;
+        foreach( i; 0 .. length ) data[i] = T(b[i]);
+        return this;
+    }
+
     auto opUnary(string op)() const
         if( op == "-" && is( typeof( T.init * (-1) ) : T ) )
     {
@@ -110,10 +134,7 @@ pure:
 
     auto opOpAssign(string op, E)( in E b )
         if( mixin( `is( typeof( this ` ~ op ~ ` b ) )` ) )
-    {
-        mixin( `this = this ` ~ op ~ ` b;` );
-        return this;
-    }
+    { mixin( `return this = this ` ~ op ~ ` b;` ); }
 
     auto opBinaryRight(string op, E)( in E b ) const
         if( isValidOp!(op,E,T,T) && op == "*" )
@@ -210,7 +231,7 @@ pure:
                 if( v.length > 1 && oneOfAccessAll(AS,v,SEP) )
             {
                 mixin( format( `return Vector!(v.length,T,"%s")(%s);`,
-                            isCompatibleArrayAccessString(v.length,v)?v.split("").join(","):"",
+                            isCompatibleArrayAccessString(v.length,v)?v.split("").join(SEP):"",
                             array( map!(a=>format( `data[%d]`,getIndex(AS,a,SEP)))(v.split("")) ).join(",")
                             ));
             }
@@ -218,7 +239,7 @@ pure:
     }
 
     /++ для кватернионов +/
-    static if( AS == "i,j,k,a" )
+    static if( AS == "i j k a" )
     {
         static assert( isFloatingPoint!T, "quaterni must be floating point vector" );
 
@@ -285,26 +306,26 @@ auto cross( size_t N, size_t K, T,E, alias string S1, alias string S2 )( in Vect
     return ret;
 }
 
-alias Vector!(2,float,"x,y") vec2;
-alias Vector!(3,float,"x,y,z") vec3;
-alias Vector!(4,float,"x,y,z,w") vec4;
+alias Vector!(2,float,"x y") vec2;
+alias Vector!(3,float,"x y z") vec3;
+alias Vector!(4,float,"x y z w") vec4;
 
-alias Vector!(4,float,"i,j,k,a") quat;
-alias Vector!(4,double,"i,j,k,a") dquat;
+alias Vector!(4,float,"i j k a") quat;
+alias Vector!(4,double,"i j k a") dquat;
 
-alias Vector!(2,double,"x,y") dvec2;
-alias Vector!(3,double,"x,y,z") dvec3;
-alias Vector!(4,double,"x,y,z,w") dvec4;
+alias Vector!(2,double,"x y") dvec2;
+alias Vector!(3,double,"x y z") dvec3;
+alias Vector!(4,double,"x y z w") dvec4;
 
-alias Vector!(2,int,"x,y") ivec2;
-alias Vector!(3,int,"x,y,z") ivec3;
-alias Vector!(4,int,"x,y,z,w") ivec4;
+alias Vector!(2,int,"x y") ivec2;
+alias Vector!(3,int,"x y z") ivec3;
+alias Vector!(4,int,"x y z w") ivec4;
 
-alias Vector!(3,float,"r,g,b") col3;
-alias Vector!(4,float,"r,g,b,a") col4;
+alias Vector!(3,float,"r g b") col3;
+alias Vector!(4,float,"r g b a") col4;
 
-alias Vector!(3,ubyte,"r,g,b") ubcol3;
-alias Vector!(4,ubyte,"r,g,b,a") ubcol4;
+alias Vector!(3,ubyte,"r g b") ubcol3;
+alias Vector!(4,ubyte,"r g b a") ubcol4;
 
 alias Vector!(0,float) vecD;
 alias Vector!(0,int) ivecD;
@@ -343,14 +364,14 @@ unittest
     static assert( isVector!(Vector!(3,float)) );
     static assert( isVector!(Vector!(0,float)) );
 
-    static assert( !__traits(compiles,Vector!(3,float,"x,y")) );
-    static assert( !__traits(compiles,Vector!(3,float,"x,y")) );
-    static assert(  __traits(compiles,Vector!(3,float,"x,y,z")) );
+    static assert( !__traits(compiles,Vector!(3,float,"x y")) );
+    static assert( !__traits(compiles,Vector!(3,float,"x y")) );
+    static assert(  __traits(compiles,Vector!(3,float,"x y z")) );
 
-    static assert( Vector!(3,float,"x,y,z").sizeof == float.sizeof * 3 );
+    static assert( Vector!(3,float,"x y z").sizeof == float.sizeof * 3 );
     static assert( Vector!(0,float).sizeof == (float[]).sizeof );
 
-    static assert( Vector!(3,float,"x,y,z").length == 3 );
+    static assert( Vector!(3,float,"x y z").length == 3 );
 }
 
 unittest
@@ -406,7 +427,7 @@ unittest
     assert( eq( a, a7 ) );
     assert( eq( a, a10 ) );
 
-    a = vec3(a4);
+    a = vec3(a4.data);
 }
 
 unittest
@@ -492,7 +513,7 @@ unittest
 
 unittest
 {
-    alias Vector!(4,float,"x,y,dx,dy") vec2p;
+    alias Vector!(4,float,"x y dx dy") vec2p;
 
     auto a = vec2p(1,2,0,0);
 
@@ -508,7 +529,7 @@ unittest
     auto c = a.xx;
     auto d = a.xxxyyzyx;
 
-    static assert( is(typeof(b) == Vector!(2,float,"x,y") ) );
+    static assert( is(typeof(b) == Vector!(2,float,"x y") ) );
     static assert( is(typeof(c) == Vector!(2,float) ) );
     static assert( is(typeof(d) == Vector!(8,float) ) );
 
@@ -554,4 +575,57 @@ unittest
     auto a = cvec3( 1-1i, 2, 3i );
     static assert( __traits(compiles, a.e) );
     assert( !mustExcept({ auto k = a.e; }) );
+}
+
+unittest
+{
+    alias Vector!(3,Vector!(3,float)) mat3;
+    auto a = mat3( vec3(1,0,0), vec3(0,1,0), vec3(0,0,1) );
+
+    a *= 2;
+    a += a;
+
+    assert( a[0][0] == 4 );
+    assert( a[1][1] == 4 );
+    assert( a[2][2] == 4 );
+
+    assert( a[0][1] == 0 );
+    assert( a[1][2] == 0 );
+    assert( a[2][1] == 0 );
+
+    a ^^= 2;
+
+    assert( a[0][0] == 16 );
+    assert( a[1][1] == 16 );
+    assert( a[2][2] == 16 );
+
+    auto b = -a;
+
+    assert( b[0][0] == -16 );
+    assert( b[1][1] == -16 );
+    assert( b[2][2] == -16 );
+}
+
+unittest
+{
+    auto a = vecD(1,2,3);
+    auto b = a;
+    assert( eq(a,b) );
+    b[0] = 111;
+    assert( !eq(a,b) );
+
+    vecD c;
+    c = b;
+    assert( eq(c,b) );
+    b[0] = 222;
+    assert( !eq(c,b) );
+}
+
+unittest
+{
+    auto a = vec3(1,2,3);
+    auto b = a;
+    assert( eq(a,b) );
+    b[0] = 111;
+    assert( !eq(a,b) );
 }
