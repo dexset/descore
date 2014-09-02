@@ -27,6 +27,8 @@ module desmath.linear.matrix;
 import std.math;
 import std.traits;
 import std.algorithm;
+import std.range;
+import std.array;
 import std.exception;
 
 import desutil.flatdata;
@@ -93,7 +95,7 @@ pure:
 
     static if( isStatic )
     {
-        this(X...)( in X vals ) { fill( flatData!E(vals) ); }
+        this(X...)( in X vals ) { _fillData( flatData!E(vals) ); }
     }
     else static if( isStaticWidthOnly )
     {
@@ -102,7 +104,7 @@ pure:
             auto buf = flatData!E(vals);
             enforce( !(buf.length%W), "wrong args length" );
             resize( buf.length/W, W );
-            fill( buf );
+            _fillData( buf );
         }
     }
     else static if( isStaticHeightOnly )
@@ -112,7 +114,7 @@ pure:
             auto buf = flatData!E(vals);
             enforce( !(buf.length%H), "wrong args length" );
             resize( H, buf.length/H );
-            fill( buf );
+            _fillData( buf );
         }
     }
     else
@@ -122,7 +124,7 @@ pure:
             auto buf = flatData!E(vals);
             enforce( buf.length == iH * iW, "wrong args length" ); 
             resize( iH, iW );
-            fill( buf );
+            _fillData( buf );
         }
 
         this( size_t iH, size_t iW ) { resize( iH, iW ); }
@@ -133,12 +135,12 @@ pure:
     {
         static if( isDynamic )
             resize( mtr.height, mtr.width );
-        fill( flatData!E(mtr.data) );
+        _fillData( flatData!E(mtr.data) );
     }
 
     static if( isDynamic )
     {
-        this(this) { fill(flatData!E(data)); }
+        this(this) { _fillData(flatData!E(data)); }
 
         auto opAssign(size_t bH, size_t bW, X)( in Matrix!(bH,bW,X) b )
             if( allowSomeOp(H,bH) && allowSomeOp(W,bW) && is(typeof(E(X.init))) )
@@ -146,29 +148,12 @@ pure:
             static if( isStaticHeight && b.isDynamicHeight ) enforce( height == b.height, "wrong height" );
             static if( isStaticWidth && b.isDynamicWidth ) enforce( width == b.width, "wrong width" );
             static if( isDynamic ) resize(b.height,b.width);
-            fill(flatData!E(b.data));
+            _fillData(flatData!E(b.data));
             return this;
         }
     }
 
-    static if( (W==H && isStatic) || isDynamicOne )
-        static auto diag(X...)( in X vals )
-        if( X.length > 0 && is(typeof(E(0))) && is(typeof(flatData!E(vals))) )
-        {
-            selftype ret;
-            static if( isStaticHeight ) auto L = H;
-            else auto L = W;
-
-            static if( ret.isDynamic )
-                ret.resize(L,L);
-
-            ret.fill( E(0) );
-            ret.fillDiag( flatData!E(vals) );
-
-            return ret;
-        }
-
-    void fill( in E[] vals... )
+    private void _fillData( in E[] vals... )
     {
         enforce( vals.length > 0, "no vals to fill" );
         if( vals.length > 1 )
@@ -182,12 +167,35 @@ pure:
         else foreach( ref row; data ) row[] = vals[0];
     }
 
+    auto fill( in E[] vals... )
+    {
+        _fillData( vals );
+        return this;
+    }
+
+    static if( (W==H && isStatic) || isDynamicOne )
+        static auto diag(X...)( in X vals )
+        if( X.length > 0 && is(typeof(E(0))) && is(typeof(flatData!E(vals))) )
+        {
+            selftype ret;
+            static if( isStaticHeight ) auto L = H;
+            else auto L = W;
+
+            static if( ret.isDynamic )
+                ret.resize(L,L);
+
+            ret._fillData( E(0) );
+            ret.fillDiag( flatData!E(vals) );
+
+            return ret;
+        }
+
     auto fillDiag( in E[] vals... )
     {
         enforce( vals.length > 0, "no vals to fill" );
         static if( isDynamic ) enforce( height == width, "not squared" );
         size_t k = 0;
-        foreach( i; 0 .. H )
+        foreach( i; 0 .. height )
             data[i][i] = vals[k++%$];
         return this;
     }
@@ -363,7 +371,7 @@ pure:
     }
 
     auto opOpAssign(string op, E)( in E b )
-        if( mixin( `is( typeof( this ` ~ op ~ ` b ) == selftype )` ) )
+        if( mixin( `is( typeof( selftype.init ` ~ op ~ ` E.init ) == selftype )` ) )
     { mixin( `return this = this ` ~ op ~ ` b;` ); }
 
     bool opCast(E)() const if( is( E == bool ) )
@@ -381,7 +389,360 @@ pure:
                 ret[j][i] = data[i][j];
         return ret;
     }
+
+    auto setCol(X...)( size_t no, in X vals )
+        if( is(typeof(flatData!E(vals))) )
+    {
+        enforce( no < width, "bad col index" );
+        auto buf = flatData!E(vals);
+        enforce( buf.length == height, "bad data length" );
+        foreach( i; 0 .. height )
+            data[i][no] = buf[i];
+        return this;
+    }
+
+    auto setRow(X...)( size_t no, in X vals )
+        if( is(typeof(flatData!E(vals))) )
+    {
+        enforce( no < height, "bad row index" );
+        auto buf = flatData!E(vals);
+        enforce( buf.length == width, "bad data length" );
+        data[no][] = buf[];
+        return this;
+    }
+
+    auto setRect(size_t bH, size_t bW, X)( size_t pos_row, size_t pos_col, in Matrix!(bH,bW,X) mtr )
+        if( is(typeof(E(X.init))) )
+    {
+        enforce( pos_row < height, "bad row index" );
+        enforce( pos_col < width, "bad col index" );
+        enforce( pos_row + mtr.height <= height, "bad height size" );
+        enforce( pos_col + mtr.width <= width, "bad width size" );
+
+        foreach( i; 0 .. mtr.height )
+            foreach( j; 0 .. mtr.width )
+                data[i+pos_row][j+pos_col] = E(mtr[i][j]);
+
+        return this;
+    }
+
+    auto col( size_t no ) const
+    {
+        enforce( no < width, "bad col index" );
+        Matrix!(H,1,E) ret;
+        static if( ret.isDynamic )
+            ret.resize(height,1);
+        foreach( i; 0 .. height )
+            ret[i][0] = data[i][no];
+        return ret;
+    }
+
+    auto row( size_t no ) const
+    {
+        enforce( no < height, "bad row index" );
+        Matrix!(1,W,E) ret;
+        static if( ret.isDynamic )
+            ret.resize(1,width);
+        ret[0][] = data[no][];
+        return ret;
+    }
+
+    auto opBinary(string op,size_t K,X,alias string AS)( in Vector!(K,X,AS) v ) const
+        if( op=="*" && allowSomeOp(W,K) && isValidOp!("*",E,X) && isValidOp!("+",E,E) )
+    {
+        static if( isDynamic || v.isDynamic )
+            enforce( width == v.length, "wrong vector length" );
+
+        static if( isStatic && W == H )
+            Vector!(H,E,AS) ret;
+        else
+            Vector!(H,E) ret;
+
+        static if( ret.isDynamic )
+            ret.length = height;
+
+        foreach( i; 0 .. height )
+        {
+            ret[i] = data[i][0] * v[0];
+
+            foreach( j; 1 .. width )
+                ret[i] = ret[i] + E(data[i][j] * v[j]);
+        }
+
+        return ret;
+    }
+
+    auto opBinaryRight(string op,size_t K,X,alias string AS)( in Vector!(K,X,AS) v ) const
+        if( op=="*" && isVector!(typeof(selftype.init.T * typeof(v).init)) )
+    { return this.T * v; }
+
+    static private size_t[] getIndexesWithout(size_t max, in size_t[] arr)
+    {
+        size_t[] ret;
+        foreach( i; 0 .. max ) if( !canFind(arr,i) ) ret ~= i;
+        return ret;
+    }
+
+    auto subWithout( size_t[] without_rows=[], size_t[] without_cols=[] ) const
+    {
+        auto with_rows = getIndexesWithout(height,without_rows);
+        auto with_cols = getIndexesWithout(width,without_cols);
+
+        return sub( with_rows,with_cols );
+    }
+
+    auto sub( size_t[] with_rows, size_t[] with_cols ) const
+    {
+        auto wrows = array( uniq(with_rows) );
+        auto wcols = array( uniq(with_cols) );
+
+        enforce( all!(a=>a<height)( wrows ), "bad row index" );
+        enforce( all!(a=>a<width)( wcols ), "bad col index" );
+
+        Matrix!(0,0,E) ret;
+        ret.resize( wrows.length, wcols.length );
+
+        foreach( i, orig_i; wrows )
+            foreach( j, orig_j; wcols )
+                ret[i][j] = data[orig_i][orig_j];
+
+        return ret;
+    }
+
+    static if( isFloatingPoint!E && ( isDynamicAll ||
+                ( isStaticHeightOnly && H > 1 ) ||
+                ( isStaticWidthOnly && W > 1 ) ||
+                ( isStatic && W == H ) ) )
+    {
+        E cofactor( size_t i, size_t j ) const
+        { return subWithout([i],[j]).det * coef(i,j); }
+
+        private static nothrow @trusted auto coef( size_t i, size_t j )
+        { return ((i+j)%2?-1:1); }
+        
+        @property auto det() const
+        {
+            static if( isDynamic )
+                enforce( width == height, "not square matrix" );
+
+            static if( isDynamic )
+            {
+                if( width == 1 )
+                    return data[0][0];
+                else if( width == 2 )
+                    return data[0][0] * data[1][1] -
+                           data[0][1] * data[1][0];
+            }
+            else
+            {
+                static if( W == 1 )
+                    return data[0][0];
+                else static if( W == 2 )
+                    return data[0][0] * data[1][1] -
+                           data[0][1] * data[1][0];
+            }
+
+            auto i = 0UL; // TODO: find max zeros line
+            auto ret = data[i][0] * cofactor(i,0);
+
+            foreach( j; 1 .. width )
+                ret = ret + data[i][j] * cofactor(i,j);
+
+            return ret;
+        }
+
+        @property auto inv() const
+        {
+            static if( isDynamic )
+                enforce( width == height, "not square matrix" );
+            else static assert( W==H, "not square matrix" );
+
+            selftype buf;
+
+            static if( isDynamic )
+                buf.resize(height,width);
+
+            foreach( i; 0 .. height )
+                foreach( j; 0 .. width )
+                    buf[i][j] = cofactor(i,j);
+
+            auto i = 0UL; // TODO: find max zeros line
+            auto d = data[i][0] * buf[i][0];
+
+            foreach( j; 1 .. width )
+                d = d + data[i][j] * buf[i][j];
+
+            return buf.T / d;
+        }
+
+        /++ only for transform matrix +/
+        static if( (isStaticHeightOnly && H==4) ||
+                   (isStaticWidthOnly && W==4) ||
+                   (isStatic && H==W && H==4) ||
+                   isDynamicAll )
+        {
+            @property auto speedTransformInv() const
+            {
+                static if( isDynamic )
+                {
+                    enforce( width == height, "not square matrix" );
+                    enforce( width == 4, "matrix must be 4x4" );
+                }
+
+                selftype ret;
+                static if( isDynamic )
+                    ret.resize( height, width );
+
+                foreach( i; 0 .. 3 )
+                    foreach( j; 0 .. 3 )
+                        ret[i][j] = this[j][i];
+
+                auto a22k = 1.0 / this[3][3];
+
+                ret[0][3] = -( ret[0][0] * this[0][3] + ret[0][1] * this[1][3] + ret[0][2] * this[2][3] ) * a22k;
+                ret[1][3] = -( ret[1][0] * this[0][3] + ret[1][1] * this[1][3] + ret[1][2] * this[2][3] ) * a22k;
+                ret[2][3] = -( ret[2][0] * this[0][3] + ret[2][1] * this[1][3] + ret[2][2] * this[2][3] ) * a22k;
+
+                ret[3][0] = -( this[3][0] * ret[0][0] + this[3][1] * ret[1][0] + this[3][2] * ret[2][0] ) * a22k;
+                ret[3][1] = -( this[3][0] * ret[0][1] + this[3][1] * ret[1][1] + this[3][2] * ret[2][1] ) * a22k;
+                ret[3][2] = -( this[3][0] * ret[0][2] + this[3][1] * ret[1][2] + this[3][2] * ret[2][2] ) * a22k;
+                
+                ret[3][3] = a22k * ( 1.0 - ( this[3][0] * ret[0][3] + this[3][1] * ret[1][3] + this[3][2] * ret[2][3] ) );
+
+                return ret;
+            }
+        }
+
+        @property auto rowReduceInv() const
+        {
+            static if( isDynamic )
+                enforce( width == height, "not square matrix" );
+
+            auto orig = selftype(this);
+            selftype invt;
+            static if( isDynamic )
+                invt.resize(height,height);
+            invt.fill( E(0) );
+            invt.fillDiag( E(1) );
+
+            static if( isStaticWidth )
+                enum ln = W;
+            else static if( isStaticHeight )
+                enum ln = H;
+            else
+                auto ln = height;
+
+            foreach( r; 0 .. ln-1 )
+            {
+                size_t n = r+1;
+                foreach( rr; n .. ln )
+                {
+                    E k = orig[rr][r] / orig[r][r];
+                    foreach( c; 0 .. ln )
+                    {
+                        orig[rr][c] -= k * orig[r][c];
+                        invt[rr][c] -= k * invt[r][c];
+                    }
+                }
+            }
+
+            foreach_reverse( r; 0 .. ln-1 )
+            {
+                size_t n = r+1;
+                foreach( rr; 0 .. ln )
+                {
+                    E k = orig[rr][n] / orig[n][n];
+                    foreach( c; 0 .. ln )
+                    {
+                        orig[rr][c] -= k * orig[n][c];
+                        invt[rr][c] -= k * invt[n][c];
+                    }
+                }
+            }
+
+            foreach( r; 0 .. ln )
+            {
+                E ident = orig[r][r];
+                foreach( c; 0 .. ln )
+                {
+                    orig[r][c] /= ident;
+                    invt[r][c] /= ident;
+                }
+            }
+
+            return invt;
+        }
+    }
 }
+
+@property auto quatToMatrix(E)( Vector!(4,E,"i j k a") iq )
+{
+    auto q = iq / iq.len2;
+
+    E wx, wy, wz, xx, yy, yz, xy, xz, zz, x2, y2, z2;
+
+    x2 = q.i + q.i;
+    y2 = q.j + q.j;
+    z2 = q.k + q.k;
+    xx = q.i * x2;   xy = q.i * y2;   xz = q.i * z2;
+    yy = q.j * y2;   yz = q.j * z2;   zz = q.k * z2;
+    wx = q.a * x2;   wy = q.a * y2;   wz = q.a * z2;
+
+    return Matrix!(3,3,E)( 1.0-(yy+zz),  xy-wz,        xz+wy,
+                           xy+wz,        1.0-(xx+zz),  yz-wx,
+                           xz-wy,        yz+wx,        1.0-(xx+yy) );
+}
+
+alias Matrix!(2,2,float) mat2;
+alias Matrix!(2,3,float) mat2x3;
+alias Matrix!(2,4,float) mat2x4;
+alias Matrix!(2,0,float) mat2xD;
+alias Matrix!(3,2,float) mat3x2;
+alias Matrix!(3,3,float) mat3;
+alias Matrix!(3,4,float) mat3x4;
+alias Matrix!(3,0,float) mat3xD;
+alias Matrix!(4,2,float) mat4x2;
+alias Matrix!(4,3,float) mat4x3;
+alias Matrix!(4,4,float) mat4;
+alias Matrix!(4,0,float) mat4xD;
+alias Matrix!(0,2,float) matDx2;
+alias Matrix!(0,3,float) matDx3;
+alias Matrix!(0,4,float) matDx4;
+alias Matrix!(0,0,float) matD;
+
+alias Matrix!(2,2,double) dmat2;
+alias Matrix!(2,3,double) dmat2x3;
+alias Matrix!(2,4,double) dmat2x4;
+alias Matrix!(2,0,double) dmat2xD;
+alias Matrix!(3,2,double) dmat3x2;
+alias Matrix!(3,3,double) dmat3;
+alias Matrix!(3,4,double) dmat3x4;
+alias Matrix!(3,0,double) dmat3xD;
+alias Matrix!(4,2,double) dmat4x2;
+alias Matrix!(4,3,double) dmat4x3;
+alias Matrix!(4,4,double) dmat4;
+alias Matrix!(4,0,double) dmat4xD;
+alias Matrix!(0,2,double) dmatDx2;
+alias Matrix!(0,3,double) dmatDx3;
+alias Matrix!(0,4,double) dmatDx4;
+alias Matrix!(0,0,double) dmatD;
+
+alias Matrix!(2,2,real) rmat2;
+alias Matrix!(2,3,real) rmat2x3;
+alias Matrix!(2,4,real) rmat2x4;
+alias Matrix!(2,0,real) rmat2xD;
+alias Matrix!(3,2,real) rmat3x2;
+alias Matrix!(3,3,real) rmat3;
+alias Matrix!(3,4,real) rmat3x4;
+alias Matrix!(3,0,real) rmat3xD;
+alias Matrix!(4,2,real) rmat4x2;
+alias Matrix!(4,3,real) rmat4x3;
+alias Matrix!(4,4,real) rmat4;
+alias Matrix!(4,0,real) rmat4xD;
+alias Matrix!(0,2,real) rmatDx2;
+alias Matrix!(0,3,real) rmatDx3;
+alias Matrix!(0,4,real) rmatDx4;
+alias Matrix!(0,0,real) rmatD;
 
 unittest
 {
@@ -400,7 +761,6 @@ unittest
 
 unittest
 {
-    alias Matrix!(3,3,float) mat3;
     auto a = mat3( 1,2,3,4,5,6,7,8,9 );
     assert( a.height == 3 );
     assert( a.width == 3 );
@@ -412,7 +772,10 @@ unittest
     assert( eq( a, [[3,1,1], [1,1,1], [1,1,1]] ) );
     a[1][0] += 3;
     assert( eq( a, [[3,1,1], [4,1,1], [1,1,1]] ) );
+}
 
+unittest
+{
     static struct Test
     {
         union
@@ -430,7 +793,6 @@ unittest
 
 unittest
 {
-    alias Matrix!(0,3,float) matDx3;
     auto a = matDx3( 1,2,3,4,5,6,7,8,9 );
     assert( mustExcept( {matDx3(1,2,3,4);} ) );
     assert( a.height == 3 );
@@ -453,7 +815,6 @@ unittest
 
 unittest
 {
-    alias Matrix!(3,0,float) mat3xD;
     auto a = mat3xD( 1,2,3,4,5,6,7,8,9 );
     assert( mustExcept( {mat3xD(1,2,3,4);} ) );
     assert( a.height == 3 );
@@ -472,7 +833,6 @@ unittest
 
 unittest
 {
-    alias Matrix!(0,0,float) matD;
     auto a = matD( 3,3, 1,2,3,4,5,6,7,8,9 );
     assert( mustExcept( {matD(1,2,3,4,5);} ) );
     assert( a.height == 3 );
@@ -501,8 +861,6 @@ unittest
 
 unittest
 {
-    alias Matrix!(0,0,float) matD;
-    alias Matrix!(3,0,float) mat3xD;
     auto a = mat3xD( 1,2,3,4,5,6,7,8,9 );
     matD b;
     assert( b.height == 0 );
@@ -522,11 +880,6 @@ unittest
 
 unittest
 {
-    alias Matrix!(3,3,float) mat3;
-    alias Matrix!(0,0,float) matD;
-    alias Matrix!(3,0,float) mat3xD;
-    alias Matrix!(0,3,float) matDx3;
-
     auto a = mat3( 1,2,3,4,5,6,7,8,9 );
     auto b = matD( 3,3, 1,2,3,4,5,6,7,8,9 );
     auto c = mat3xD( 1,2,3,4,5,6,7,8,9 );
@@ -580,18 +933,12 @@ unittest
 
 unittest
 {
-    alias Matrix!(3,3,float) mat3;
     auto a = mat3( 1,2,3,4,5,6,7,8,9 );
     assert( a.asArray == [1.0f,2,3,4,5,6,7,8,9] );
 }
 
 unittest
 {
-    alias Matrix!(3,3,float) mat3;
-    alias Matrix!(0,0,float) matD;
-    alias Matrix!(3,0,float) mat3xD;
-    alias Matrix!(0,3,float) matDx3;
-
     auto a = mat3.diag(1);
     assert( eq(a,[[1,0,0],[0,1,0],[0,0,1]]) );
     auto b = mat3xD.diag(1,2);
@@ -605,7 +952,6 @@ unittest
 
 unittest
 {
-    alias Matrix!(3,3,float) mat3;
     auto a = mat3( 1,2,3,4,5,6,7,8,9 );
     auto sha = a.sliceHeight(1);
     assert( eq(sha,[[4,5,6],[7,8,9]]) );
@@ -615,14 +961,12 @@ unittest
 
 unittest
 {
-    alias Matrix!(3,3,float) mat3;
     auto a = mat3.diag(1);
     assert( eq( -a,[[-1,0,0],[0,-1,0],[0,0,-1]]) );
 }
 
 unittest
 {
-    alias Matrix!(3,3,float) mat3;
     auto a = mat3.diag(1);
     auto b = a*3-a;
     assert( eq( b,a*2 ) );
@@ -632,10 +976,6 @@ unittest
 
 unittest
 {
-    alias Matrix!(3,3,float) mat3;
-    alias Matrix!(3,3,real) rmat3;
-    alias Matrix!(3,0,real) rmat3xD;
-
     auto a = rmat3( 3,2,2, 1,3,1, 5,3,4 );
     auto ainv = rmat3xD( 9,-2,-4,  1,2,-1, -12,1,7 ) / 5;
 
@@ -650,8 +990,6 @@ unittest
 
 unittest
 {
-    alias Matrix!(2,4,float) mat2x4;
-    alias Matrix!(4,0,float) mat4xD;
     alias Matrix!(4,5,float) mat4x5;
 
     auto a = mat2x4.init * mat4xD.init;
@@ -665,8 +1003,6 @@ unittest
 
 unittest
 {
-    alias Matrix!(2,3,float) mat2x3;
-    alias Matrix!(4,0,float) mat4xD;
 
     auto a = mat2x3( 1,2,3, 4,5,6 );
     auto b = mat4xD( 1,2,3,4 );
@@ -680,3 +1016,153 @@ unittest
     assert( bT.height == b.width );
 }
 
+unittest
+{
+    auto a = mat3.diag(1);
+
+    a.setRow(2,4,5,6);
+    assert( eq( a, [[1,0,0],[0,1,0],[4,5,6]] ) );
+    a.setCol(1,8,4,2);
+    assert( eq( a, [[1,8,0],[0,4,0],[4,2,6]] ) );
+
+    assert( eq( a.row(0), [[1,8,0]] ) );
+    assert( eq( a.col(0), [[1],[0],[4]] ) );
+}
+
+unittest
+{
+    auto b = mat3.diag(2) * vec3(2,3,4);
+    assert( is( typeof(b) == vec3 ) );
+    assert( eq( b, [4,6,8] ) );
+
+    auto c = vec3(1,1,1) * mat3.diag(1,2,3);
+    assert( is( typeof(c) == vec3 ) );
+    assert( eq( c, [1,2,3] ) );
+}
+
+unittest
+{
+    auto mtr = matD(2,3).fill( 1,2,3, 
+                               3,4,7 );
+
+    auto a = mtr * vec3(1,1,1);
+
+    assert( is( typeof(a) == Vector!(0,float) ) );
+    assert( a.length == 2 );
+    assert( eq( a, [ 6, 14 ] ) );
+
+    auto b = vec3(1,1,1) * mtr.T;
+    assert( eq( a, b ) );
+}
+
+unittest
+{
+    void check(E)( E mtr ) if( isMatrix!E )
+    {
+        mtr.fill( 1,2,3,4,
+                  5,6,7,8,
+                  9,10,11,12,
+                  13,14,15,16 );
+        auto sm = mtr.subWithout( [0,3,3,3], [1,2] );
+        assert( is( typeof(sm) == matD ) );
+        assert( sm.width == 2 );
+        assert( sm.height == 2 );
+        assert( eq( sm, [ [5,8], [9,12] ] ) );
+        assert( mustExcept({ mtr.sub( [0,4], [1,2] ); }) );
+        auto sm2 = mtr.subWithout( [], [1,2] );
+        assert( sm2.width == 2 );
+        assert( sm2.height == 4 );
+        assert( eq( sm2, [ [1,4],[5,8],[9,12],[13,16] ] ) );
+    }
+
+    check( matD(4,4) );
+    check( mat4() );
+}
+
+unittest
+{
+    assert( eq( matD(4,4).fillDiag(1,2,3,4).det, 24 ) );
+}
+
+unittest
+{
+    auto mtr = rmatD(4,4).fill( 1,2,5,2,
+                                5,6,1,4,
+                                9,1,3,0,
+                                9,2,4,2 );
+    auto xx = mtr * mtr.inv;
+    assert( eq( xx, matD(4,4).fillDiag(1) ) );
+}
+
+unittest
+{
+    auto mtr = matD(4,4).fill( 0,1,0,2,
+                               1,0,0,4,
+                               0,0,1,1,
+                               0,0,0,1 );
+    auto vv = vec4(4,2,1,1);
+    auto rv = mtr.speedTransformInv * (mtr*vv);
+    assert( eq( rv, vv ) );
+}
+
+unittest
+{
+    auto mtr = matD(4,4).fillDiag(1);
+    auto vv = vec4(4,2,1,1);
+    auto rv = vv * mtr;
+    auto vr = mtr.T * vv * mtr;
+}
+
+unittest
+{
+    auto mtr = rmat4.diag(1);
+    auto vv = vec4(4,2,1,1);
+    auto rv = vv * mtr;
+    auto vr = mtr.T * vv * mtr;
+
+    auto xx = mtr * mtr.inv;
+    assert( eq( xx, mat4.diag(1) ) );
+}
+
+unittest
+{
+    auto mtr = rmat4( 1,2,5,2,
+                      5,6,1,4,
+                      9,1,3,0,
+                      9,2,4,2 );
+
+    auto xx = mtr * mtr.rowReduceInv;
+
+    assert( eq( xx, mat4.diag(1) ) );
+}
+
+unittest
+{
+    auto mtr = mat4().setRect(0,0,mat3.diag(1)).setCol(3,1,2,3,4);
+    assert( eq( mtr, [[1,0,0,1],
+                      [0,1,0,2],
+                      [0,0,1,3],
+                      [0,0,0,4]] ) );
+}
+
+unittest
+{
+    auto stm = mat4();
+    assert( !stm );
+    auto dnm = matD();
+    assert( dnm );
+}
+
+unittest
+{
+    auto q = quat.fromAngle( PI_2, vec3(0,0,1) );
+
+    /+ Issue 13417
+    auto m = quatToMatrix(q); // fails with dmd segfault
+    +/
+
+    auto m = quatToMatrix!float(q);
+    assert( eq( m, [[0,-1,0],
+                    [1, 0,0],
+                    [0, 0,1]] ));
+}
