@@ -7,8 +7,7 @@ bool isLikeArray(A)()
 { return is( typeof( A.init[0] ) ) && is( typeof( A.init.length ) == size_t ); }
 
 bool eq(A,B)( in A a, in B b )
-    if( is( typeof( A.init != B.init ) ) &&
-       !isLikeArray!A && !isLikeArray!B )
+    if( is(typeof(A.init!=B.init)) && !isLikeArray!A && !isLikeArray!B )
 {
     static if( isFloatingPoint!A || isFloatingPoint!B )
     {
@@ -34,12 +33,17 @@ unittest
 }
 
 bool eq(A,B)( in A a, in B b )
-    if( isLikeArray!A && isLikeArray!B && is( typeof( A.init[0] != B.init[0] ) ) )
+    if( isLikeArray!A && isLikeArray!B && is(typeof(A.init[0]!=B.init[0])) )
 {
-    if( a.length != b.length ) return false;
-    foreach( i; 0 .. a.length )
-        if( !eq(a[i],b[i]) ) return false;
-    return true;
+    static if( is(Unqual!A == void[] ) )
+        return a == b; 
+    else
+    {
+        if( a.length != b.length ) return false;
+        foreach( i; 0 .. a.length )
+            if( !eq(a[i],b[i]) ) return false;
+        return true;
+    }
 }
 
 unittest
@@ -51,6 +55,21 @@ unittest
     assert( eq( ["hello","world"], ["hello","world"] ) );
     static assert( !__traits(compiles, eq(["hello"],1)) );
 }
+
+bool eq_approx(A,B,E)( in A a, in B b, in E eps )
+    if( isLikeArray!A && isLikeArray!B && 
+        is(typeof(-E.init)) &&
+        is(typeof( (A.init[0]-B.init[0]) < eps )) )
+{
+    if( a.length != b.length ) return false;
+    foreach( i; 0 .. a.length )
+        if( !eq_approx(a[i],b[i],eps) ) return false;
+    return true;
+}
+
+bool eq_approx(A,B,E)( in A a, in B b, in E eps )
+    if( is(typeof( (A.init-B.init) < eps )) )
+{ return (a-b < eps) && (a-b > -eps); }
 
 bool mustExcept(E=Exception)( void delegate() fnc, bool throwUnexpected=false )
 if( is( E : Throwable ) )

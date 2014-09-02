@@ -31,7 +31,7 @@ import std.exception;
 import std.math;
 import std.traits;
 
-version(unittest) import desmath.linear;
+version(unittest) import desmath.linear.vector;
 
 import desmath.combin;
 
@@ -239,7 +239,7 @@ body
 }
 
 auto angleSplineCriteria(T)( float angle )
-    if( isCompVector!(2,float,T) || isCompVector!(3,float,T) )
+    if( isCompatibleVector!(2,float,T) || isCompatibleVector!(3,float,T) )
 {
     auto cos_angle = cos( angle );
     return ( in T[] accepted, in T newpoint )
@@ -251,12 +251,12 @@ auto angleSplineCriteria(T)( float angle )
         auto a = (cc[1]-cc[0]).e;
         auto b = (cc[2]-cc[1]).e;
 
-        return (a ^ b) >= cos_angle;
+        return dot(a,b) >= cos_angle;
     };
 }
 
 auto lengthSplineCriteria(T)( float len )
-if( isCompVector!(2,float,T) || isCompVector!(3,float,T) )
+if( isCompatibleVector!(2,float,T) || isCompatibleVector!(3,float,T) )
 in{ assert( len > 0 ); } body
 {
     return ( in T[] accepted, in T newpoint )

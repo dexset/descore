@@ -62,7 +62,7 @@ public:
 
 class LookAtTransform : Transform
 {
-    vec3 pos, target, up;
+    vec3 pos=vec3(0), target=vec3(0), up=vec3(0);
     @property mat4 matrix() const
     { return calcLookAt( pos, target, up ); }
 }
@@ -98,7 +98,7 @@ class LookAtNodeTransform : ResolveTransform
 protected:
 
     vec3 resolveOffset( const(Node) node ) const
-    { return vec3( resolver(node,center).col!(3).data[0..3] ); }
+    { return vec3( resolver(node,center).col(3)[0..3] ); }
 }
 
 class PerspectiveTransform : Transform
@@ -124,13 +124,13 @@ private:
 mat4 calcLookAt( in vec3 pos, in vec3 trg, in vec3 up )
 {
     auto z = (pos-trg).e;
-    auto x = (up * z).e;
+    auto x = cross(up,z).e;
     vec3 y;
-    if( x ) y = (z * x).e;
+    if( x ) y = cross(z,x).e;
     else
     {
-        y = (z * vec3(1,0,0)).e;
-        x = (y * z).e;
+        y = cross(z,vec3(1,0,0)).e;
+        x = cross(y,z).e;
     }
     return mat4( x.x, y.x, z.x, pos.x,
                  x.y, y.y, z.y, pos.y,

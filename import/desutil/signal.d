@@ -85,7 +85,7 @@ struct NamedSignal( TName, Args... )
 {
     alias void delegate(Args) slottype;
     slottype[TName] slots;
-    void clear() { slots.clear(); }
+    void clear() { slots.destroy(); }
 
     /++ добавляет в список делегат с определённым именем +/
     void connect( TName name, slottype f )

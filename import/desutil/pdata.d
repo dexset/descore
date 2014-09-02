@@ -27,6 +27,8 @@ module desutil.pdata;
 import std.traits;
 import std.string;
 
+import desutil.testsuite;
+
 alias immutable(void)[] data_t;
 
 bool isPData(T)() { return is( Unqual!T == PData ); }
@@ -75,6 +77,7 @@ private T conv(T)( in data_t data )
 struct PData
 {
     data_t data;
+    alias data this;
 
     private void readData(T)( in T val )
     {
@@ -109,16 +112,15 @@ struct PData
 
 unittest
 {
-    void should_eq(size_t line=__LINE__,T1,T2)( T1 a, T2 b )
-    { assert( a == b, format( "should equal at line #%d", line ) ); }
+    static assert( isPureDump!PData );
+}
 
-    void should_not_eq(size_t line=__LINE__,T1,T2)( T1 a, T2 b )
-    { assert( a != b, format( "should not equal at line #%d", a, b, line ) ); }
-
+unittest
+{
     auto a = PData( [ .1, .2, .3 ] );
-    should_eq( a.as!(double[]), [ .1, .2, .3 ] );
+    assert( eq( a.as!(double[]), [ .1, .2, .3 ] ) );
     a = "hello";
-    should_eq( a.as!string, "hello" );
+    assert( eq( a.as!string, "hello" ) );
 
     static struct TestStruct 
     { double x, y; string info; immutable(int)[] data; }
@@ -132,17 +134,17 @@ unittest
     auto xd = immutable PData( xx );
     auto xe = shared immutable PData( xx );
 
-    should_eq( xx, xa );
-    should_eq( xx, xb );
-    should_eq( xx, xc );
-    should_eq( xx, xd );
-    should_eq( xx, xe );
+    assert( xx == xa );
+    assert( xx == xb );
+    assert( xx == xc );
+    assert( xx == xd );
+    assert( xx == xe );
 
-    should_eq( xa.as!TestStruct, ts );
-    should_eq( xb.as!TestStruct, ts );
-    should_eq( xc.as!TestStruct, ts );
-    should_eq( xd.as!TestStruct, ts );
-    should_eq( xe.as!TestStruct, ts );
+    assert( xa.as!TestStruct == ts );
+    assert( xb.as!TestStruct == ts );
+    assert( xc.as!TestStruct == ts );
+    assert( xd.as!TestStruct == ts );
+    assert( xe.as!TestStruct == ts );
 
     auto ax = PData( xa );
     auto bx = PData( xb );
@@ -150,23 +152,23 @@ unittest
     auto dx = PData( xd );
     auto ex = PData( xe );
 
-    should_eq( xx, ax );
-    should_eq( xx, bx );
-    should_eq( xx, cx );
-    should_eq( xx, dx );
-    should_eq( xx, ex );
+    assert( xx == ax );
+    assert( xx == bx );
+    assert( xx == cx );
+    assert( xx == dx );
+    assert( xx == ex );
 
-    should_eq( ax.data, xx.data );
-    should_eq( bx.data, xx.data );
-    should_eq( cx.data, xx.data );
-    should_eq( dx.data, xx.data );
-    should_eq( ex.data, xx.data );
+    assert( ax.data == xx.data );
+    assert( bx.data == xx.data );
+    assert( cx.data == xx.data );
+    assert( dx.data == xx.data );
+    assert( ex.data == xx.data );
 
-    should_eq( ax.as!TestStruct, ts );
-    should_eq( bx.as!TestStruct, ts );
-    should_eq( cx.as!TestStruct, ts );
-    should_eq( dx.as!TestStruct, ts );
-    should_eq( ex.as!TestStruct, ts );
+    assert( ax.as!TestStruct == ts );
+    assert( bx.as!TestStruct == ts );
+    assert( cx.as!TestStruct == ts );
+    assert( dx.as!TestStruct == ts );
+    assert( ex.as!TestStruct == ts );
 }
 
 unittest

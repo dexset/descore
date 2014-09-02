@@ -3,6 +3,11 @@ module desmath.method.calculus.diff;
 import desmath.linear;
 import std.traits;
 
+/+ TODO:
+    rework
++/
+    static assert(0,"not reworked");
+
 auto df(size_t N, size_t M, T, E=T, string A, string B)
     ( vec!(M,T,B) delegate( in vec!(N,T,A) ) f, in vec!(N,T,A) p, E step=E.epsilon*10 )
     if( isFloatingPoint!T && isFloatingPoint!E )

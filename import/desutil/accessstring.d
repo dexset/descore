@@ -1,10 +1,21 @@
-module desmath.util.accessstring;
+module desutil.accessstring;
 
 import std.string;
 import std.algorithm;
+import std.stdio;
 
 pure bool isCompatibleArrayAccessString( size_t N, string str, string sep="" )
-{ return str.length != 0 && N == getAccessFieldsCount(str,sep) && isArrayAccessString(str,sep); }
+{ return N == getAccessFieldsCount(str,sep) && isArrayAccessString(str,sep); }
+
+pure bool isArrayAccessString( in string as, in string sep="", bool allowDot=false )
+{
+    if( as.length == 0 ) return false;
+    auto splt = as.split(sep);
+    foreach( i, val; splt )
+        if( !isValueAccessString(val,allowDot) || canFind(splt[0..i],val) )
+            return false;
+    return true;
+}
 
 pure size_t getAccessFieldsCount( string str, string sep )
 { return str.split(sep).length; }
@@ -52,9 +63,9 @@ unittest
     assert( isCompatibleArrayAccessString( 3, "xyz" ) );
     assert( !isCompatibleArrayAccessString( 4, "xxxy" ) );
     assert( !isCompatibleArrayAccessString( 3, "xxx" ) );
-    static assert( getIndex( "x,y,z", "x", "," ) == 0 );
-    static assert( getIndex( "x,y,z", "y", "," ) == 1 );
-    static assert( getIndex( "x,y,z", "z", "," ) == 2 );
+    static assert( getIndex( "x y z", "x", " " ) == 0 );
+    static assert( getIndex( "x y z", "y", " " ) == 1 );
+    static assert( getIndex( "x y z", "z", " " ) == 2 );
     assert( getIndex( "x|dx|y|dy", "dx", "|" ) == 1 );
     assert( getIndex( "x|dx|y|dy", "1dx", "|" ) == -1 );
 
@@ -64,22 +75,34 @@ unittest
     assert( oneOfAccessAll("x,y,z","xxxxyxyyyz",",") );
     assert( isOneSymbolPerFieldAccessString("xyz") );
     assert( isOneSymbolPerFieldAccessString("x,y,z",",") );
+
+    assert( !isArrayAccessString("x.y.z","",false) );
+    assert( !isArrayAccessString("x.y.z","",true) );
+    assert( !isArrayAccessString("x.y.z"," ",false) );
+    assert(  isArrayAccessString("x.y.z"," ",true) );
+    assert(  isArrayAccessString("pos.x pos.y pos.z vel.x vel.y vel.z"," ",true) );
+
+    assert(  isArrayAccessString( "pos vel", " ", true ) );
+    assert(  isArrayAccessString( "abcd", " ", true ) );
+    assert(  isArrayAccessString( "a1 a2", " ", true ) );
+    assert(  isArrayAccessString( "ok.no", " ", true ) );
+    auto fstr = "pos.x pos.y vel.x vel.y";
+    assert(  isArrayAccessString( fstr, " ", true ) );
+    assert( !isArrayAccessString( fstr[0 .. $-1], " ", true ) );
+    assert( !isArrayAccessString( "ok.1", " ", true ) );
+    assert( !isArrayAccessString( "1abcd", " ", true ) );
+    assert( !isArrayAccessString( "not 2ok", " ", true ) );
 }
 
 pure
 {
 
-bool isArrayAccessString( string as, string sep="" )
+bool isValueAccessString( in string as, bool allowDot=false )
 {
-    auto splt = as.split(sep);
-    foreach( i, val; splt )
-        if( !isValueAccessString(val) || canFind(splt[0..i],val) )
-            return false;
-    return true;
+    return as.length > 0 &&
+    startsWithAllowedChars(as) &&
+    (allowDot?(all!(a=>isValueAccessString(a))(as.split("."))):allowedCharsOnly(as));
 }
-
-bool isValueAccessString( in string as )
-{ return as.length > 0 && startsWithAllowedChars(as) && allowedCharsOnly(as); }
 
 bool startsWithAllowedChars( in string as )
 {

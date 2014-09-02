@@ -1,8 +1,10 @@
-module desmath.util.flatdata;
+module desutil.flatdata;
 
 import std.traits;
 import std.string;
 import std.typetuple;
+
+import desmath.basic.traits;
 
 import desutil.testsuite;
 
@@ -25,22 +27,6 @@ unittest
 
 template hasIterableData(T)
 { enum hasIterableData = is( typeof( isIterable!(typeof(T.init.data)) ) ); }
-
-bool isComplex(T)()
-{
-    alias Unqual!T UT;
-    return is( UT == cfloat ) ||
-           is( UT == cdouble ) ||
-           is( UT == creal );
-}
-
-bool isImaginary(T)()
-{
-    alias Unqual!T UT;
-    return is( UT == ifloat ) ||
-           is( UT == idouble ) ||
-           is( UT == ireal );
-}
 
 pure auto flatValue(T,E)( in E val )
 {

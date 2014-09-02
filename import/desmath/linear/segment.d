@@ -26,25 +26,19 @@ module desmath.linear.segment;
 
 import std.math;
 import std.traits;
+import desutil.testsuite;
 import desmath.linear.vector;
 import desmath.linear.matrix;
 import desmath.basic;
 
-version(unittest)
-{
-    bool eq_seg(T=float)( in Segment!T a, in Segment!T b, T eps = T.epsilon * 4 )
-    { return eq( a.pnt, b.pnt, eps ) && eq( a.dir , b.dir, eps ); }
-}
-
 struct Segment(T) if( isFloatingPoint!T )
 {
-    alias vec!(3,T,"xyz") vectype;
+    alias Vector!(3,T,"x y z") vectype;
     vectype pnt, dir;
     mixin( BasicMathOp!"pnt dir" );
 
     static auto fromPoints( in vectype s, in vectype e )
     { return Segment!T( s, e - s ); }
-
 
     @property
     {
@@ -65,10 +59,10 @@ struct Segment(T) if( isFloatingPoint!T )
     }
 
     /+ аффинное преобразование +/
-    auto tr(X)( in mat!(4,4,X) mtr ) const
+    auto tr(X)( in Matrix!(4,4,X) mtr ) const
     {
-        return Segment!T( (mtr * vec!(4,T,"xyzw")( pnt, 1 )).xyz,
-                          (mtr * vec!(4,T,"xyzw")( dir, 0 )).xyz );
+        return Segment!T( (mtr * Vector!(4,T,"x y z w")( pnt, 1 )).xyz,
+                          (mtr * Vector!(4,T,"x y z w")( dir, 0 )).xyz );
     }
 
     /+ высота проведённая из точки это отрезок, 
@@ -77,7 +71,7 @@ struct Segment(T) if( isFloatingPoint!T )
     auto altitude( in vectype pp ) const
     {
         auto n = dir.e;
-        auto dd = pnt + n * ( n ^ (pp-pnt) );
+        auto dd = pnt + n * dot(n,(pp-pnt));
         return Segment!T( dd, pp - dd );
     }
 
@@ -86,13 +80,13 @@ struct Segment(T) if( isFloatingPoint!T )
     {
         /+ находим нормаль для паралельных 
         плоскостей в которых лежат s1 и s2 +/
-        auto norm = (dir * seg.dir).e;
+        auto norm = cross(dir,seg.dir).e;
 
         /+ расстояние между началами точками на прямых +/
         auto mv = pnt - seg.pnt;
 
         /+ нормальный вектор, длиной в расстояние между плоскостями +/
-        auto dist = norm * (norm ^ mv);
+        auto dist = norm * dot(norm,mv);
 
         /+ переносим отрезок на плоскость первой прямой
            и сразу находим пересечение +/
@@ -137,6 +131,12 @@ alias Segment!float  fSeg;
 alias Segment!double dSeg;
 alias Segment!real   rSeg;
 
+version(unittest)
+{
+    bool eq_seg(A,B,E=float)( in Segment!A a, in Segment!B b, in E eps=E.epsilon )
+    { return eq_approx( a.pnt.data ~ a.dir.data, b.pnt.data ~ b.dir.data, eps ); }
+}
+
 unittest
 {
     auto r1 = fSeg( vec3(1,2,3), vec3(2,3,4) );
@@ -174,8 +174,8 @@ unittest
     auto tb = (mtr * vec4(s.end,1)).xyz;
     auto ts = s.tr( mtr );
 
-    assert( eq( ts.start, ta, float.epsilon*4 ) );
-    assert( eq( ts.end, tb, 10e-5 ) );
+    assert( eq( ts.start, ta ) );
+    assert( eq_approx( ts.end, tb, 1e-5 ) );
 }
 
 unittest
@@ -201,7 +201,7 @@ unittest
     auto s2 = fSeg( vec3(2,0,-1), vec3(-4,4,0) );
     auto a1 = s1.altitude(s2);
     auto a2 = s2.altitude(s1);
-    assert( a1 == a2.revert );
+    assert( eq_seg( a1, a2.revert ) );
     assert( a1.len == 2 );
     assert( eq( a1.pnt, vec3(1,1,1) ) );
     assert( eq( a1.dir, vec3(0,0,-2) ) );
@@ -213,13 +213,13 @@ unittest
     auto s2 = fSeg( vec3(0,0,2), vec3(0,1,-1) );
 
     auto a1 = s1.altitude(s2);
-    assert( eq_seg( a1, fSeg( vec3(0,0,0), vec3(0,1,1) ) ) );
+    assert( eq_seg( a1, fSeg(vec3(0,0,0), vec3(0,1,1)) ) );
 }
 
 unittest
 {
     auto s1 = fSeg( vec3(0,0,0), vec3(2,2,0) );
     auto s2 = fSeg( vec3(2,0,0), vec3(-4,4,0) );
-    assert( eq( s1.intersect( s2 ), s2.intersect( s1 ) ) );
-    assert( eq( s1.intersect( s2 ), vec3(1,1,0) ) );
+    assert( eq( s1.intersect(s2), s2.intersect(s1) ) );
+    assert( eq( s1.intersect(s2), vec3(1,1,0) ) );
 }
