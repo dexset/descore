@@ -34,8 +34,11 @@ unittest
     static assert( !isDynamicVector!float );
 }
 
-pure bool isCompatibleVector(size_t N,T,E)() if( isVector!E )
-{ return E.init.length == N && is( E.datatype : T ); }
+pure bool isCompatibleVector(size_t N,T,E)()
+{
+    static if( !isVector!E ) return false;
+    else return E.init.length == N && is( E.datatype : T );
+}
 
 pure bool isValidOp(string op,T,E,K=T)()
 { mixin( `return is( typeof( T.init ` ~ op ~ ` E.init ) : K );` ); }
@@ -44,6 +47,8 @@ pure bool hasCompMltAndSum(T,E)()
 { return is( typeof( T(T.init * E.init) ) ) && is( typeof( T.init + T.init ) == T ); }
 
 private enum SEP = " ";
+
+pure @property string spaceSep(string str) { return str.split("").join(SEP); }
 
 struct Vector( size_t N, T, alias string AS="")
     if( isCompatibleArrayAccessString(N,AS,SEP) || AS.length == 0 )

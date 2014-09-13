@@ -532,6 +532,7 @@ pure:
                 else if( width == 2 )
                     return data[0][0] * data[1][1] -
                            data[0][1] * data[1][0];
+                else return classicDet;
             }
             else
             {
@@ -540,8 +541,12 @@ pure:
                 else static if( W == 2 )
                     return data[0][0] * data[1][1] -
                            data[0][1] * data[1][0];
+                else return classicDet;
             }
+        }
 
+        private @property classicDet() const
+        {
             auto i = 0UL; // TODO: find max zeros line
             auto ret = data[i][0] * cofactor(i,0);
 
