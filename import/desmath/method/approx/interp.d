@@ -24,8 +24,6 @@ The MIT License (MIT)
 
 module desmath.method.approx.interp;
 
-public import desmath.basic.traits;
-
 import std.algorithm;
 import std.exception;
 import std.math;
@@ -34,6 +32,7 @@ import std.traits;
 version(unittest) import desmath.linear.vector;
 
 import desmath.combin;
+public import desmath.basic.traits;
 
 struct InterpolateTableData(T) if( hasBasicMathOp!T ) { float key; T val; }
 
