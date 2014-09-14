@@ -26,6 +26,7 @@ module desphys.state;
 
 public import desmath.linear.vector;
 public import desmath.basic.traits;
+public import desmath.basic.mathstruct;
 
 struct MPoint
 { 

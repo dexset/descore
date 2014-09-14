@@ -38,12 +38,19 @@ struct Event
         data = PData(value);
     }
 
-    pure this( in Event ev )
+    private enum base_ctor =
+        ` this( in Event ev )
     {
         code = ev.code;
         timestamp = ev.timestamp;
         data = ev.data;
-    }
+    }`;
+
+    mixin( base_ctor );
+    mixin( "const" ~ base_ctor );
+    mixin( "immutable" ~ base_ctor );
+    mixin( "shared" ~ base_ctor );
+    mixin( "shared const" ~ base_ctor );
 
     @property
     {

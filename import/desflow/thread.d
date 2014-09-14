@@ -45,13 +45,20 @@ public:
             timestamp = currentTick;
         }
 
-        pure this( in Info fts )
+        enum ctor_text = ` this( in Info fts )
         {
             state = fts.state;
             error = fts.error;
             message = fts.message;
             timestamp = fts.timestamp;
         }
+        `;
+
+        mixin( ctor_text );
+        mixin( "const" ~ ctor_text );
+        mixin( "immutable" ~ ctor_text );
+        mixin( "shared" ~ ctor_text );
+        mixin( "shared const" ~ ctor_text );
     }
 
     this(Args...)( string name, WorkElement function(Args) func, Args args )
