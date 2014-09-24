@@ -32,7 +32,7 @@ import desmath.basic;
 
 struct Poly(T) if( isFloatingPoint!T )
 {
-    alias vec!(3,T,"xyz") vectype;
+    alias Vector!(3,T,"x y z") vectype;
     vectype[3] pnt;
 
     pure this( in vectype P0, in vectype P1, in vectype P2 )
@@ -44,17 +44,17 @@ struct Poly(T) if( isFloatingPoint!T )
 
     @property
     {
-        vectype perp() const { return ( pnt[1] - pnt[0] ) * ( pnt[2] - pnt[0] ); }
+        vectype perp() const { return cross( pnt[1]-pnt[0], pnt[2]-pnt[0] ); }
         vectype norm() const { return perp.e; }
         T area() const { return perp.len / 2.0; }
         vectype center() const { return (pnt[0] + pnt[1] + pnt[2]) / 3.0f; }
     }
 
-    auto tr(X)( in mat!(4,4,X) mtr ) const
+    auto tr(X)( in Matrix!(4,4,X) mtr ) const
     {
-        return Poly!T( (mtr * vec!(4,T,"xyzw")( pnt[0], 1 )).xyz,
-                       (mtr * vec!(4,T,"xyzw")( pnt[1], 1 )).xyz,
-                       (mtr * vec!(4,T,"xyzw")( pnt[2], 1 )).xyz );
+        return Poly!T( (mtr * vec!(4,T,"x y z w")( pnt[0], 1 )).xyz,
+                       (mtr * vec!(4,T,"x y z w")( pnt[1], 1 )).xyz,
+                       (mtr * vec!(4,T,"x y z w")( pnt[2], 1 )).xyz );
     }
 
     Segment!(T)[3] toSegments() const
@@ -71,15 +71,15 @@ struct Poly(T) if( isFloatingPoint!T )
     auto altitude( in vectype pp ) const
     {
         auto n = norm;
-        auto dst = n * ( n ^ ( pp - pnt[0] ) );
+        auto dst = n * dot( n, pp-pnt[0] );
         return Segment!T( pp - dst, dst );
     }
 
     auto project(F)( in Segment!F seg ) const
     {
         auto n = norm;
-        auto dst1 = n ^ ( seg.pnt - pnt[0] );
-        auto dst2 = n ^ ( seg.end - pnt[0] );
+        auto dst1 = dot( n, seg.pnt-pnt[0] );
+        auto dst2 = dot( n, seg.end-pnt[0] );
         auto diff = dst1 - dst2;
         return Segment!T( seg.png - n * dst1,
                           seg.dir + n * diff );

@@ -1,522 +1,149 @@
-/+
-The MIT License (MIT)
-
-    Copyright (c) <2013> <Oleg Butko (deviator), Anton Akzhigitov (Akzwar)>
-
-    Permission is hereby granted, free of charge, to any person obtaining a copy
-    of this software and associated documentation files (the "Software"), to deal
-    in the Software without restriction, including without limitation the rights
-    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is
-    furnished to do so, subject to the following conditions:
-
-    The above copyright notice and this permission notice shall be included in
-    all copies or substantial portions of the Software.
-
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-    THE SOFTWARE.
-+/
-
 module desmath.linear.vector;
 
 import std.math;
-import std.traits;
 import std.algorithm;
-import std.range;
-
+import std.array;
+import std.traits;
+import std.exception;
 import std.string;
-import std.conv;
 
-/++ work with access string +/
-private static pure {
+import desutil.testsuite;
+import desutil.accessstring;
+import desutil.flatdata;
 
-    version(unittest) enum __UNITTEST__ = true;
-    else enum __UNITTEST__ = false;
+version(unittest) import std.stdio;
 
-    debug enum __DEBUG__ = true;
-    else enum __DEBUG__ = false;
+private pure void isVectorImpl(size_t N,T,alias string AS)( in Vector!(N,T,AS) ) {}
+pure bool isVector(E)() { return is( typeof(isVectorImpl(E.init)) ); }
 
-    @property bool staticCheck( bool result, string msg="__no_message__", string file=__FILE__, size_t line=__LINE__ )()
-    {
-        static if( !result && __DEBUG__ && !__UNITTEST__ )
-            pragma(msg, format( "fails at %s:%d : %s", file, line, msg ));
-        return result;
-    }
-
-    @property bool failFunc( string ctmsg="", size_t ln=__LINE__ )()
-    { return staticCheck!(false,ctmsg,__FILE__,ln); }
-
-    string toStr( ptrdiff_t x ) { return format( "%d", x ); }
-
-    unittest
-    {
-        assert( toStr( 1 ) == "1" );
-        assert( toStr( 0 ) == "0" );
-        assert( toStr( 12 ) == "12" );
-        assert( toStr( -8 ) == "-8" );
-        assert( toStr( 15123 ) == "15123" );
-    }
-
-    @property nothrow ptrdiff_t getIndex( string str, char m )()
-    { return canFind( str, ""~m ) ? str.length - find(str, ""~m ).length : -1; }
-
-    unittest
-    {
-        static assert( getIndex!("xyz",'y') == 1 );
-        static assert( getIndex!("xyz",'x') == 0 );
-        static assert( getIndex!("rgba",'a') == 3 );
-        static assert( getIndex!("ijka",'a') == 3 );
-        static assert( getIndex!("rgb",'y') == -1 );
-    }
-
-    @property bool onlyTrueChars( string str, int ln=__LINE__ )()
-    {
-        bool check( size_t i )()
-        {
-            static if( str.length <= i ) return true;
-            else
-            static if( ( 'a' <= str[i] && 'z' >= str[i] ) || 
-                       ( 'A' <= str[i] && 'Z' >= str[i] ) )
-                return check!(i+1);
-            else
-                return failFunc!( format( "string '%s' contain bad symbol '%s' at %d position", str, str[i], i ), ln );
-        }
-        return check!0;
-    }
-
-    unittest
-    {
-        static assert(  onlyTrueChars!( "xyz" ) );
-        static assert(  onlyTrueChars!( "rgba" ) );
-        static assert(  onlyTrueChars!( "xxxx" ) );
-        static assert( !(onlyTrueChars!( "a:b:c", -1 )) );
-        static assert( !(onlyTrueChars!( "a b c", -1 )) );
-    }
-
-    @property bool trueAccessString( string str, int ln=__LINE__ )()
-    {
-        bool check( size_t i1, size_t i2 )() if( i1 < i2 )
-        {
-
-            static if( str.length > i2 && str.length-1 > i1 ) 
-            {
-                static if( str[i1] == str[i2] )
-                    return failFunc!( format( "access string '%s' have duplicate char '%s' at %d and %d positions", str, str[i1], i1, i2 ), ln );
-                else return check!( i1, i2+1 );
-            }
-            else static if( str.length <= i2 && str.length-1 > i1 ) return check!( i1+1, i1+2 );
-            else static if( str.length <= i2 && str.length-1 <= i1 ) return true;
-        }
-
-        static if( !onlyTrueChars!( str, ln ) ) 
-            return failFunc!( "access string have not true access chars", ln );
-        else
-            return check!(0,1);
-    }
-
-    unittest
-    {
-        static assert(  trueAccessString!( "xyz" ) );
-        static assert(  trueAccessString!( "rgba" ) );
-        static assert( !trueAccessString!( "xxxx", -1 ) );
-        static assert( !trueAccessString!( "xzz", -1 ) );
-        static assert( !trueAccessString!( "xxz", -1 ) );
-        static assert( !trueAccessString!( "xyzz", -1 ) );
-        static assert( !trueAccessString!( "xyzww", -1 ) );
-        static assert( !trueAccessString!( "a:b:c", -1 ) );
-        static assert( !trueAccessString!( "a b c", -1 ) );
-    }
-
-    @property bool checkIndexAll( string S, string v )()
-    {
-        bool checkIndex( string S, string c )()
-        {
-            static if( c.length == 0 ) return true;
-            else
-            static if( getIndex!(S,c[0]) >= 0 )
-                return checkIndex!(S,c[1 .. $]);
-            else return false;
-        }
-
-        static if( !onlyTrueChars!v ) return false;
-        else return checkIndex!(S,v);
-    }
-
-    unittest
-    {
-        static assert( checkIndexAll!( "xyz", "x" ) );
-        static assert( checkIndexAll!( "xyz", "xy" ) );
-        static assert( checkIndexAll!( "xyz", "xyz" ) );
-        static assert( checkIndexAll!( "xyz", "yx" ) );
-        static assert( checkIndexAll!( "xyz", "yzx" ) );
-        static assert( checkIndexAll!( "xyz", "zyx" ) );
-        static assert( checkIndexAll!( "xyz", "zzz" ) );
-        static assert( checkIndexAll!( "xyz", "zyz" ) );
-        static assert( checkIndexAll!( "ijka", "ijk" ) );
-        static assert( checkIndexAll!( "ijka", "a" ) );
-        static assert( !checkIndexAll!( "ijk", "zyz" ) );
-    }
-
-    @property string dataComp(string S, string v)()
-    {
-        static if( v.length == 0 ) return "";
-        static if( v.length == 1 )
-            return format( "data[%d]", getIndex!(S,v[0]) );
-        else
-            return dataComp!( S, v[0 .. 1] ) ~ "," ~ dataComp!( S, v[1 .. $] );
-    }
-
-    unittest
-    {
-        static assert( dataComp!("xyz","xy") == "data[0],data[1]" );
-        static assert( dataComp!("xyz","yz") == "data[1],data[2]" );
-        static assert( dataComp!("xyz","xx") == "data[0],data[0]" );
-        static assert( dataComp!("xyz","zyyxyz") == "data[2],data[1],data[1],data[0],data[1],data[2]" );
-    }
-}
-
-version(unittest)
+pure bool isStaticVector(E)()
 {
-    import desmath.linear.matrix;
-
-    bool eq(T,D=float)( in T m1, in T m2, D eps = D.epsilon*4 )
-        if( isFloatingPoint!D && ( isMatrix!T || isVector!T ) )
-    {
-        float k = 0;
-        foreach( i; 0 .. m1.data.length )
-            k += abs( m1.data[i] - m2.data[i] );
-        return k < eps;
-    }
+    static if( !isVector!E ) return false;
+    else return E.isStatic;
 }
 
-/++ work with static, dynamic compatible and accessing to data +/
-package{
-
-    @property pure nothrow bool isStaticConv(D,T...)() if( T.length > 0 )
-    {
-        static if( T.length == 1 ) 
-        {
-            alias T[0] G;
-            static if( isNumeric!G ) return is( G : D );
-            else static if( isStaticArray!G ) return is( typeof( G.init[0] ) : D );
-            else static if( isVector!G ) return is( G.datatype : D );
-            else return false;
-        }
-        else return isStaticConv!(D,T[0]) && isStaticConv!(D,T[1 .. $]);
-    }
-
-    @property pure nothrow bool isAllNumeric(T...)() if( T.length > 0 )
-    {
-        static if( T.length == 1 ) 
-        {
-            alias T[0] G;
-            static if( isNumeric!G ) return true;
-            else static if( isStaticArray!G ) return isNumeric!(typeof(G.init[0]));
-            else static if( isVector!G ) return true;
-            else return false;
-        }
-        else return isAllNumeric!(T[0]) && isAllNumeric!(T[1 .. $]);
-    }
-
-    @property pure nothrow bool hasDynamicArray(T...)() if( T.length > 0 )
-    {
-        static if( T.length == 1 )
-        {
-            alias T[0] G;
-            static if( isDynamicArray!G ) return true;
-            else return false;
-        }
-        else return hasDynamicArray!(T[0]) || hasDynamicArray!(T[1 .. $]);
-    }
-
-    pure auto getStaticData(string src, string dst, T, E) ( ref size_t S, size_t N )
-    {
-        enum string typename = T.stringof;
-        static if( isNumeric!E ) 
-        {
-            return [ format( "%s[%d] = %s%s[%d]",
-                    dst, S++, is(E==T)?"":"cast("~typename~")", src, N ) ];
-        }
-        else static if( isStaticArray!E ) 
-        {
-            string[] buf;
-            enum string ncast = is( typeof(E[0]) == T )?"":"cast("~typename~")";
-            foreach( i; 0 .. E.length )
-                buf ~= format( "%s[%d] = %s%s[%d][%d]", dst, S+i, ncast, src, N, i );
-            S+=E.length;
-            return buf;
-        }
-        else static if( isVector!E ) 
-        {
-            string[] buf;
-            enum string ncast = is( typeof(E.data[0]) == T )?"":"cast("~typename~")";
-            foreach( i; 0 .. E.length )
-                buf ~= format( "%s[%d] = %s%s[%d].data[%d]", dst, S+i, ncast, src, N, i );
-            S+=E.length;
-            return buf;
-        }
-        else static assert( 0, "fail getStaticData with " ~ typename );
-    }
-
-    pure @property string getAllStaticData(string src, string dst, T, E... )()
-        if( E.length >= 1 )
-    {
-        size_t S = 0;
-        string[] retarr;
-        foreach( i, e; E )
-        {
-            auto buf = getStaticData!(src,dst,T,e)(S,i);
-            retarr ~= buf;
-        }
-        return reduce!"a ~ b ~ \";\n\""( "", retarr );
-    }
-
-    T[] getDynamicData(T,E)( E data )
-    {
-        static if( isNumeric!E ) return [ cast(T)data ];
-        else static if( isArray!E )
-        {
-            T[] buf;
-            foreach( d; data )
-                buf ~= cast(T)d;
-            return buf;
-        }
-        else static if( isVector!E )
-        {
-            T[] buf;
-            foreach( d; data.data )
-                buf ~= cast(T)d;
-            return buf;
-        }
-        else 
-            static assert( 0, "fail getDynamicData with " ~ E.stringof );
-    }
-
-    pure @property nothrow size_t getStaticArgsLength(E...)() if( E.length >= 1 )
-    {
-        static if( E.length == 1 )
-        {
-            alias E[0] G;
-            static if( isNumeric!G ) return 1;
-            else static if( isStaticArray!G ) return E[0].length;
-            else static if( isVector!G ) return E[0].length;
-            else return 0;
-        }
-        else
-            return getStaticArgsLength!(E[0]) + getStaticArgsLength!(E[1 .. $]);
-    }
-
-    pure @property bool isStaticCompatibleArgs(size_t N, T, E... )()
-    {
-        static if( E.length == 0 ) return false;
-        else return ( isAllNumeric!E && N == getStaticArgsLength!(E) );
-    }
-} 
-
-private static {
-    @property string chVecWithVecOpStr( string data, string bvec, string op, size_t N )()
-    {
-        string buf;
-        foreach( i; 0 .. N )
-        {
-            auto sd = format( "%s[%d]", data, i );
-            buf ~= format( "%s%s%s.%s;\n", sd, op, bvec, sd );
-        }
-        return buf;
-    }
-
-    @property string chVecWithArrOpStr( string data, string arr, string op, size_t N )()
-    {
-        string buf;
-        foreach( i; 0 .. N )
-            buf ~= format( "%s[%d]%s%s[%d];\n", data, i, op, arr, i );
-        return buf;
-    }
-
-    unittest
-    {
-        assert( chVecWithVecOpStr!( "data", "b", "=", 2 ) == 
-                "data[0]=b.data[0];\ndata[1]=b.data[1];\n" );
-    }
-}
-
-private pure nothrow
+pure bool isDynamicVector(E)()
 {
-    void isVectorImpl( size_t N, T, string AS)( vec!(N,T,AS) ){}
-    //void isVectorImpl( size_t N, T)( VectorData!(N,T) ){}
-    void isCompVectorImpl( size_t N, T, E, string AS)
-    ( vec!(N,E,AS) ) if( is( E : T ) ) {}
+    static if( !isVector!E ) return false;
+    else return E.isDynamic;
 }
 
-@property bool isVector(T)() { return is( typeof( isVectorImpl( T.init ) ) ); }
-
-@property bool hasDataFieldArray(T)()
+unittest
 {
-    return isArray!(typeof(T.init.data));
+    static assert( !isStaticVector!float );
+    static assert( !isDynamicVector!float );
 }
 
-bool equal(A,B)( in A a, in B b, real eps=float.epsilon )
-    if( hasDataFieldArray!A && hasDataFieldArray!B )
+pure bool isCompatibleVector(size_t N,T,E)()
 {
-
-    return eps >= reduce!((a,b)=>a+=abs(b[0]-b[1]))(0.0,zip(a.data.dup,b.data.dup)) 
-               && a.data.length == b.data.length;
+    static if( !isVector!E ) return false;
+    else return E.init.length == N && is( E.datatype : T );
 }
 
-@property bool isCompVector(size_t N,T,E)()
-{ return is( typeof( isCompVectorImpl!(N,T)( E.init ) ) ); }
+pure bool isValidOp(string op,T,E,K=T)()
+{ mixin( `return is( typeof( T.init ` ~ op ~ ` E.init ) : K );` ); }
 
-@property bool isCompVectors(size_t N,T,E...)() if( E.length > 0 )
+pure bool hasCompMltAndSum(T,E)()
+{ return is( typeof( T(T.init * E.init) ) ) && is( typeof( T.init + T.init ) == T ); }
+
+private enum SEP = " ";
+
+pure @property string spaceSep(string str) { return str.split("").join(SEP); }
+
+struct Vector( size_t N, T, alias string AS="")
+    if( isCompatibleArrayAccessString(N,AS,SEP) || AS.length == 0 )
 {
-    static if( E.length == 1 )
-        return isCompVector!(N,T,E[0]);
-    else
-        return isCompVector!(N,T,E[0]) && 
-            isCompVectors!(N,T,E[1 .. $]);
-}
+    enum isDynamic = N == 0;
+    enum isStatic = N != 0;
 
-template generalType(T,E)
-{ alias typeof( 1?T.init:E.init ) generalType; }
+    static if( isStatic ) 
+        T[N] data;
+    else T[] data;
 
-class VecException: Exception 
-{ 
-    @safe pure nothrow this( string msg, string file=__FILE__, size_t line=__LINE__ )
-    { super( msg,file,line ); } 
-}
+    alias data this;
 
-private string zeros( size_t N )
-{
-    string[] ret;
-    foreach( i; 0 .. N ) ret ~= "0";
-    return "[" ~ join(ret,",") ~ "]";
-}
-
-package
-{
-    string generateFor(ptrdiff_t END, ptrdiff_t START=0)( string bodystr )
-    {
-        string[] ret;
-        for( auto i = START; i < END; i++ )
-            ret ~= format( bodystr, i );
-        return ret.join("\n");
-    }
-
-    string generateFor2(size_t A, size_t B)( string bodystr )
-    {
-        string[] ret;
-        foreach( i; 0 .. A )
-            foreach( j; 0 .. B )
-                ret ~= format( bodystr, i, j );
-        return ret.join("\n");
-    }
-}
-
-struct vec( size_t N, T=float, string AS="" )
-    if( ( ( N == AS.length && trueAccessString!AS ) || AS.length == 0 ) && 
-        isNumeric!T && N > 0 )
-{
-    T[N] data = mixin( zeros(N) );
-    alias vec!(N,T,AS) selftype;
     alias T datatype;
-    alias N length;
-    alias AS accessString;
+    alias AS access_string;
+    alias Vector!(N,T,AS) selftype;
 
 pure:
-    this(E, string bs)( in vec!(N,E,bs) b ) if( is( E : T ) )
-    { mixin( chVecWithVecOpStr!( "data","b","=",N ) ); }
-
-    this(E...)( in E ext ) 
+    static if( isDynamic )
     {
-        static if( isStaticCompatibleArgs!(N,T,E) )
-            mixin( getAllStaticData!("ext","data",T,E) );
-        else static if( !hasDynamicArray!(E) )
-            static assert(0, "bad arguments '" ~ E.stringof ~ "' for " ~ selftype.stringof );
-        else
+        pure @property auto length() const { return data.length; }
+
+        pure @property auto length( size_t nl )
         {
-            T[] buf;
-            foreach( e; ext )
-                buf ~= getDynamicData!T(e);
-            if( buf.length != N )
-                throw new VecException( "bad size" );
-            data[] = buf[];
+            data.length = nl;
+            return data.length;
         }
     }
+    else enum length = N;
 
-    auto opAssign(E, string bs)( in vec!(N,E,bs) b )
-        if( is( E : T ) )
+    this(E...)( in E vals )
+        if( E.length > 0 && is(typeof(flatData!T(vals))) )
     {
-        mixin( chVecWithVecOpStr!( "data", "b", "=", N ) );
+        auto buf = flatData!T(vals);
+
+        static if( isStatic )
+            enforce( buf.length == length, "bad args length" );
+        else
+            length = buf.length;
+
+        data[] = buf[];
+    }
+
+    static if( isStatic ) this(E)( in E val ) if( is(typeof(T(val))) ) { data[] = T(val); }
+
+    static if( isDynamic ) this(this) { data = this.data.dup; }
+
+    auto opAssign( size_t K, E, alias string oas )( in Vector!(K,E,oas) b )
+        if( (K==N||K==0||N==0) && is( typeof(T(E.init)) ) )
+    {
+        static if( isDynamic ) length = b.length;
+        foreach( i; 0 .. length ) data[i] = T(b[i]);
         return this;
     }
 
-    auto opUnary(string op)() const 
+    auto opUnary(string op)() const
         if( op == "-" && is( typeof( T.init * (-1) ) : T ) )
     {
         selftype ret;
-        mixin( generateFor!N( "ret.data[%1$d] = cast(T)( data[%1$d] * (-1) );" ) );
+        static if( isDynamic ) ret.length = length;
+        foreach( i; 0 .. length )
+            ret[i] = this[i] * -1;
         return ret;
     }
 
-    auto elem(string op, E, string bs)( in vec!(N,E,bs) b ) const
-        if( op == "*" || op == "/" || op == "^^" )    
+    auto opBinary(string op, size_t K, E, alias string oas )
+        ( in Vector!(K,E,oas) b ) const
+        if( isValidOp!(op,T,E) && (K==N||K==0||N==0) )
     {
         selftype ret;
-        mixin( generateFor!N( "ret.data[%1$d] = cast(T)( data[%1$d] " ~ op ~ " b.data[%1$d] );" ) );
-        return ret;
-    }
-
-    auto mlt(E, string bs)( in vec!(N,E,bs) b ) const
-    { return this.elem!"*"(b); }
-
-    auto div(E, string bs)( in vec!(N,E,bs) b ) const
-    { return this.elem!"/"(b); }
-
-    auto opBinary(string op, E, string bs)( in vec!(N,E,bs) b ) const
-        if( op == "+" || op == "-" )
-    {
-        selftype ret;
-        mixin( generateFor!N( "ret.data[%1$d] = cast(T)( data[%1$d] " ~ op ~ " b.data[%1$d] );" ) );
+        static if( isDynamic || b.isDynamic )
+            enforce( length == b.length, "wrong length" );
+        static if( isDynamic ) ret.length = length;
+        foreach( i; 0 .. length )
+            mixin( `ret[i] = this[i] ` ~ op ~ ` b[i];` );
         return ret;
     }
 
     auto opBinary(string op, E)( in E b ) const
-        if( !isVector!E && ( op == "*" || op == "/" || op == "^^" ) && is( generalType!(T,E) ) )
+        if( isValidOp!(op,T,E) && op != "+" && op != "-" )
     {
         selftype ret;
-        mixin( generateFor!N( "ret.data[%1$d] = cast(T)( data[%1$d] " ~ op ~ " b );" ) );
+        static if( isDynamic ) ret.length = length;
+        foreach( i; 0 .. length )
+            mixin( `ret[i] = this[i] ` ~ op ~ ` b;` );
         return ret;
     }
 
-    auto opBinaryRight(string op, E)( in E b ) const 
-        if( !isVector!E && ( op == "*" || op == "/" ) && is( generalType!(T,E) ) )
-    { return opBinary!op( b ); }
+    auto opOpAssign(string op, E)( in E b )
+        if( mixin( `is( typeof( this ` ~ op ~ ` b ) )` ) )
+    { mixin( `return this = this ` ~ op ~ ` b;` ); }
 
-    auto opBinary(string op, E, string bs)( in vec!(N,E,bs) b ) const
-        if( op == "^" && is( generalType!(T,E) ) )
-    {
-        generalType!(T,E) ret = 0;
-        mixin( generateFor!N( "ret += data[%1$d] * b.data[%1$d];" ) );
-        return ret;
-    }
-
-    auto opOpAssign(string op, E, string bs)( in vec!(N,E,bs) b )
-    { return (this = opBinary!op(b)); }
-    auto opOpAssign(string op,E)( in E b ) 
-        if( !isVector!E )
-    { return (this = opBinary!op(b)); }
-
-    @property auto len2() const { return opBinary!"^"(this); }
-    @property auto len(E=float)() const 
-        if( isFloatingPoint!E ) 
-    { return sqrt( cast(E)len2 ); }
-
-    static if( isFloatingPoint!T )
-        @property auto e() const { return this / len; }
+    auto opBinaryRight(string op, E)( in E b ) const
+        if( isValidOp!(op,E,T,T) && op == "*" )
+    { mixin( "return this " ~ op ~ " b;" ); }
 
     bool opCast(E)() const if( is( E == bool ) )
     { 
@@ -524,32 +151,25 @@ pure:
         return true;
     }
 
-    E opCast(E)() const if( isCompVector!(N,T,E) ) { return E(this); }
-
-    bool opEquals(E,string bs)( in vec!(N,E,bs) b ) const
+    const @property
     {
-        foreach( i, val; data )
-            if( val != b.data[i] ) return false;
-        return true;
-    }
+        static if( is( typeof( dot(selftype.init,selftype.init) ) ) )
+        {
+            auto len2() { return dot(this,this); }
 
-    ref T opIndex( size_t i ){ return data[i]; }
-    T opIndex( size_t i ) const { return data[i]; }
+            static if( is( typeof( sqrt(CommonType!(T,float)(this.len2)) ) ) )
+                auto len(E=CommonType!(T,float))() { return sqrt( E(len2) ); }
 
-    auto opBinary(string op, E, string bs)( in vec!(N,E,bs) b ) const
-        if( N == 3 && op == "*" && is( generalType!(T,E) ) )
-    {
-        alias this a;
-        return selftype( b[2] * a[1] - a[2] * b[1],
-                         b[0] * a[2] - a[0] * b[2],
-                         b[1] * a[0] - a[1] * b[0] );
+            static if( is( typeof( this / len ) == typeof(this) ) )
+                auto e() { return this / len; }
+        }
     }
 
     static if( N == 2 )
     {
         auto rebase(I,J)( in I x, in J y ) const
-            if( isCompVector!(2,T,I) &&
-                isCompVector!(2,T,J) )
+            if( isCompatibleVector!(2,T,I) &&
+                isCompatibleVector!(2,T,J) )
         {
             alias this m;
 
@@ -564,9 +184,9 @@ pure:
     static if( N == 3 )
     {
         auto rebase(I,J,K)( in I x, in J y, in K z ) const
-            if( isCompVector!(3,T,I) &&
-                isCompVector!(3,T,J) &&
-                isCompVector!(3,T,K) )
+            if( isCompatibleVector!(3,T,I) &&
+                isCompatibleVector!(3,T,J) &&
+                isCompatibleVector!(3,T,K) )
         {
             alias this m;
 
@@ -597,30 +217,38 @@ pure:
         }
     }
 
-    static if( AS.length == N )
+    static if( AS.length > 0 )
     {
-        @property ref T opDispatch(string v)()
-            if( v.length == 1 && getIndex!(AS,v[0]) >= 0 )
-        { mixin( format( "return data[%d];", getIndex!(AS,v[0]) ) ); }
-
-        @property T opDispatch(string v)() const
-            if( v.length == 1 && getIndex!(AS,v[0]) >= 0 )
-        { mixin( format( "return data[%d];", getIndex!(AS,v[0]) ) ); }
-
-        @property auto opDispatch(string v)() const
-            if( v.length > 1 && checkIndexAll!(AS,v) )
+        @property
         {
-            mixin( format( "return vec!(v.length,T%s)(%s);",
-                        trueAccessString!(v,-1)?",v":"", dataComp!(AS,v) ) );
+            ref T opDispatch(string v)()
+                if( oneOfAccess(AS,v,SEP) )
+            { mixin( format( "return data[%d];", getIndex(AS,v,SEP) ) ); }
+
+            T opDispatch(string v)() const
+                if( oneOfAccess(AS,v,SEP) )
+            { mixin( format( "return data[%d];", getIndex(AS,v,SEP) ) ); }
+        }
+
+        static if( isOneSymbolPerFieldAccessString(AS,SEP) )
+        {
+            @property auto opDispatch(string v)() const
+                if( v.length > 1 && oneOfAccessAll(AS,v,SEP) )
+            {
+                mixin( format( `return Vector!(v.length,T,"%s")(%s);`,
+                            isCompatibleArrayAccessString(v.length,v)?v.split("").join(SEP):"",
+                            array( map!(a=>format( `data[%d]`,getIndex(AS,a,SEP)))(v.split("")) ).join(",")
+                            ));
+            }
         }
     }
 
     /++ для кватернионов +/
-    static if( AS == "ijka" )
+    static if( AS == "i j k a" )
     {
         static assert( isFloatingPoint!T, "quaterni must be floating point vector" );
 
-        static selftype fromAngle(E,string bs)( T alpha, in vec!(3,E,bs) b )
+        static selftype fromAngle(E,alias string bs)( T alpha, in Vector!(3,E,bs) b )
             if( isFloatingPoint!E )
         { 
             T a = alpha / cast(T)(2.0);
@@ -628,25 +256,26 @@ pure:
         }
 
         /++ quaterni mul +/
-        auto opBinary(string op,E)( in vec!(4,E,AS) b ) const
-            if( is( generalType!(T,E) : T ) && op == "*" )
+        auto quatMlt(E)( in Vector!(4,E,AS) b ) const
+            if( is( CommonType!(T,E) : T ) )
         {
             alias this a;
             auto aijk = a.ijk;
             auto bijk = b.ijk;
-            return selftype( aijk * bijk + aijk * b.a + bijk * a.a,
-                    a.a * b.a - (aijk ^ bijk) );
+            return selftype( cross(aijk, bijk) + aijk * b.a + bijk * a.a,
+                    a.a * b.a - dot(aijk, bijk) );
         }
 
-        auto rot(E,string bs)( in vec!(3,E,bs) b ) const
-            if( is( generalType!(T,E) : T ) )
-        { 
-            auto res = (this * selftype(b,0) * inv);
-            return vec!(3,T,bs)( res.ijk ) ;
+        auto rot(size_t K,E,alias string bs)( in Vector!(K,E,bs) b ) const
+            if( (K==0||K==3) && is( CommonType!(T,E) : T ) )
+        {
+            static if( K==0 ) enforce( b.length == 3, "wrong length" );
+            auto res = (this.quatMlt( selftype(b,0).quatMlt(inv) ));
+            return Vector!(K,T,bs)( res.ijk );
         }
 
         @property {
-            T norm() const { return this ^ this; }
+            T norm() const { return dot(this,this); }
             T mag() const { return sqrt( norm ); }
             auto con() const { return selftype( -this.ijk, this.a ); }
             auto inv() const { return con / norm; }
@@ -654,118 +283,264 @@ pure:
     }
 }
 
-alias vec!(2,float,"xy") vec2;
-alias vec!(3,float,"xyz") vec3;
-alias vec!(4,float,"xyzw") vec4;
+auto dot( size_t N, size_t K, T,E, alias string S1, alias string S2 )( in Vector!(N,T,S1) a, in Vector!(K,E,S2) b )
+    if( (N==K||K==0||N==0) && hasCompMltAndSum!(T,E) )
+{
+    static if( a.isDynamic || b.isDynamic )
+    {
+        enforce( a.length == b.length, "wrong length" );
+        enforce( a.length > 0, "zero length" );
+    }
+    T ret = a[0] * b[0];
+    foreach( i; 1 .. a.length )
+        ret = ret + T( a[i] * b[i] );
+    return ret;
+}
 
-alias vec!(4,float,"ijka") quat;
+auto cross( size_t N, size_t K, T,E, alias string S1, alias string S2 )( in Vector!(N,T,S1) a, in Vector!(K,E,S2) b )
+    if( ((K==3||K==0)&&(N==3||N==0)) && hasCompMltAndSum!(T,E) )
+{
+    static if( a.isDynamic ) enforce( a.length == 3, "wrong length a" );
+    static if( b.isDynamic ) enforce( b.length == 3, "wrong length b" );
 
-alias vec!(2,double,"xy") dvec2;
-alias vec!(3,double,"xyz") dvec3;
-alias vec!(4,double,"xyzw") dvec4;
+    a.selftype ret;
+    static if( a.isDynamic ) ret.length = 3;
+    ret[0] = T(a[1] * b[2]) - T(a[2] * b[1]);
+    ret[1] = T(a[2] * b[0]) - T(a[0] * b[2]);
+    ret[2] = T(a[0] * b[1]) - T(a[1] * b[0]);
+    return ret;
+}
 
-alias vec!(4,double,"ijka") dquat;
+alias Vector!(2,float,"x y") vec2;
+alias Vector!(3,float,"x y z") vec3;
+alias Vector!(4,float,"x y z w") vec4;
 
-alias vec!(3,float,"rgb") col3;
-alias vec!(4,float,"rgba") col4;
+alias Vector!(4,float,"i j k a") quat;
+alias Vector!(4,double,"i j k a") dquat;
 
-alias vec!(3,ubyte,"rgb") bcol3;
-alias vec!(4,ubyte,"rgba") bcol4;
+alias Vector!(2,double,"x y") dvec2;
+alias Vector!(3,double,"x y z") dvec3;
+alias Vector!(4,double,"x y z w") dvec4;
 
-alias vec!(2,int,"xy") ivec2;
-alias vec!(3,int,"xyz") ivec3;
-alias vec!(4,int,"xyzw") ivec4;
+alias Vector!(2,int,"x y") ivec2;
+alias Vector!(3,int,"x y z") ivec3;
+alias Vector!(4,int,"x y z w") ivec4;
 
-alias vec!( 2, float, "nf" ) z_vec; 
-alias vec!( 2, float, "wh" ) sz_vec; 
+alias Vector!(3,float,"r g b") col3;
+alias Vector!(4,float,"r g b a") col4;
+
+alias Vector!(3,ubyte,"r g b") ubcol3;
+alias Vector!(4,ubyte,"r g b a") ubcol4;
+
+alias Vector!(0,float) vecD;
+alias Vector!(0,int) ivecD;
+alias Vector!(0,double) dvecD;
 
 unittest
 {
-    assert( hasDataFieldArray!vec3 );
-    assert(  equal( vec3(1,2,3), vec3(1,2,3) ) );
-    assert( !equal( vec3(1,2,3), vec3(2,2,3) ) );
-}
-
-unittest 
-{ 
-    vec!(3,float,"xyz") a;
-    assert( a.sizeof == 3 * float.sizeof );
-    vec!(32,byte) b;
-    assert( b.sizeof == 32 );
-
-    vec2 v2;
-    vec3 v3;
-    vec4 v4;
-
-    quat q;
-
-    col3 c3;
-    col4 c4;
-
-    ivec2 iv2; 
-    ivec3 iv3;
-    ivec4 iv4;
-}
-
-unittest
-{
-    auto v = vec3(1,2,3);
-
-    auto v2 = cast(dvec3)v;
-    assert( is(v2.datatype == double) );
-    assert( v2.x == 1 && v2.y == 2 && v2.z == 3 );
-
-    auto v3 = cast(ivec3)v;
-    assert( is(v3.datatype == int) );
-    assert( v3.x == 1 && v3.y == 2 && v3.z == 3 );
-}
-
-unittest
-{
-    auto a = vec!3( [1,2,3] );
-    auto b = vec!5( 0, a, 1 );
-    assert( b.data == [ 0, 1,2,3, 1 ] );
-
-    auto c = vec!13( 5, a, 1, cast(int[2])[4,8], 666, b );
-    assert( c.data == [ 5, 1,2,3, 1, 4,8, 666, 0,1,2,3,1 ] );
-}
-
-unittest
-{
-    auto a = vec3( 1, 2, 3 );
-    auto b = vec3( 3, 4, 5 );
-    a = b;
-    assert( a.data == b.data );
-    a.data[0] = 10;
-    assert( a.data != b.data );
-
-    alias vec!(3,int) ivec3;
-    auto c = ivec3( 5, 6, 7 );
-    assert( !is( typeof( c = a ) ) ); 
-    assert(  is( typeof( a = c ) ) );
-    c = ivec3( a );
-    assert( a.data == c.data );
+    static assert( isVector!vec2 );
+    static assert( isVector!vec3 );
+    static assert( isVector!vec4 );
+    static assert( isVector!quat );
+    static assert( isVector!dquat );
+    static assert( isVector!dvec2 );
+    static assert( isVector!dvec3 );
+    static assert( isVector!dvec4 );
+    static assert( isVector!ivec2 );
+    static assert( isVector!ivec3 );
+    static assert( isVector!ivec4 );
+    static assert( isVector!col3 );
+    static assert( isVector!col4 );
+    static assert( isVector!ubcol3 );
+    static assert( isVector!ubcol4 );
+    static assert( isVector!vecD );
+    static assert( isVector!ivecD );
+    static assert( isVector!dvecD );
 }
 
 unittest
 {
-    auto a = vec!3( 1, 2, 3 );
-    assert( (-a).data == [ -1, -2, -3 ] );
+    static assert( Vector!(3,float).isStatic == true );
+    static assert( Vector!(3,float).isDynamic == false );
+
+    static assert( Vector!(0,float).isStatic == false );
+    static assert( Vector!(0,float).isDynamic == true );
+
+    static assert( isVector!(Vector!(3,float)) );
+    static assert( isVector!(Vector!(0,float)) );
+
+    static assert( !__traits(compiles,Vector!(3,float,"x y")) );
+    static assert( !__traits(compiles,Vector!(3,float,"x y")) );
+    static assert(  __traits(compiles,Vector!(3,float,"x y z")) );
+
+    static assert( Vector!(3,float,"x y z").sizeof == float.sizeof * 3 );
+    static assert( Vector!(0,float).sizeof == (float[]).sizeof );
+
+    static assert( Vector!(3,float,"x y z").length == 3 );
 }
 
 unittest
 {
-    auto a = vec!3( 1,2,3 );
-    auto b = vec!3( 3,4,5 );
+    assert( eq( Vector!(3,float)(1,2,3), [1,2,3] ) );
 
-    auto c = a.elem!"*"(b);
-    assert( is( typeof(c) == vec!3 ) );
-    assert( c.data == [ 3, 8, 15 ] );
+    auto a = Vector!(3,float)(1,2,3);
+    assert( eq( Vector!(5,int)(0,a,4), [0,1,2,3,4] ) );
 
-    auto x = vec!3( 2, 4, 5 );
-    auto d = c.elem!"/"(x);
-    assert( is( typeof(d) == vec!3 ) );
-    assert( d.data == [ 1.5, 2, 3 ] );
+    assert( mustExcept( { auto v = Vector!(2,int)(1,2,3); } ) );
+    assert( !mustExcept( { auto v = Vector!(0,int)(1,2,3); } ) );
+    assert( !mustExcept( { auto v = Vector!(3,int)(1); } ) );
+    auto b = Vector!(0,float)(1,2,3);
+    assert( b.length == 3 );
+    
+    auto c = Vector!(3,float)(1);
+    assert( eq( c, [1,1,1] ) );
+    auto d = c;
+    assert( eq( c, d ) );
+}
+
+unittest
+{
+    static struct Test1 { float x,y,z; }
+    static assert( !__traits(compiles,Vector!(3,float)(Test1.init)) );
+
+    static struct Test2 { float[3] data; }
+    static assert( __traits(compiles,Vector!(3,float)(Test2.init)) );
+}
+
+unittest
+{
+    auto a = vec3(1,2,3);
+
+    auto a1 = const vec3(a);
+    auto a2 = const vec3(1,2,3);
+    auto a3 = const vec3(1);
+
+    auto a4 = shared vec3(a);
+    auto a5 = shared vec3(1,2,3);
+    auto a6 = shared vec3(1);
+
+    auto a7 = immutable vec3(a);
+    auto a8 = immutable vec3(1,2,3);
+    auto a9 = immutable vec3(1);
+
+    auto a10 = shared const vec3(a);
+    auto a11 = shared const vec3(1,2,3);
+    auto a12 = shared const vec3(1);
+
+    assert( eq( a, a1 ) );
+    assert( eq( a, a4 ) );
+    assert( eq( a, a7 ) );
+    assert( eq( a, a10 ) );
+
+    a = vec3(a4.data);
+}
+
+unittest
+{
+    auto a = vec3(2);
+    assert( eq( -a, [-2,-2,-2] ) );
+}
+
+unittest
+{
+    auto a = vec3(1,2,3);
+    auto b = vecD(1,2,3);
+    auto c = a + b;
+    assert( is( typeof(c) == vec3 ) );
+    auto d = b + a;
+    assert( is( typeof(d) == vecD ) );
+    assert( eq(c,d) );
+    auto f = ivec3(1,2,3);
+    auto c1 = a + f;
+    assert( is( typeof(c1) == vec3 ) );
+    auto d1 = ivec3(f) + ivec3(a);
+    assert( is( typeof(d1) == ivec3 ) );
+    assert( eq(c1,d) );
+    assert( eq(c,d1) );
+
+    a *= 2;
+    b *= 2;
+    auto e = b *= 2;
+    assert( eq(a,[2,4,6]) );
+    assert( eq(b,a*2) );
+
+    auto x = 2 * a;
+    assert( eq(x,[4,8,12]) );
+
+    assert( !!x );
+    x[0] = float.nan;
+    assert( !x );
+}
+
+unittest
+{
+    auto a = vec3(1,2,3);
+    auto b = vecD(1,2,3);
+
+    assert( eq( dot(a,b), 1+4+9 ) );
+}
+
+unittest
+{
+    auto x = vec3(1,0,0);
+    auto y = vecD(0,1,0);
+    auto z = vecD(0,0,1);
+
+    assert( eq( cross(x,y), z ) );
+    assert( eq( cross(y,z), x ) );
+    assert( eq( cross(y,x), -z ) );
+    assert( eq( cross(x,z), -y ) );
+    assert( eq( cross(z,x), y ) );
+
+    auto fy = vecD(0,1,0,0);
+    assert( mustExcept({ auto fz = x * fy; }) );
+    auto cfy = vec4(0,1,0,0);
+    static assert( !__traits(compiles,x*cfy) );
+}
+
+unittest
+{
+    auto a = vec3(2,2,1);
+    assert( eq(a.rebase(vec3(2,0,0),vec3(0,2,0),vec3(0,0,2)), [1,1,.5] ) );
+}
+
+unittest
+{
+    auto a = vec3(1,2,3);
+
+    assert( a.opDispatch!"x" == 1 );
+    assert( a.y == 2 );
+    assert( a.z == 3 );
+
+    a.x = 2;
+    assert( a.x == 2 );
+}
+
+unittest
+{
+    alias Vector!(4,float,"x y dx dy") vec2p;
+
+    auto a = vec2p(1,2,0,0);
+
+    assert( a.opDispatch!"x" == 1 );
+    assert( a.dx == 0 );
+}
+
+unittest
+{
+    auto a = vec3(1,2,3);
+
+    auto b = a.opDispatch!"xy";
+    auto c = a.xx;
+    auto d = a.xxxyyzyx;
+
+    static assert( is(typeof(b) == Vector!(2,float,"x y") ) );
+    static assert( is(typeof(c) == Vector!(2,float) ) );
+    static assert( is(typeof(d) == Vector!(8,float) ) );
+
+    assert( eq( b, [1,2] ) );
+    assert( eq( c, [1,1] ) );
+    assert( eq( d, [1,1,1,2,2,3,2,1] ) );
 }
 
 unittest
@@ -773,153 +548,15 @@ unittest
     auto r = quat.fromAngle( PI_2, vec3(0,0,1) );
 
     auto a = vec3( 1,0,0 );
-    auto b = r.rot( a );
+    auto b = r.rot(a);
     assert( is( typeof(b) == vec3 ) );
-    assert( b.data == [ 0, 1, 0 ] );
+    assert( eq( b.data, [ 0, 1, 0 ] ) );
 }
 
 unittest
 {
-    auto a = vec!(3,float)( 1,2,3 );
-    auto b = vec!(3,int)( 3,4,5 );
-    auto c = a + b;
-    assert( is( typeof(c) == vec!(3,float,"") ) );
-    assert( c.data == [ 4, 6, 8 ] );
-
-    c += b;
-    assert( c.data == [ 7, 10, 13 ] );
-    c -= a;
-    assert( c.data == [ 6, 8, 10 ] );
-
-    auto d = b * 2.0f;
-    assert( is( typeof(d) == vec!(3,int) ) );
-    assert( d.data == [ 6, 8, 10 ] );
-
-    auto e = b * 2;
-    assert( is( typeof(e) == vec!(3,int) ) );
-    assert( e.data == [ 6, 8, 10 ] );
-
-    auto f = 2 * b;
-    assert( is( typeof(f) == vec!(3,int) ) );
-    assert( f.data == [ 6, 8, 10 ] );
-
-    auto g = 2.0 * b;
-    assert( is( typeof(g) == vec!(3,int) ) );
-    assert( g.data == [ 6, 8, 10 ] );
-
-    auto x = b ^ g;
-    assert( is( typeof(x) == int ) );
-    assert( x == 100 );
-}
-
-unittest
-{
-    auto a = vec!3( 1,2,3 );
-    assert( float.epsilon < 1e-6 );
-    assert( abs( a.e.len - 1 ) < float.epsilon );
-}
-
-unittest
-{
-    vec!3 a;
-    assert( a );
-    a = vec!3( 1,2,3 );
-    assert( a );
-    a[0] = float.nan;
-    assert( !a );
-    assert( a[0] is float.nan );
-}
-
-unittest
-{
-    auto x = vec!3( 1, 0, 0 );
-    auto y = vec!3( 0, 1, 0 );
-    auto z = x * y;
-    assert( z.data == [ 0, 0, 1 ] );
-    assert( (x * z).data == [  0, -1, 0 ] );
-    assert( (y * z).data == [  1,  0, 0 ] );
-    assert( (z * y).data == [ -1,  0, 0 ] );
-    x *= y;
-    assert( x == z );
-}
-
-unittest
-{
-    auto pos = vec3( 1, 2, 3 );
-    assert( pos.x == 1 );
-    assert( pos.y == 2 );
-    assert( !is( typeof( pos.t ) ) );
-    pos.z = 10;
-    assert( pos.z == 10 );
-}
-
-unittest
-{
-    auto pos = vec3( 1, 2, 10 );
-    auto pxy = pos.xy;
-    assert( is( typeof( pxy ) == vec!(2,float,"xy") ) );
-    assert( pxy[0] == 1 && pxy[1] == 2 );
-    assert( pxy.x == 1 && pxy.y == 2 );
-    auto pxzz = pos.xzz;
-    assert( is( typeof( pxzz ) == vec!(3,float) ) );
-    assert( pxzz[0] == 1 && pxzz[1] == 10 && pxzz[2] == 10 );
-}
-
-unittest
-{
-    auto x = vec3(2,2,0);
-    auto y = vec3(0,1,0);
-    auto z = vec3(0,0,1);
-
-    auto px = vec3(2,4,.5);
-
-    auto g = px.rebase( x,y,z );
-
-    assert( g.x == 1 &&
-            g.y == 2 &&
-            g.z == .5 );
-}
-
-unittest
-{
-    auto x = vec2(1,2);
-    auto y = vec2(0,1);
-
-    auto px = vec2(1,4);
-    auto g = px.rebase( x,y );
-
-    assert( g.x == 1 && g.y == 2 );
-}
-
-unittest
-{
-    auto a = vec3( 1,2,3 );
-    auto b = ivec3( 2,3,4 );
-
-    auto c = a + b;
-    assert( is( typeof(c) == vec3 ) );
-
-    auto d = a ^ b;
-    assert( is( typeof(d) == float ) );
-
-    auto e = a * b;
-    assert( is( typeof(e) == vec3 ) );
-
-    auto f = b.elem!"/"( a );
-    assert( is( typeof(f) == ivec3 ) );
-
-    auto g = b * 2;
-    assert( is( typeof(g) == ivec3 ) );
-
-    auto i = b * 2.0;
-    assert( is( typeof(i) == ivec3 ) );
-
-    auto j = 2.0 * a;
-    assert( is( typeof(j) == vec3 ) );
-
-    a += j;
-    a *= i;
-
+    auto a = vec3(1,2,3);
+    auto b = ivec3(1,2,3);
     auto k = a.len2;
     assert( is( typeof(k) == float ) );
 
@@ -934,40 +571,66 @@ unittest
 
     assert( is( typeof( vec3( 1, 2, 3 ).e ) == vec3 ) );
     assert( abs( a.e.len - 1 ) < float.epsilon );
+}
 
-    a = b;
-    assert( a == b );
+unittest
+{
+    alias Vector!(3,cfloat) cvec3;
 
-    a.z = 10;
-    a.x = float.nan;
-    assert( !a );
+    auto a = cvec3( 1-1i, 2, 3i );
+    static assert( __traits(compiles, a.e) );
+    assert( !mustExcept({ auto k = a.e; }) );
+}
 
-    a[0] = 1;
-    assert( a );
+unittest
+{
+    alias Vector!(3,Vector!(3,float)) mat3;
+    auto a = mat3( vec3(1,0,0), vec3(0,1,0), vec3(0,0,1) );
 
-    auto x = vec3( 1,1,0 );
-    auto y = vec3( 0,1,1 );
-    auto z = vec3( 1,0,1 );
-    auto ra = a.rebase( x,y,z );
+    a *= 2;
+    a += a;
 
-    auto o1 = a.xy;
-    assert( is( typeof(o1) == vec!(2,float,"xy") ) );
+    assert( a[0][0] == 4 );
+    assert( a[1][1] == 4 );
+    assert( a[2][2] == 4 );
 
-    auto o2 = a.zx;
-    assert( is( typeof(o2) == vec!(2,float,"zx") ) );
+    assert( a[0][1] == 0 );
+    assert( a[1][2] == 0 );
+    assert( a[2][1] == 0 );
 
-    assert( !is( typeof( a.rgb ) ) );
+    a ^^= 2;
 
-    auto p = a.xxzzyzx;
-    assert( is( typeof(p) == vec!(7,float,"") ) );
+    assert( a[0][0] == 16 );
+    assert( a[1][1] == 16 );
+    assert( a[2][2] == 16 );
 
-    auto r = quat.fromAngle( PI_2, vec3(0,0,1) );
+    auto b = -a;
 
-    auto q1 = r.rot( vec3(1,0,0) );
-    assert( q1 == vec3( 0,1,0 ) );
+    assert( b[0][0] == -16 );
+    assert( b[1][1] == -16 );
+    assert( b[2][2] == -16 );
+}
 
-    auto q2 = r.inv.rot( vec3(1,0,0) );
-    assert( q2 == vec3( 0,-1,0 ) );
+unittest
+{
+    auto a = vecD(1,2,3);
+    auto b = a;
+    assert( eq(a,b) );
+    b[0] = 111;
+    assert( !eq(a,b) );
 
-    assert( is( typeof(q1) == vec3 ) );
+    vecD c;
+    c = b;
+    assert( eq(c,b) );
+    b[0] = 222;
+    assert( !eq(c,b) );
+}
+
+unittest
+{
+    auto a = vec3(1,2,3);
+    auto b = a;
+    assert( eq(a,b) );
+    b[0] = 111;
+    assert( !eq(a,b) );
 }

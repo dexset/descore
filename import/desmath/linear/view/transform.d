@@ -35,7 +35,7 @@ interface Transform
     {
         if( tr !is null )
             return tr.matrix;
-        return mat4.init;
+        return mat4.diag(1);
     }
 }
 
@@ -71,7 +71,7 @@ public:
     void recalc()
     {
         if( tform !is null ) mtr = tform.matrix;
-        else mtr = mat4.init;
+        else mtr = mat4.diag(1);
     }
 
     @property mat4 matrix() const { return mtr; }

@@ -28,6 +28,7 @@ import std.string;
 import std.conv; 
 import std.array;
 
+/+
 version(unittest) 
 { 
     private 
@@ -119,11 +120,11 @@ struct DMLValue
         chnode.rehash();
     }
 
-    static DMLValue load( in ubyte[] data )
+    static DMLValue load( in void[] data )
     { return parseDML(cast(string)data.idup); }
 
     auto dump() const
-    { return cast(immutable(ubyte)[])(writeDML(this).idup); }
+    { return cast(immutable(void)[])(writeDML(this).idup); }
 
     // FIXME: workaround 
     static private enum opEqualsStr = 
@@ -983,3 +984,4 @@ unittest
     auto dml2 = a.as!DMLValue;
     assert( dml == dml2 );
 }
++/

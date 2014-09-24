@@ -25,6 +25,7 @@ The MIT License (MIT)
 module desmath.method.calculus.integ;
 
 public import desmath.basic.traits;
+public import desmath.basic.mathstruct;
 
 T euler(T)( in T x, T delegate(in T,double) f, double time, double h )
     if( hasBasicMathOp!T )

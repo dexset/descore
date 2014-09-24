@@ -39,12 +39,12 @@ interface Node : Transform
 
         final
         {
-            vec3 baseX() { return vec3( matrix.col!(0).data[0 .. 3] ); }
-            vec3 baseY() { return vec3( matrix.col!(1).data[0 .. 3] ); }
-            vec3 baseZ() { return vec3( matrix.col!(2).data[0 .. 3] ); }
+            vec3 baseX() { return vec3( matrix.col(0).data[0 .. 3] ); }
+            vec3 baseY() { return vec3( matrix.col(1).data[0 .. 3] ); }
+            vec3 baseZ() { return vec3( matrix.col(2).data[0 .. 3] ); }
 
             /+ in parent system +/
-            vec3 offset() { return vec3( matrix.col!(3).data[0 .. 3] ); }
+            vec3 offset() { return vec3( matrix.col(3).data[0 .. 3] ); }
         }
     }
 }
@@ -53,7 +53,7 @@ final class DimmyNode : Node
 {
 private:
     Node _parent;
-    mat4 _matrix;
+    mat4 _matrix = mat4.diag(1);
 
 public:
     this( Node par = null ) { _parent = par; }
@@ -66,12 +66,7 @@ public:
         void parent( Node par ) { _parent = par; }
     }
 
-    void setOffset( vec3 pnt )
-    {
-        _matrix[0,3] = pnt.x;
-        _matrix[1,3] = pnt.y;
-        _matrix[2,3] = pnt.z;
-    }
+    void setOffset( in vec3 pnt ) { _matrix.setCol(3,vec4(pnt,1)); }
 }
 
 class TransformNode : Node
@@ -90,7 +85,7 @@ public:
         {
             if( transform !is null )
                 return transform.matrix;
-            else return mat4.init;
+            else return mat4.diag(1);
         }
 
         const(Node) parent() const { return _parent; }
