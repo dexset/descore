@@ -91,7 +91,19 @@ block:
 
     auto val = parseDML( dml );
 
-    printBlock( val.block.fff );
+    assert( val.value == "some string\nanother string" );
+    assert( val.a.b.c.x == "abc" );
+    assert( val.block.value == "value for this block\nit: is +a simple(value)\nappend block value" );
+    assert( val.block.array.length == 3 );
+    assert( val.block.array[0].value == "value for first elem of array" );
+    assert( val.block.array[0].array.length == 0 );
+    assert( val.block.array[0].dict.keys.length == 0 );
+    assert( val.block.fsub.abc.a == "1" );
+    assert( val.block.fsub.abc.b == "2" );
+    assert( val.block.fsub.bcd == "okda" );
+    assert( val.block.ssub.abc.a == "10" );
+    assert( val.block.fff.array.length == 2 );
+    assert( val.block.fff.abc.a == "1" );
 }
 
 void printBlock( Value block, string indent="" )

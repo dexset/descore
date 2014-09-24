@@ -102,10 +102,14 @@ class ParseNode
 
     Value getValue( Command.Subject subject )
     {
-        if( subject.type == Command.Subject.Type.FUNCTION )
+        if( subject.type == Command.Subject.Type.VALUE )
+        {
+            return Value( subject.str );
+        }
+        else if( subject.type == Command.Subject.Type.FUNCTION )
         {
             auto args = std.array.array( map!(a=>getValue(a))(subject.args) );
-            return callFunction( this, subject.name, args );
+            return callFunction( this, subject.str, args );
         }
         else if( subject.type == Command.Subject.Type.BLOCK )
             return resolveAddress( this, subject.addr ).compile();

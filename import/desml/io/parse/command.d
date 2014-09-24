@@ -20,13 +20,15 @@ struct Command
     {
         enum Type
         {
+            VALUE,
             BLOCK,
             FUNCTION
         }
 
         Type type;
 
-        string name;
+        string str;
+
         Subject[] args;
 
         BlockAddress[] addr;
