@@ -1,6 +1,6 @@
 ## Core part of D Extended Set library
 
-### des.util
+- ### des.util
 
     - testsuite utilites
     - external memory manager (EMM) interface
@@ -8,7 +8,7 @@
     - localization
     - helpers for math
 
-### des.math 
+- ### des.math 
 
     - linear algebra
     - combinatorics
@@ -16,10 +16,10 @@
     - interpolation
     - view camera
 
-### des.il -- minimal image library
+- ### des.il -- minimal image library
 
-### des.isys -- itelligence system
+- ### des.isys -- itelligence system
 
     - des.isys.neiro -- some neiro net realizations (layered with backprop)
 
-### des.flow -- multithreading wrapper
+- ### des.flow -- multithreading wrapper
