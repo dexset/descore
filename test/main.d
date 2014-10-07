@@ -1,8 +1,8 @@
 import std.stdio;
 
-import desutil;
-import desmath;
-import desil;
+import des.util;
+import des.math;
+import des.il;
 
 void main() 
 { 
