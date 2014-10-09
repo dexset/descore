@@ -74,6 +74,14 @@ private enum SEP = " ";
 
 pure @property string spaceSep(string str) { return str.split("").join(SEP); }
 
+private @property string zerosVectorData(size_t N)()
+{
+    string[] ret;
+    foreach( j; 0 .. N )
+        ret ~= format( "%d", 0 );
+    return "[" ~ ret.join(",") ~ "]";
+}
+
 struct Vector( size_t N, T, alias string AS="")
     if( isCompatibleArrayAccessString(N,AS,SEP) || AS.length == 0 )
 {
@@ -81,7 +89,12 @@ struct Vector( size_t N, T, alias string AS="")
     enum isStatic = N != 0;
 
     static if( isStatic ) 
-        T[N] data;
+    {
+        static if( isNumeric!T )
+            T[N] data = mixin( zerosVectorData!N );
+        else
+            T[N] data;
+    }
     else T[] data;
 
     alias data this;

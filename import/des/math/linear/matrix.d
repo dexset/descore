@@ -61,7 +61,6 @@ unittest
 private @property
 {
     import std.string;
-    import std.format;
 
     string identityMatrixDataString(size_t S)()
     { return diagMatrixDataString!(S,S)(1); }
