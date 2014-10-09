@@ -58,6 +58,43 @@ unittest
     static assert( !isDynamicMatrix!float );
 }
 
+private @property
+{
+    import std.string;
+    import std.format;
+
+    string identityMatrixDataString(size_t S)()
+    { return diagMatrixDataString!(S,S)(1); }
+
+    string zerosMatrixDataString(size_t H, size_t W)()
+    { return diagMatrixDataString!(H,W)(0); }
+
+    string diagMatrixDataString(size_t H, size_t W)( size_t val )
+    {
+        string[] ret;
+        foreach( i; 0 .. H )
+        {
+            string[] buf;
+            foreach( j; 0 .. W )
+                buf ~= format( "%d", i == j ? val : 0 );
+            ret ~= "[" ~ buf.join(",") ~ "]";
+        }
+        return "[" ~ ret.join(",") ~ "]";
+    }
+
+    unittest
+    {
+        assert( identityMatrixDataString!3 == "[[1,0,0],[0,1,0],[0,0,1]]" );
+        assert( zerosMatrixDataString!(3,3) == "[[0,0,0],[0,0,0],[0,0,0]]" );
+    }
+
+    string castArrayString(string type, size_t H, size_t W)()
+    {
+        return format( "cast(%s[%d][%d])", type, W, H );
+    }
+
+}
+
 struct Matrix(size_t H, size_t W, E)
 {
     alias Matrix!(H,W,E) selftype;
@@ -79,7 +116,16 @@ struct Matrix(size_t H, size_t W, E)
     enum isDynamicOne = isStaticWidthOnly || isStaticHeightOnly;
 
     static if( isStatic )
-        E[W][H] data;
+    {
+        static if( isNumeric!E )
+        {
+            static if( H == W )
+                E[W][H] data = mixin( castArrayString!("E",H,H) ~ identityMatrixDataString!H );
+            else 
+                E[W][H] data = mixin( castArrayString!("E",H,W) ~ zerosMatrixDataString!(H,W) );
+        }
+        else E[W][H] data;
+    }
     else static if( isStaticWidthOnly )
         E[W][] data;
     else static if( isStaticHeightOnly )
@@ -766,6 +812,13 @@ unittest
 
 unittest
 {
+    assert( eq( mat3.init, [[1,0,0],[0,1,0],[0,0,1]] ) );
+    assert( eq( mat2.init, [[1,0],[0,1]] ) );
+    assert( eq( mat2x3.init, [[0,0,0],[0,0,0]] ) );
+}
+
+unittest
+{
     auto a = mat3( 1,2,3,4,5,6,7,8,9 );
     assert( a.height == 3 );
     assert( a.width == 3 );
@@ -1153,7 +1206,7 @@ unittest
 unittest
 {
     auto stm = mat4();
-    assert( !stm );
+    assert( stm );
     auto dnm = matD();
     assert( dnm );
 }
