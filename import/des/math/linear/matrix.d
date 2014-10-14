@@ -1234,12 +1234,20 @@ unittest
 {
     auto q = quat.fromAngle( PI_2, vec3(0,0,1) );
 
-    /+ Issue 13417
-    auto m = quatToMatrix(q); // fails with dmd segfault
-    +/
-
-    auto m = quatToMatrix!float(q);
+    auto m = quatToMatrix(q);
     assert( eq( m, [[0,-1,0],
                     [1, 0,0],
                     [0, 0,1]] ));
+}
+
+unittest
+{
+    auto q = quat.fromAngle( PI_2, vec3(0,0,1) );
+
+    auto m = quatAndPosToMatrix(q, vec3(1,2,3) );
+    assert( eq( m, [[0,-1,0,1],
+                    [1, 0,0,2],
+                    [0, 0,1,3],
+                    [0, 0,0,1]] ));
+
 }
