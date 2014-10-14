@@ -725,7 +725,7 @@ pure:
     }
 }
 
-@property auto quatToMatrix(E)( Vector!(4,E,"i j k a") iq )
+auto quatToMatrix(E)( Vector!(4,E,"i j k a") iq )
 {
     auto q = iq / iq.len2;
 
@@ -741,6 +741,26 @@ pure:
     return Matrix!(3,3,E)( 1.0-(yy+zz),  xy-wz,        xz+wy,
                            xy+wz,        1.0-(xx+zz),  yz-wx,
                            xz-wy,        yz+wx,        1.0-(xx+yy) );
+}
+
+auto quatAndPosToMatrix(A,B,string AS)( in Vector!(4,A,"i j k a") iq, in Vector!(3,B,AS) pos )
+{
+    auto q = iq / iq.len2;
+
+    A wx, wy, wz, xx, yy, yz, xy, xz, zz, x2, y2, z2;
+
+    x2 = q.i + q.i;
+    y2 = q.j + q.j;
+    z2 = q.k + q.k;
+    xx = q.i * x2;   xy = q.i * y2;   xz = q.i * z2;
+    yy = q.j * y2;   yz = q.j * z2;   zz = q.k * z2;
+    wx = q.a * x2;   wy = q.a * y2;   wz = q.a * z2;
+
+    return Matrix!(4,4,A)( 1.0-(yy+zz),  xy-wz,        xz+wy,       pos.x,
+                           xy+wz,        1.0-(xx+zz),  yz-wx,       pos.y,
+                           xz-wy,        yz+wx,        1.0-(xx+yy), pos.z,
+                           0,            0,            0,           1     );
+
 }
 
 alias Matrix!(2,2,float) mat2;
