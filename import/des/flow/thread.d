@@ -107,6 +107,8 @@ public:
     void delListener( FThread th ) { com.listener.del( th.com.eventbus ); }
 }
 
+version(none)
+{
 unittest
 {
     static class TestElement : WorkElement
@@ -140,6 +142,7 @@ unittest
     Thread.sleep(dur!"usecs"(20));
     fth.pushCommand( Command.CLOSE );
     fth.join();
+}
 }
 
 private
