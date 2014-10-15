@@ -1,6 +1,7 @@
 module des.util.timer;
 
 import std.datetime;
+import core.thread;
 
 struct TimerCallback
 {
@@ -51,6 +52,12 @@ class Timer
         time = 0;
         foreach( cb; callback ) cb.reset();
         return r;
+    }
+
+    void restart( double s=0 )
+    {
+        cycle();
+        Thread.sleep( dur!"usecs"(cast(ulong)(s*1e6)) );
     }
 
     double hardReset()
