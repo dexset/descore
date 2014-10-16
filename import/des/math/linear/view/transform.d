@@ -39,6 +39,19 @@ interface Transform
     }
 }
 
+class SimpleTransform : Transform
+{
+protected:
+    mat4 mtr;
+
+public:
+    @property
+    {
+        mat4 matrix() const { return mtr; }
+        void matrix( in mat4 m ) { mtr = m; }
+    }
+}
+
 class TransformList : Transform
 {
     Transform[] list;
