@@ -128,8 +128,9 @@ protected:
 
 public:
 
-    this()
+    this( Node p=null )
     {
+        super(p);
         look_tr = new LookAtTransform;
         look_tr.up = vec3(0,0,1);
         transform = look_tr;
