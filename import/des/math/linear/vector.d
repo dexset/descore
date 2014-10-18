@@ -87,6 +87,7 @@ struct Vector( size_t N, T, alias string AS="")
 {
     enum isDynamic = N == 0;
     enum isStatic = N != 0;
+    enum dims = N;
 
     static if( isStatic ) 
     {
