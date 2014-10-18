@@ -197,38 +197,6 @@ mat4 calcPerspective( float fov_degree, float ratio, float znear, float zfar )
                  0, 0, -1, 0 );
 }
 
-version(none)
-{
-    mat4 calcPerspective( float fov_degree, float ratio, float znear, float zfar )
-    {
-                            /+ fov conv to radians and div 2 +/
-        float xymax = znear * tan( fov_degree * PI / 360.0 );
-        float ymin = -xymax;
-        float xmin = -xymax;
-
-        float width = xymax - xmin;
-        float height = xymax - ymin;
-
-        float depth = znear - zfar;
-        float q = (zfar + znear) / depth;
-        float dzn = 2.0 * znear;
-        float n = dzn * zfar / depth;
-
-        float w = dzn / ( width * ratio );
-        float h = dzn / height;
-
-        return mat4( w, 0,  0, 0,
-                    0, h,  0, 0,
-                    0, 0,  q, n,
-                    0, 0, -1, 0 );
-    }
-}
-
-//mat4 ortho( sz_vec sz, z_vec z )
-//{
-//    return ortho( sz.w, sz.h, z.n, z.f );
-//}
-
 mat4 calcOrtho( float w, float h, float znear, float zfar )
 {
     float x = znear - zfar;
