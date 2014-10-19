@@ -364,6 +364,10 @@ alias Vector!(2,int,"x y") ivec2;
 alias Vector!(3,int,"x y z") ivec3;
 alias Vector!(4,int,"x y z w") ivec4;
 
+alias Vector!(2,uint,"x y") uivec2;
+alias Vector!(3,uint,"x y z") uivec3;
+alias Vector!(4,uint,"x y z w") uivec4;
+
 alias Vector!(3,float,"r g b") col3;
 alias Vector!(4,float,"r g b a") col4;
 
