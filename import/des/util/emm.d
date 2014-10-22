@@ -54,6 +54,9 @@ interface ExternalMemoryManager
             return obj;
         }
 
+        T newEMM(T,Args...)( Args args )
+        { return registerChildEMM( new T(args) ); }
+
         void destroy()
         {
             foreach( cemm; childEMM )
