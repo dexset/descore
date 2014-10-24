@@ -66,27 +66,34 @@ nothrow
     void log_trace(string m=__MODULE__, Args...)( Args args ) { __log( m, __ts, LogLevel.TRACE, args ); }
 }
 
-private @property ulong __ts() { return Clock.currAppTick().length; }
+private nothrow @property ulong __ts()
+{
+    try return Clock.currAppTick().length;
+    catch(Exception e) return 0;
+}
 
 private nothrow void __log(Args...)( string emmiter, ulong timestamp, LogLevel level, Args args )
 {
     try
     {
-        auto fmt = "[%016d][%5s][%s]: %s";
+        auto fmt = "[%016.9f][%5s][%s]: %s";
         auto msg = message( args );
         if( rule.allow(emmiter) >= level )
         {
             if( level < LogLevel.INFO )
-                stderr.writefln( fmt, timestamp, level, emmiter, msg );
+                stderr.writefln( fmt, timestamp / 1e9f, level, emmiter, msg );
             else
-                stdout.writefln( fmt, timestamp, level, emmiter, msg );
+                stdout.writefln( fmt, timestamp / 1e9f, level, emmiter, msg );
         }
     }
     catch(Exception e)
-        return "[INTERNAL LOG EXCEPTION]: " ~ e.msg;
+    {
+        try stderr.writefln( "[INTERNAL LOG EXCEPTION]: %s", e );
+        catch(Exception){}
+    }
 }
 
-nothrow string message(Args...)( Args args )
+string message(Args...)( Args args )
 {
     static if( is( Args[0] == string ) )
         return format( args );
