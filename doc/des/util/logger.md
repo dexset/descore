@@ -33,6 +33,14 @@ If start program as `./program --log debug` output must be like this (without tr
 ```
 
 Flag `--log` used for setting max level of logging output.
-Default level is 'error'. If log function called with greater level it's skipped.
+Default level is `error`. If log function called with greater level it's skipped.
 Level has attitude `off < error < warn < info < debug < trace`.
 
+Flag `--log` may used with module name `./program --log draw.point:debug`.
+It's set `debug` level for module `draw.point` and default to other.
+
+Flag `--log-use-min` is boolean flag. It makes logging system skips output from
+all child modules if their level greater that parent. Default is `false`.
+
+`./program --log info --log draw.point:trace --log-use-min=true` 
+skips all `log_trace` and `log_debug` from whole program.
