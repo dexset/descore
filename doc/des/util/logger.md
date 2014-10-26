@@ -18,9 +18,7 @@ void log_trace(Args...)( Args args );
 ...
 ```
 
-If start program as `./program --log trace`
-
-output must be like this
+If start program as `./program --log trace` output must be like this
 
 ```
 [000000.111427128][ INFO][module.function]: format str 3.14 4
@@ -28,11 +26,7 @@ output must be like this
 [000000.111938579][TRACE][module.function]: 12
 ```
 
-If start program as
-
-`./program --log debug`
-
-output must be like this (without trace)
+If start program as `./program --log debug` output must be like this (without trace)
 
 ```
 [000000.111427128][ INFO][module.function]: format str 3.14 4
