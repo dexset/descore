@@ -93,6 +93,16 @@ private nothrow void __log(Args...)( string emmiter, ulong timestamp, LogLevel l
     }
 }
 
+nothrow string ntformat(Args...)( Args args )
+{
+    try return format( args );
+    catch(Exception e)
+    {
+        try return format( "[NTFORMAT EXCEPTION]: %s", e );
+        catch(Exception e) return "[NTFORMAT !!!FATAL!!! ERROR]";
+    }
+}
+
 string message(Args...)( Args args )
 {
     static if( is( Args[0] == string ) )
@@ -110,7 +120,7 @@ private class Rule
 {
     Rule parent;
 
-    LogLevel level = LogLevel.OFF;
+    LogLevel level = LogLevel.ERROR;
     Rule[string] inner;
 
     bool use_minimal = true;
@@ -218,7 +228,7 @@ static this()
     {
         getopt( args,
                 "log", &logging,
-                "log-use-minimal", &useMinimal,
+                "log-use-min", &useMinimal,
               );
     }
     catch( Exception e ) stderr.writefln( "bad log arguments: %s", e.msg );
