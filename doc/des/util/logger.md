@@ -42,5 +42,80 @@ It's set `debug` level for module `draw.point` and default to other.
 Flag `--log-use-min` is boolean flag. It makes logging system skips output from
 all child modules if their level greater that parent. Default is `false`.
 
-`./program --log info --log draw.point:trace --log-use-min=true` 
-skips all `log_trace` and `log_debug` from whole program.
+`./program --log trace --log draw:info --log draw.point:trace --log-use-min=true` 
+skips all `log_trace` and `log_debug` from whole draw.point, and not skip from
+other modules.
+
+`./program --log trace --log draw:info --log draw.point:trace` allow `log_trace`
+and `log_debug` only from `draw.point` from module `draw`. For other modules in
+`draw` sets level `info`
+
+### Class logging
+
+Module des.util.logger provides some functional for useful logging classes.
+
+Example:
+
+```d
+module x;
+import des.util.logger;
+class A
+{
+    mixin AnywayLogger;
+    void func() { logger.trace( "hello" ); }
+}
+```
+
+```d
+module y;
+import x;
+class B : A { }
+```
+
+```d
+...
+    auto b = new B;
+...
+    b.func();
+...
+```
+
+outputs `[000000.148628473][TRACE][x.A.func]: hello`
+
+If create instance logger 
+
+```d
+module y;
+import x;
+class B : A { this(){ logger = new InstanceLogger(this); } }
+```
+outputs `[000000.148628473][TRACE][y.B.func]: hello`
+
+If create instance logger with instance name
+
+```d
+module y;
+import x;
+class B : A { this(){ logger = new InstanceLogger(this,"my object"); } }
+```
+outputs `[000000.148628473][TRACE][y.B.[my object].func]: hello`
+
+If create instance full logger
+
+```d
+module y;
+import x;
+class B : A { this(){ logger = new InstanceFullLogger(this); } }
+```
+outputs `[000000.148628473][TRACE][y.B.[x.A.func]]: hello`
+
+If create instance full logger with name
+
+```d
+module y;
+import x;
+class B : A { this(){ logger = new InstanceFullLogger(this,"name"); } }
+```
+outputs `[000000.148628473][TRACE][y.B.[name].[x.A.func]]: hello`
+
+Flag `--log` can get full emitter string `y.B.[name].[x.A.func]`.
