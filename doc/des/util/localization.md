@@ -20,4 +20,4 @@ void main()
     example:
     `hello : привет`
 0. run program
-0. when program call `!"hello"`it returns `"привет"w`
+0. when program call `_!"hello"`it returns `"привет"w`
