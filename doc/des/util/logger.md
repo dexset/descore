@@ -111,3 +111,6 @@ class B : A { this(){ logger = new InstanceFullLogger(this,"name"); } }
 outputs `[000000.148628473][TRACE][y.B.[name].[x.A.func]]: hello`
 
 Flag `--log` can get full emitter string `y.B.[name].[x.A.func]`.
+```
+./program --log y.B.[one]:trace --log y.B.[two]:debug
+```
