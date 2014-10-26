@@ -2,11 +2,11 @@
 
 - ### des.util
 
-    - testsuite utilites
     - external memory manager (EMM) interface
+    - logger
     - signal-slot structs
     - localization
-    - helpers for math
+    - testsuite utilites
 
 - ### des.math 
 
