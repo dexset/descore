@@ -31,9 +31,9 @@ import std.range;
 import std.array;
 import std.exception;
 
-import des.util.flatdata;
 import des.util.testsuite;
 
+import des.math.util;
 import des.math.linear.vector;
 import des.math.basic.traits;
 

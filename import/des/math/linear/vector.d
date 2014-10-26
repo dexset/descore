@@ -32,8 +32,8 @@ import std.exception;
 import std.string;
 
 import des.util.testsuite;
-import des.util.accessstring;
-import des.util.flatdata;
+
+import des.math.util;
 
 version(unittest) import std.stdio;
 

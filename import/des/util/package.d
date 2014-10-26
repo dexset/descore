@@ -1,17 +1,18 @@
 module des.util;
 
-public import des.util.accessstring;
-public import des.util.algo;
-public import des.util.colorparse;
-public import des.util.emm;
-public import des.util.flatdata;
-public import des.util.helpers;
-public import des.util.localization;
-public import des.util.logger;
-public import des.util.pdata;
-public import des.util.pseudointerface;
-public import des.util.signal;
-public import des.util.socket;
-public import des.util.string;
-public import des.util.testsuite;
-public import des.util.timer;
+public
+{
+    import des.util.algo;
+    import des.util.colorparse;
+    import des.util.emm;
+    import des.util.helpers;
+    import des.util.localization;
+    import des.util.logger;
+    import des.util.pdata;
+    import des.util.pseudointerface;
+    import des.util.signal;
+    import des.util.socket;
+    import des.util.string;
+    import des.util.testsuite;
+    import des.util.timer;
+}

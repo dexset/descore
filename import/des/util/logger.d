@@ -28,6 +28,7 @@ import std.stdio;
 import std.string;
 import std.conv;
 import std.datetime;
+import std.traits;
 
 import std.algorithm;
 
@@ -43,27 +44,119 @@ enum LogLevel
 
 struct LogMessage
 {
-    LogLevel level;
+    string emitter;
     ulong ts;
-    string emmiter;
+    LogLevel level;
     string message;
 
-    this( LogLevel ll, string em, string msg )
+    @disable this();
+
+    pure nothrow @safe this( string emitter, ulong ts,
+                             LogLevel level, string message )
     {
-        ts = Clock.currAppTick().length;
-        level = ll;
-        emmiter = em;
-        message = msg;
+        this.emitter = emitter;
+        this.ts = ts;
+        this.level = level;
+        this.message = message;
     }
 }
 
-nothrow
+string formatLogMessage( in LogMessage lm )
 {
-    void log_error(string m=__MODULE__, Args...)( Args args ) { __log( m, __ts, LogLevel.ERROR, args ); }
-    void log_warn (string m=__MODULE__, Args...)( Args args ) { __log( m, __ts, LogLevel.WARN,  args ); }
-    void log_info (string m=__MODULE__, Args...)( Args args ) { __log( m, __ts, LogLevel.INFO,  args ); }
-    void log_debug(string m=__MODULE__, Args...)( Args args ) { __log( m, __ts, LogLevel.DEBUG, args ); }
-    void log_trace(string m=__MODULE__, Args...)( Args args ) { __log( m, __ts, LogLevel.TRACE, args ); }
+    auto fmt = "[%016.9f][%5s][%s]: %s";
+    return format( fmt, lm.ts / 1e9f, lm.level, lm.emitter, lm.message );
+}
+
+mixin template AnywayLogger()
+{
+    private Logger __logger;
+    protected nothrow final @property
+    {
+        const(Logger) logger() const
+        {
+            static import des.util.logger;
+            if( __logger is null )
+                return des.util.logger.simple_logger;
+            else return __logger;
+        }
+        void logger( Logger lg ) { __logger = lg; }
+    }
+}
+
+abstract class Logger
+{
+    mixin( getLogFunctions( "", "__log", "procFuncName", true ) );
+protected:
+    nothrow string procFuncName( string name ) const
+    in{ assert( name.length ); }
+    out(ret){ assert( ret.length ); }
+    body { return name; }
+}
+
+private class SimpleLogger : Logger {}
+
+SimpleLogger simple_logger;
+
+class InstanceLogger : Logger
+{
+protected:
+    string class_name;
+    string inst_name;
+
+public:
+    this( Object obj, string inst="" )
+    {
+        class_name = typeid(obj).name;
+        inst_name = inst;
+    }
+
+    nothrow @property
+    {
+        void instance( string i ) { inst_name = i; }
+        string instance() const { return inst_name; }
+    }
+
+protected:
+
+    override nothrow string procFuncName( string name ) const
+    {
+        try return fullEmitterName ~ "." ~ name.split(".")[$-1];
+        catch(Exception e) return fullEmitterName;
+    }
+
+    nothrow @property string fullEmitterName() const
+    { return class_name ~ (inst_name.length?".["~inst_name~"]":""); }
+}
+
+class InstanceFullLogger : InstanceLogger
+{
+    public this( Object obj, string inst="" ) { super(obj,inst); }
+    protected override nothrow string procFuncName( string name ) const
+    { return fullEmitterName ~ ".[" ~ name ~ "]"; }
+}
+
+mixin( getLogFunctions( "log_", "__log" ) );
+
+private string getLogFunctions( string prefix, string baselog, string emitterProc="", bool isConst=false )
+{
+    string fnc = `
+    nothrow void %s%s(string fnc=__FUNCTION__,Args...)( Args args )%s
+    { %s( LogMessage( %s, __ts, LogLevel.%s, toMessage(args) ) ); }
+    `;
+
+    string emitter = emitterProc ? emitterProc ~ "(fnc)" : "fnc";
+
+    string ret;
+    foreach( lvl; [EnumMembers!LogLevel] )
+    {
+        if( lvl == LogLevel.OFF ) continue;
+        auto slvl = to!string(lvl);
+        auto fname = slvl.toLower;
+        if( fname == "debug" && prefix.length == 0 ) fname = "Debug";
+        ret ~= format( fnc, prefix, fname, isConst?" const":"",
+                baselog, emitter, slvl );
+    }
+    return ret;
 }
 
 private nothrow @property ulong __ts()
@@ -72,18 +165,16 @@ private nothrow @property ulong __ts()
     catch(Exception e) return 0;
 }
 
-private nothrow void __log(Args...)( string emmiter, ulong timestamp, LogLevel level, Args args )
+private nothrow void __log( in LogMessage lm )
 {
     try
     {
-        auto fmt = "[%016.9f][%5s][%s]: %s";
-        auto msg = message( args );
-        if( rule.allow(emmiter) >= level )
+        if( log_rule.allow(lm.emitter) >= lm.level )
         {
-            if( level < LogLevel.INFO )
-                stderr.writefln( fmt, timestamp / 1e9f, level, emmiter, msg );
+            if( lm.level < LogLevel.INFO )
+                stderr.writeln( formatLogMessage( lm ) );
             else
-                stdout.writefln( fmt, timestamp / 1e9f, level, emmiter, msg );
+                stdout.writeln( formatLogMessage( lm ) );
         }
     }
     catch(Exception e)
@@ -93,37 +184,36 @@ private nothrow void __log(Args...)( string emmiter, ulong timestamp, LogLevel l
     }
 }
 
-nothrow string ntformat(Args...)( Args args )
+nothrow string toMessage(Args...)( Args args )
 {
-    try return format( args );
+    try
+    {
+        static if( is( Args[0] == string ) )
+            return format( args );
+        else
+        {
+            string res;
+            foreach( arg; args )
+                res ~= to!string(arg);
+            return res;
+        }
+    } 
     catch(Exception e)
-    {
-        try return format( "[NTFORMAT EXCEPTION]: %s", e );
-        catch(Exception e) return "[NTFORMAT !!!FATAL!!! ERROR]";
-    }
-}
-
-string message(Args...)( Args args )
-{
-    static if( is( Args[0] == string ) )
-        return format( args );
-    else
-    {
-        string res;
-        foreach( arg; args )
-            res ~= to!string(arg);
-        return res;
-    }
+        return "[MESSAGE CTOR EXCEPTION]: " ~ e.msg;
 }
 
 private class Rule
 {
+protected:
     Rule parent;
 
     LogLevel level = LogLevel.ERROR;
     Rule[string] inner;
 
     bool use_minimal = true;
+
+public:
+    this( Rule parent = null ) { this.parent = parent; }
 
     @property bool useMinimal() const
     {
@@ -132,40 +222,21 @@ private class Rule
         else return use_minimal;
     }
 
-    this( Rule parent = null ) { this.parent = parent; }
-
-    string[2] splitAddress( string emmiter )
+    void setLevel( LogLevel lvl, string emitter="" )
     {
-        auto addr = emmiter.split(".");
-        if( addr.length == 0 ) return ["",""];
-        if( addr.length == 1 ) return [addr[0],""];
-        
-        return [ addr[0], addr[1..$].join(".") ];
-    }
-
-    void setLevel( LogLevel lvl, string emmiter="" )
-    {
-        auto addr = splitAddress( emmiter );
-
+        auto addr = splitAddress( emitter );
         if( addr[0].length == 0 ) { level = lvl; return; }
-
         auto iname = addr[0];
-
         if( iname !in inner ) inner[iname] = new Rule(this);
-
         inner[iname].setLevel( lvl, addr[1] );
     }
 
-    LogLevel allow( string emmiter="" )
+    LogLevel allow( string emitter="" )
     {
-        auto addr = splitAddress( emmiter );
-
+        auto addr = splitAddress( emitter );
         if( addr[0].length == 0 ) return level;
-
         auto iname = addr[0];
-
         if( iname !in inner ) return level;
-
         if( useMinimal )
             return min( level, inner[iname].allow( addr[1] ) );
         else
@@ -178,6 +249,17 @@ private class Rule
         foreach( key, val; inner )
             ret ~= format( "\n%s%s : %s", offset, key, val.print( offset ~ mlt(" ",key.length) ) );
         return ret;
+    }
+
+protected:
+
+    static string[2] splitAddress( string emitter )
+    {
+        auto addr = emitter.split(".");
+        if( addr.length == 0 ) return ["",""];
+        if( addr.length == 1 ) return [addr[0],""];
+        
+        return [ addr[0], addr[1..$].join(".") ];
     }
 }
 
@@ -210,7 +292,7 @@ unittest
     assert( r.allow("des.gl") == LogLevel.TRACE );
 }
 
-private Rule rule;
+private Rule log_rule;
 
 static this()
 {
@@ -218,7 +300,8 @@ static this()
     import std.stdio;
     import std.file;
 
-    rule = new Rule;
+    log_rule = new Rule;
+    simple_logger = new SimpleLogger;
 
     auto args = thisExePath ~ Runtime.args;
     string[] logging;
@@ -233,14 +316,14 @@ static this()
     }
     catch( Exception e ) stderr.writefln( "bad log arguments: %s", e.msg );
 
-    rule.use_minimal = useMinimal;
+    log_rule.use_minimal = useMinimal;
 
     foreach( ln; logging )
     {
         auto sp = ln.split(":");
         if( sp.length == 1 )
         {
-            try rule.setLevel( toLogLevel( sp[0] ) );
+            try log_rule.setLevel( toLogLevel( sp[0] ) );
             catch( Exception e )
                 stderr.writefln( "log argument '%s' can't conv to LogLevel: %s", ln, e.msg );
         }
@@ -249,7 +332,7 @@ static this()
             try
             {
                 auto level = toLogLevel( sp[1] );
-                rule.setLevel( level, sp[0] );
+                log_rule.setLevel( level, sp[0] );
             }
             catch( Exception e )
                 stderr.writefln( "log argument '%s' can't conv '%s' to LogLevel: %s", ln, sp[1], e.msg );
@@ -257,8 +340,8 @@ static this()
         else stderr.writefln( "bad log argument: %s" );
     }
 
-    writeln( "[log use minimal]: ", useMinimal );
-    writeln( "[log rules]:\n", rule.print() );
+    writeln( "[log use min]: ", useMinimal );
+    writeln( "[log rules]:\n", log_rule.print() );
 }
 
 LogLevel toLogLevel( string s ) { return to!LogLevel( s.toUpper ); }
