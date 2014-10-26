@@ -39,7 +39,6 @@ output must be like this (without trace)
 ```
 
 Flag `--log` used for setting max level of logging output.
-Default level is 'error'. If log function called with greater level this not pass.
-
-error < warn < info < debug < trace
+Default level is 'error'. If log function called with greater level it's skipped.
+Level has attitude `off < error < warn < info < debug < trace`.
 
