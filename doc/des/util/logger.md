@@ -85,8 +85,6 @@ outputs `[000000.148628473][TRACE][x.A.func]: hello`
 If create instance logger 
 
 ```d
-module y;
-import x;
 class B : A { this(){ logger = new InstanceLogger(this); } }
 ```
 outputs `[000000.148628473][TRACE][y.B.func]: hello`
@@ -94,8 +92,6 @@ outputs `[000000.148628473][TRACE][y.B.func]: hello`
 If create instance logger with instance name
 
 ```d
-module y;
-import x;
 class B : A { this(){ logger = new InstanceLogger(this,"my object"); } }
 ```
 outputs `[000000.148628473][TRACE][y.B.[my object].func]: hello`
@@ -103,8 +99,6 @@ outputs `[000000.148628473][TRACE][y.B.[my object].func]: hello`
 If create instance full logger
 
 ```d
-module y;
-import x;
 class B : A { this(){ logger = new InstanceFullLogger(this); } }
 ```
 outputs `[000000.148628473][TRACE][y.B.[x.A.func]]: hello`
@@ -112,8 +106,6 @@ outputs `[000000.148628473][TRACE][y.B.[x.A.func]]: hello`
 If create instance full logger with name
 
 ```d
-module y;
-import x;
 class B : A { this(){ logger = new InstanceFullLogger(this,"name"); } }
 ```
 outputs `[000000.148628473][TRACE][y.B.[name].[x.A.func]]: hello`
