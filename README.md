@@ -2,7 +2,7 @@
 
 - ### des.util
 
-    - [doc/util/emm](external memory manager interface)
+    - [external memory manager (EMM) interface](doc/util/emm)
     - logger
     - signal-slot structs
     - localization
