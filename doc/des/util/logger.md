@@ -26,6 +26,9 @@ If start program as `./program --log trace` output must be like this
 [000000.111938579][TRACE][module.function]: 12
 ```
 
+If log function get string as first argument it try to format other args to this
+string, if it failed print converted to string and concatenated args.
+
 If start program as `./program --log debug` output must be like this (without trace)
 
 ```
