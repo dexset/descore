@@ -374,9 +374,15 @@ alias Vector!(4,float,"r g b a") col4;
 alias Vector!(3,ubyte,"r g b") ubcol3;
 alias Vector!(4,ubyte,"r g b a") ubcol4;
 
-alias Vector!(0,float) vecD;
-alias Vector!(0,int) ivecD;
+alias Vector!(0,byte)   bvecD;
+alias Vector!(0,ubyte) ubvecD;
+alias Vector!(0,int)    ivecD;
+alias Vector!(0,uint)  uivecD;
+alias Vector!(0,long)   lvecD;
+alias Vector!(0,ulong) ulvecD;
+alias Vector!(0,float)   vecD;
 alias Vector!(0,double) dvecD;
+alias Vector!(0,real)   rvecD;
 
 unittest
 {
