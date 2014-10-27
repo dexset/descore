@@ -17,7 +17,7 @@
         - matrix
         - segment
         - polygon
-        - view camera
+        - camera view
 
     - combinatorics
     - differentials
