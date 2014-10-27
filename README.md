@@ -3,9 +3,9 @@
 - ### des.util
 
     - [external memory manager (EMM) interface](doc/des/util/emm.md)
-    - logger
-    - signal-slot structs
-    - localization
+    - [logger](doc/des/util/logger.md)
+    - [signal-slot structs](doc/des/util/signal.md)
+    - [localization](doc/des/util/localization.md)
     - testsuite utilites
 
 - ### des.math 

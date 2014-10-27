@@ -20,5 +20,5 @@ void main()
     setTranslatePath( "data" );
     Translator.setLocalization( "ru" );
 
-    writeln( _!"hello" );
+    assert( _!"hello" == "привет"w, "tranlation not complite" );
 }
