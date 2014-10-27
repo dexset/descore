@@ -6,7 +6,8 @@
     - [logger](doc/des/util/logger.md)
     - [signal-slot structs](doc/des/util/signal.md)
     - [localization](doc/des/util/localization.md)
-    - testsuite utilites
+    - [testsuite utilites](doc/des/util/testsuite.md)
+    - [pure data](doc/des/util/pdata.md)
 
 - ### des.math 
 
