@@ -12,10 +12,16 @@
 - ### des.math 
 
     - linear algebra
+
+        - vector
+        - matrix
+        - segment
+        - polygon
+        - view camera
+
     - combinatorics
     - differentials
     - interpolation
-    - view camera
 
 - ### des.il -- minimal image library
 
