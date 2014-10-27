@@ -286,11 +286,11 @@ pure:
     {
         static assert( isFloatingPoint!T, "quaterni must be floating point vector" );
 
-        static selftype fromAngle(E,alias string bs)( T alpha, in Vector!(3,E,bs) b )
+        static selftype fromAngle(E,alias string bs)( T alpha, in Vector!(3,E,bs) axis )
             if( isFloatingPoint!E )
         { 
             T a = alpha / cast(T)(2.0);
-            return selftype( b * sin(a), cos(a) ); 
+            return selftype( axis * sin(a), cos(a) );
         }
 
         /++ quaterni mul +/
@@ -312,11 +312,12 @@ pure:
             return Vector!(K,T,bs)( res.ijk );
         }
 
-        @property {
-            T norm() const { return dot(this,this); }
-            T mag() const { return sqrt( norm ); }
-            auto con() const { return selftype( -this.ijk, this.a ); }
-            auto inv() const { return con / norm; }
+        const @property
+        {
+            T norm() { return dot(this,this); }
+            T mag() { return sqrt( norm ); }
+            auto con() { return selftype( -this.ijk, this.a ); }
+            auto inv() { return con / norm; }
         }
     }
 }
