@@ -303,6 +303,8 @@ private:
 
     void s_store()
     {
+        if( used_keys.length == 0 ) return;
+
         if( dict_loader is null )
         {
             log_error( "dictionary loader not setted: no store" );
