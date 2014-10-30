@@ -7,7 +7,9 @@ struct Vector( size_t N, T, alias string AS="")
 
 Vector can be dynamic (N=0) and static (N>0).
 
-Vector has aliases and enum (static fields):
+Vector has `alias data this` and can used as array.
+
+Vector has aliases and enums (static fields):
 
 ```d
 alias Vector!(3,float,"x y z") vec3;
@@ -32,6 +34,8 @@ assert( !__traits(__compiles,vecD.length) ); // for dynamic its a property
 auto a = vecD(1,2);
 assert( a.length == 2 );
 ```
+Static vector inits by zeros if `isNumeric!datatype`
+
 Vector can construct with different ways:
 
 - from single values

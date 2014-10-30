@@ -238,7 +238,7 @@ pure:
     auto fillDiag( in E[] vals... )
     {
         enforce( vals.length > 0, "no vals to fill" );
-        static if( isDynamic ) enforce( height == width, "not squared" );
+        enforce( height == width, "not squared" );
         size_t k = 0;
         foreach( i; 0 .. height )
             data[i][i] = vals[k++%$];
