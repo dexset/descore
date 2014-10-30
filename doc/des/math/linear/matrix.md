@@ -184,11 +184,11 @@ Matrix!(4,4,E) quatAndPosToMatrix(A,B,string AS)( in Vector!(4,A,"i j k a") iq, 
 
 and some aliases `alias Matrix!(<H>,<W>,<Type>) <T>mat<H>x<W>`
 
-    - `<T>` type id, associated with `<Type>` as:
+- `<T>` type id, associated with `<Type>` as:
 
-        - NoID : `float`
-        - `d`  : `double`
-        - `r`  : `real`
+    - NoID : `float`
+    - `d`  : `double`
+    - `r`  : `real`
 
-    - `<H>` - `size_t` - matrix height
-    - `<W>` - `size_t` - matrix widht
+- `<H>` - `size_t` - matrix height
+- `<W>` - `size_t` - matrix widht
