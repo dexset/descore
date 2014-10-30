@@ -84,18 +84,18 @@ Provides some aliases:
 
 `alias Vector!(<N>,<Type>,<Access>) <T>vec<N>` where:
 
-    - `<N>` - `size_t` - element count [0,2,3,4,D] where `D` is dynamic
-    - `<T>` type id, associated with `<Type>` as:
+- `<N>` - `size_t` - element count [0,2,3,4,D] where `D` is dynamic
+- `<T>` type id, associated with `<Type>` as:
 
-        - NoID : `float`
-        - `d`  : `double`
-        - `r`  : `real`
-        - `i`  : `int`
-        - `ui` : `uint`
-        - `b`  : `byte`
-        - `ub` : `ubyte`
+    - NoID : `float`
+    - `d`  : `double`
+    - `r`  : `real`
+    - `i`  : `int`
+    - `ui` : `uint`
+    - `b`  : `byte`
+    - `ub` : `ubyte`
 
-    - `<Access>` only for static "x y z w"[0..N]
+- `<Access>` only for static "x y z w"[0..N]
 
 Example:
 ```d
