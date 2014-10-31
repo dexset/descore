@@ -214,6 +214,6 @@ auto obj = new SomeDrawObject;
 auto tr = cam(obj);
 
 // and now you can
-someAPI_setTransform(tr);
-drawObject( obj );
+someAPI_setTransform( tr );
+someAPI_drawObject( obj );
 ```
