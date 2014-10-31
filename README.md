@@ -15,7 +15,7 @@
 
         - [vector](doc/des/math/linear/vector.md)
         - [matrix](doc/des/math/linear/matrix.md)
-        - [segment](doc/des/math/segment.md)
+        - [segment](doc/des/math/linear/segment.md)
         - polygon
         - [camera view](doc/des/math/linear/view.md)
 
