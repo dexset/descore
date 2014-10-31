@@ -194,12 +194,9 @@ public propertyes (meaning same in `LookAtTransform` and
 
 class SomeDrawObject : Node
 {
-    ...
-
     protected mat4 mtr;
 
     ...
-
 
     const @property
     {
