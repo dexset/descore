@@ -19,7 +19,7 @@
         - polygon
         - [camera view](doc/des/math/linear/view.md)
 
-    - combinatorics
+    - [combinatorics](doc/des/math/combin.md)
     - [some math methods](doc/des/math/method.md)
 
 - ### des.il -- minimal image library
