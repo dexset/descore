@@ -27,6 +27,8 @@ module des.math.method.calculus.integ;
 public import des.math.basic.traits;
 public import des.math.basic.mathstruct;
 
+import std.math;
+
 T euler(T)( in T x, T delegate(in T,double) f, double time, double h )
     if( hasBasicMathOp!T )
 {
@@ -82,7 +84,6 @@ unittest
 
     Pos acc( in Pos p )
     {
-        import std.math;
         return Pos( -(p.x * abs(p.x)), -(p.y * abs(p.y)) );
     }
 

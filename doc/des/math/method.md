@@ -130,6 +130,37 @@ Provides 2 methods:
 - `T runge(T)( in T x, T delegate(in T,double) f, double time, double h ) if( hasBasicMathOp!T )` -
     RK4
 
+Example:
+
+```d
+struct Pos
+{
+    double x=0, y=0;
+    mixin( BasicMathOp!"x y" );
+}
+
+struct Point
+{
+    Pos pos, vel;
+    mixin( BasicMathOp!"pos vel" );
+}
+
+Pos acc( in Pos p ) { return Pos( -(p.x * abs(p.x)), -(p.y * abs(p.y)) ); }
+
+Point rpart( in Point p, double time ) { return Point( p.vel, acc(p.pos) ); }
+
+auto state1 = Point( Pos(50,10), Pos(5,15) );
+auto state2 = Point( Pos(50,10), Pos(5,15) );
+
+double t = 0, ft = 10, dt = 0.01;
+
+foreach( i; 0 .. cast(size_t)(ft/dt) )
+{
+    state1 = euler( state1, &rpart, t+=dt, dt );
+    state2 = runge( state2, &rpart, t+=dt, dt );
+}
+```
+
 ### `math.method.stat.randn`
 
 Provides normal distibution
