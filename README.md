@@ -13,15 +13,14 @@
 
     - linear algebra
 
-        - vector
-        - matrix
-        - segment
+        - [vector](doc/des/math/linear/vector.md)
+        - [matrix](doc/des/math/linear/matrix.md)
+        - [segment](doc/des/math/segment.md)
         - polygon
-        - camera view
+        - [camera view](doc/des/math/linear/view.md)
 
     - combinatorics
-    - differentials
-    - interpolation
+    - [some math methods](doc/des/math/method.md)
 
 - ### des.il -- minimal image library
 
