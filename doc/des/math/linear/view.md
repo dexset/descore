@@ -211,7 +211,9 @@ class SomeDrawObject : Node
 auto cam = new SimpleCamera;
 auto obj = new SomeDrawObject;
 
-auto full_transform = cam(obj);
-```
+auto tr = cam(obj);
 
-you can set `full_transform` matrix to shader for example
+// and now you can
+someAPI_setTransform(tr);
+drawObject( obj );
+```
