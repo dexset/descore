@@ -1,4 +1,4 @@
-### Module view
+## Module view
 
 Package view provides 4 modules:
 
@@ -130,7 +130,7 @@ public methods:
 
 #### `class LookAtNodeTransform : ResolveTransform`
 
-can use `Node` instead of `vec3`
+use `Node` instead of `vec3`
 
 public fields:
 
@@ -187,3 +187,31 @@ public propertyes (meaning same in `LookAtTransform` and
 - `vec3 up() const`
 - `void target( in vec3 val )`
 - `vec3 target() const`
+
+## Using example
+
+```d
+
+class SomeDrawObject : Node
+{
+    ...
+
+    protected mat4 mtr;
+
+    ...
+
+
+    const @property
+    {
+        mat4 matrix() { return mtr; }
+        const(Node) parent() { return null; } // always no parent, world coord sys
+    }
+}
+
+auto cam = new SimpleCamera;
+auto obj = new SomeDrawObject;
+
+auto full_transform = cam(obj);
+```
+
+you can set `full_transform` matrix to shader for example
