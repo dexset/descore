@@ -62,7 +62,7 @@ public:
 
 class LookAtTransform : Transform
 {
-    vec3 pos=vec3(0), target=vec3(0), up=vec3(0);
+    vec3 pos=vec3(0), target=vec3(0), up=vec3(0,0,1);
     @property mat4 matrix() const
     { return calcLookAt( pos, target, up ); }
 }
@@ -104,19 +104,63 @@ protected:
 class PerspectiveTransform : Transform
 {
     float fov = 70;
-    float aspect = 4.0f / 3.0f;
-    float near = 1e-3;
+    float ratio = 4.0f / 3.0f;
+    float near = 1e-1;
     float far = 1e5;
 
     @property mat4 matrix() const
     in
     {
         assert( fov > 0 );
-        assert( aspect > 0 );
+        assert( ratio > 0 );
         assert( near > 0 );
         assert( far > 0 );
     }
-    body { return calcPerspective( fov, aspect, near, far ); }
+    body { return calcPerspective( fov, ratio, near, far ); }
+}
+
+/+ simple lookAt perspective camera +/
+class SimpleCamera : Camera
+{
+protected:
+    LookAtTransform look_tr;
+    PerspectiveTransform perspective;
+
+public:
+
+    this( Node p=null )
+    {
+        super(p);
+        look_tr = new LookAtTransform;
+        look_tr.up = vec3(0,0,1);
+        transform = look_tr;
+        perspective = new PerspectiveTransform;
+        projection = perspective;
+    }
+
+    @property
+    {
+        void fov( float val ) { perspective.fov = val; }
+        float fov() const { return perspective.fov; }
+
+        void ratio( float val ) { perspective.ratio = val; }
+        float ratio() const { return perspective.ratio; }
+
+        void near( float val ) { perspective.near = val; }
+        float near() const { return perspective.near; }
+
+        void far( float val ) { perspective.far = val; }
+        float far() const { return perspective.far; }
+
+        void pos( in vec3 val ) { look_tr.pos = val; }
+        vec3 pos() const { return look_tr.pos; }
+
+        void up( in vec3 val ) { look_tr.up = val; }
+        vec3 up() const { return look_tr.up; }
+
+        void target( in vec3 val ) { look_tr.target = val; }
+        vec3 target() const { return look_tr.target; }
+    }
 }
 
 private:
@@ -138,34 +182,21 @@ mat4 calcLookAt( in vec3 pos, in vec3 trg, in vec3 up )
                    0,   0,   0,     1 );
 }
 
-mat4 calcPerspective( float fov_degree, float aspect, float znear, float zfar )
+mat4 calcPerspective( float fov_degree, float ratio, float znear, float zfar )
 {
                         /+ fov conv to radians and div 2 +/
-    float xymax = znear * tan( fov_degree * PI / 360.0 );
-    float ymin = -xymax;
-    float xmin = -xymax;
-
-    float width = xymax - xmin;
-    float height = xymax - ymin;
+    float h = 1.0 / tan( fov_degree * PI / 360.0 );
+    float w = h / ratio;
 
     float depth = znear - zfar;
-    float q = (zfar + znear) / depth;
-    float dzn = 2.0 * znear;
-    float n = dzn * zfar / depth;
-
-    float w = dzn / ( width * aspect );
-    float h = dzn / height;
+    float q = ( znear + zfar ) / depth;
+    float n = ( 2.0f * znear * zfar ) / depth;
 
     return mat4( w, 0,  0, 0,
                  0, h,  0, 0,
                  0, 0,  q, n,
                  0, 0, -1, 0 );
 }
-
-//mat4 ortho( sz_vec sz, z_vec z )
-//{
-//    return ortho( sz.w, sz.h, z.n, z.f );
-//}
 
 mat4 calcOrtho( float w, float h, float znear, float zfar )
 {

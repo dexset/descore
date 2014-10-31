@@ -77,7 +77,8 @@ protected:
 
 class SListener : DSocket, ExternalMemoryManager
 {
-mixin( getMixinChildEMM );
+    mixin DirectEMM;
+
 protected override void selfDestroy()
 { server.close(); }
 private:
@@ -150,7 +151,8 @@ public:
 
 class SSender : DSocket, ExternalMemoryManager
 {
-mixin( getMixinChildEMM );
+    mixin DirectEMM;
+
 protected override void selfDestroy()
 { sender.close(); }
 private:

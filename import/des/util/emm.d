@@ -26,16 +26,16 @@ module des.util.emm;
 
 interface ExternalMemoryManager
 {
-    protected @property final static string getMixinChildEMM()
+    mixin template DirectEMM()
     {
-        return `private ExternalMemoryManager[] chemm;
-                protected final ref ExternalMemoryManager[] childEMM() { return chemm; }`;
+        private ExternalMemoryManager[] chemm;
+        protected final ref ExternalMemoryManager[] childEMM() { return chemm; }
     }
 
-    protected @property final static string getMixinAllEMMFuncs()
+    mixin template ParentEMM()
     {
-        return getMixinChildEMM ~ `
-            protected void selfDestroy() {}`;
+        mixin DirectEMM;
+        protected void selfDestroy() {}
     }
 
     protected
@@ -53,6 +53,9 @@ interface ExternalMemoryManager
             if( cemm ) childEMM ~= cemm; 
             return obj;
         }
+
+        T newEMM(T,Args...)( Args args )
+        { return registerChildEMM( new T(args) ); }
 
         void destroy()
         {

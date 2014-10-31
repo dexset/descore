@@ -25,6 +25,7 @@ The MIT License (MIT)
 module des.flow.base;
 
 import std.datetime;
+public import des.util.logger;
 
 class FlowException : Exception
 {
@@ -39,21 +40,6 @@ enum Command { START, PAUSE, STOP, REINIT, CLOSE };
 
 package
 {
-
-    import std.stdio;
-    import std.string;
-
-    nothrow void log_error(string file=__FILE__,
-                   string modname=__MODULE__,
-                   size_t line=__LINE__, Args...)(Args args)
-    {
-        try stderr.writeln( "%s:%d %s", file, line, format( args ) );
-        catch( Exception e )
-        {
-            try stderr.writeln( "FATAL LOG: wrong format" );
-            catch( Exception e ){}
-        }
-    }
 
     version(unittest)
     {

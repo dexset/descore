@@ -24,246 +24,324 @@ The MIT License (MIT)
 
 module des.util.logger;
 
-enum : ubyte { DEBUG=1, UTEST=2, VERBOSE=4 };
-enum logLevel { ERROR=1, INFO=3, TRACE=5 };
-
-struct logAccess
-{
-    ubyte mask = VERBOSE;
-    logLevel level = logLevel.TRACE;
-
-    nothrow
-    {
-        pure
-        {
-            void set( ubyte m, logLevel l ) { mask = m; level = l; }
-
-            this( ubyte m, logLevel l ) { set( m, l ); }
-            this( in logAccess b ) { set( b.mask, b.level ); }
-            auto opAssign( in logAccess b ) { set( b.mask, b.level ); return this; }
-        }
-        bool check( in logAccess b ) const
-        { return ( b.mask & mask ) && b.level <= level; }
-
-        bool check( in logMessage m ) const
-        { return check( m.access ); }
-    }
-}
-
-struct logMessage
-{
-    logAccess access;
-    string emitter;
-    string msg;
-
-    nothrow
-    {
-        pure
-        {
-            void set( in logAccess ac, string message, string em )
-            {
-                access = ac;
-                msg = message;
-                emitter = em;
-            }
-
-            this( ubyte mask, logLevel level, string message, string em="" )
-            { set( logAccess(mask,level), message, em ); }
-            this( in logAccess ac, string message, string em="" ) { set( ac, message, em ); }
-            this( in logMessage lm ) { set( lm.access, lm.msg, lm.emitter ); }
-            this( in logMessage lm, string emadd ) 
-            { set( lm.access, lm.msg, emadd ~ '.' ~ lm.emitter ); }
-            auto opAssign( in logMessage lm )
-            { set( lm.access, lm.msg, lm.emitter ); return this; }
-        }
-    }
-}
-
-unittest
-{
-    logAccess[3] test;
-    test[0] = logAccess( DEBUG | VERBOSE, logLevel.INFO );
-    test[1] = logAccess( VERBOSE, logLevel.ERROR );
-    test[2] = logAccess( DEBUG | UTEST, logLevel.TRACE );
-
-    bool[3][9] res;
-    logAccess[9] var;
-
-    var[0] = logAccess( DEBUG, logLevel.ERROR );   res[0] = [ 1, 0, 1 ];
-    var[1] = logAccess( DEBUG, logLevel.INFO );    res[1] = [ 1, 0, 1 ];
-    var[2] = logAccess( DEBUG, logLevel.TRACE );   res[2] = [ 0, 0, 1 ];
-
-    var[3] = logAccess( UTEST, logLevel.ERROR );   res[3] = [ 0, 0, 1 ];
-    var[4] = logAccess( UTEST, logLevel.INFO );    res[4] = [ 0, 0, 1 ];
-    var[5] = logAccess( UTEST, logLevel.TRACE );   res[5] = [ 0, 0, 1 ];
-
-    var[6] = logAccess( VERBOSE, logLevel.ERROR ); res[6] = [ 1, 1, 0 ];
-    var[7] = logAccess( VERBOSE, logLevel.INFO );  res[7] = [ 1, 0, 0 ];
-    var[8] = logAccess( VERBOSE, logLevel.TRACE ); res[8] = [ 0, 0, 0 ];
-
-    foreach( i, v; var )
-        foreach( j, t; test )
-            assert( t.check(v) == res[i][j] );
-}
-
-unittest
-{
-    auto msg = logMessage( DEBUG, logLevel.ERROR, "hello.emitter", "Hello world!" );
-    auto test = logAccess( DEBUG | VERBOSE, logLevel.INFO );
-    assert( test.check(msg) );
-}
-
+import std.stdio;
 import std.string;
+import std.conv;
+import std.datetime;
+import std.traits;
+
+import std.algorithm;
+
+enum LogLevel
+{
+    OFF   = 0,
+    ERROR = 1,
+    WARN  = 2,
+    INFO  = 3,
+    DEBUG = 4,
+    TRACE = 5
+};
+
+struct LogMessage
+{
+    string emitter;
+    ulong ts;
+    LogLevel level;
+    string message;
+
+    @disable this();
+
+    pure nothrow @safe this( string emitter, ulong ts,
+                             LogLevel level, string message )
+    {
+        this.emitter = emitter;
+        this.ts = ts;
+        this.level = level;
+        this.message = message;
+    }
+}
+
+string formatLogMessage( in LogMessage lm )
+{
+    auto fmt = "[%016.9f][%5s][%s]: %s";
+    return format( fmt, lm.ts / 1e9f, lm.level, lm.emitter, lm.message );
+}
+
+mixin template AnywayLogger()
+{
+    private Logger __logger;
+    protected nothrow final @property
+    {
+        const(Logger) logger() const
+        {
+            static import des.util.logger;
+            if( __logger is null )
+                return des.util.logger.simple_logger;
+            else return __logger;
+        }
+        void logger( Logger lg ) { __logger = lg; }
+    }
+}
 
 abstract class Logger
 {
+    mixin( getLogFunctions( "", "__log", "procFuncName", true ) );
 protected:
+    nothrow string procFuncName( string name ) const
+    in{ assert( name.length ); }
+    out(ret){ assert( ret.length ); }
+    body { return name; }
+}
 
-    string name;
-    logAccess filter;
+private class SimpleLogger : Logger {}
 
-    logAccess[string] named_filter;
+SimpleLogger simple_logger;
 
-    Logger[string] childs;
-    Logger[] output;
+class InstanceLogger : Logger
+{
+protected:
+    string class_name;
+    string inst_name;
 
 public:
-
-    void setFilter( in logAccess flt, string chname = "" )
+    this( Object obj, string inst="" )
     {
-        if( chname.length )
-        {
-            auto namepath = chname.split(".");
+        class_name = typeid(obj).name;
+        inst_name = inst;
+    }
 
-            if( namepath[0] in childs )
-                childs[namepath[0]].setFilter( flt, namepath[1 .. $].join(".") );
+    nothrow @property
+    {
+        void instance( string i ) { inst_name = i; }
+        string instance() const { return inst_name; }
+    }
+
+protected:
+
+    override nothrow string procFuncName( string name ) const
+    {
+        try return fullEmitterName ~ "." ~ name.split(".")[$-1];
+        catch(Exception e) return fullEmitterName;
+    }
+
+    nothrow @property string fullEmitterName() const
+    { return class_name ~ (inst_name.length?".["~inst_name~"]":""); }
+}
+
+class InstanceFullLogger : InstanceLogger
+{
+    public this( Object obj, string inst="" ) { super(obj,inst); }
+    protected override nothrow string procFuncName( string name ) const
+    { return fullEmitterName ~ ".[" ~ name ~ "]"; }
+}
+
+mixin( getLogFunctions( "log_", "__log" ) );
+
+private string getLogFunctions( string prefix, string baselog, string emitterProc="", bool isConst=false )
+{
+    string fnc = `
+    nothrow void %s%s(string fnc=__FUNCTION__,Args...)( Args args )%s
+    { %s( LogMessage( %s, __ts, LogLevel.%s, toMessage(args) ) ); }
+    `;
+
+    string emitter = emitterProc ? emitterProc ~ "(fnc)" : "fnc";
+
+    string ret;
+    foreach( lvl; [EnumMembers!LogLevel] )
+    {
+        if( lvl == LogLevel.OFF ) continue;
+        auto slvl = to!string(lvl);
+        auto fname = slvl.toLower;
+        if( fname == "debug" && prefix.length == 0 ) fname = "Debug";
+        ret ~= format( fnc, prefix, fname, isConst?" const":"",
+                baselog, emitter, slvl );
+    }
+    return ret;
+}
+
+private nothrow @property ulong __ts()
+{
+    try return Clock.currAppTick().length;
+    catch(Exception e) return 0;
+}
+
+private nothrow void __log( in LogMessage lm )
+{
+    try
+    {
+        if( log_rule.allow(lm.emitter) >= lm.level )
+        {
+            if( lm.level < LogLevel.INFO )
+                stderr.writeln( formatLogMessage( lm ) );
             else
-                named_filter[chname] = flt;
+                stdout.writeln( formatLogMessage( lm ) );
         }
-        else filter = flt;
     }
-
-    bool log( in logMessage msg )
+    catch(Exception e)
     {
-        if( !filter.check(msg) ) return false;
-
-        if( msg.emitter in named_filter )
-        {
-            auto nfilter = named_filter[msg.emitter];
-
-            auto namepath = msg.emitter.split("."); 
-            if( namepath[0] in childs )
-            {
-                childs[namepath[0]].setFilter( nfilter, namepath[1 .. $].join(".") );
-                named_filter.remove( msg.emitter );
-            }
-
-            if( !nfilter.check(msg) ) return false;
-        }
-
-        foreach( ol; output )
-            ol.log( logMessage( msg, name ) );
-
-        return true;
+        try stderr.writefln( "[INTERNAL LOG EXCEPTION]: %s", e );
+        catch(Exception){}
     }
 }
 
-final class StdErrLogger: Logger
+nothrow string toMessage(Args...)( Args args )
 {
-    this() { name = "stderr"; }
-
-    this( in logAccess la )
+    try
     {
-        this();
-        filter = la;
+        static if( is( Args[0] == string ) )
+            return format( args );
+        else
+        {
+            string res;
+            foreach( arg; args )
+                res ~= to!string(arg);
+            return res;
+        }
+    } 
+    catch(Exception e)
+        return "[MESSAGE CTOR EXCEPTION]: " ~ e.msg;
+}
+
+private class Rule
+{
+protected:
+    Rule parent;
+
+    LogLevel level = LogLevel.ERROR;
+    Rule[string] inner;
+
+    bool use_minimal = true;
+
+public:
+    this( Rule parent = null ) { this.parent = parent; }
+
+    @property bool useMinimal() const
+    {
+        if( parent !is null )
+            return parent.useMinimal();
+        else return use_minimal;
     }
 
-    override bool log( in logMessage msg )
+    void setLevel( LogLevel lvl, string emitter="" )
     {
-        import std.stdio;
-        if( super.log( msg ) )
-        {
-            try stderr.writefln( "[ %5s ] [ %25s ] %s", msg.access.level, msg.emitter, msg.msg );
-            catch( Exception e ){}
-            return true;
-        }
-        return false;
+        auto addr = splitAddress( emitter );
+        if( addr[0].length == 0 ) { level = lvl; return; }
+        auto iname = addr[0];
+        if( iname !in inner ) inner[iname] = new Rule(this);
+        inner[iname].setLevel( lvl, addr[1] );
+    }
+
+    LogLevel allow( string emitter="" )
+    {
+        auto addr = splitAddress( emitter );
+        if( addr[0].length == 0 ) return level;
+        auto iname = addr[0];
+        if( iname !in inner ) return level;
+        if( useMinimal )
+            return min( level, inner[iname].allow( addr[1] ) );
+        else
+            return inner[iname].allow( addr[1] );
+    }
+
+    string print( string offset="" ) const
+    {
+        string ret = format( "%s", level );
+        foreach( key, val; inner )
+            ret ~= format( "\n%s%s : %s", offset, key, val.print( offset ~ mlt(" ",key.length) ) );
+        return ret;
+    }
+
+protected:
+
+    static string[2] splitAddress( string emitter )
+    {
+        auto addr = emitter.split(".");
+        if( addr.length == 0 ) return ["",""];
+        if( addr.length == 1 ) return [addr[0],""];
+        
+        return [ addr[0], addr[1..$].join(".") ];
     }
 }
 
-//mixin template PrivateLogger()
-pure @property string PrivateLoggerMixin()
+private T[] mlt(T)( T[] val, size_t cnt )
 {
-    return `
-    private
-    {
-        StdErrLogger __logger;
-        immutable string __emitter;
-        static this()
-        {
-            import core.runtime, std.getopt;
-            import std.stdio;
-            import std.file;
+    T[] buf;
+    foreach( i; 0 .. cnt )
+        buf ~= val;
+    return buf;
+}
 
-            auto args = thisExePath ~ Runtime.args;
-            logLevel lv = logLevel.ERROR;
-            string[] without;
-            string[] withonly;
-            
+unittest { assert( "    ", mlt( " ", 4 ) ); }
+
+unittest
+{
+    auto r = new Rule;
+
+    r.setLevel( LogLevel.INFO );
+    r.setLevel( LogLevel.TRACE, "des.gl" );
+    r.setLevel( LogLevel.WARN, "des" );
+
+    assert( r.allow() == LogLevel.INFO );
+    assert( r.allow("des") == LogLevel.WARN );
+    assert( r.allow("des.gl") == LogLevel.WARN );
+
+    r.use_minimal = false;
+
+    assert( r.allow() == LogLevel.INFO );
+    assert( r.allow("des") == LogLevel.WARN );
+    assert( r.allow("des.gl") == LogLevel.TRACE );
+}
+
+private Rule log_rule;
+
+static this()
+{
+    import core.runtime, std.getopt;
+    import std.stdio;
+    import std.file;
+
+    log_rule = new Rule;
+    simple_logger = new SimpleLogger;
+
+    auto args = thisExePath ~ Runtime.args;
+    string[] logging;
+    bool useMinimal;
+    
+    try
+    {
+        getopt( args,
+                "log", &logging,
+                "log-use-min", &useMinimal,
+              );
+    }
+    catch( Exception e ) stderr.writefln( "bad log arguments: %s", e.msg );
+
+    log_rule.use_minimal = useMinimal;
+
+    foreach( ln; logging )
+    {
+        auto sp = ln.split(":");
+        if( sp.length == 1 )
+        {
+            try log_rule.setLevel( toLogLevel( sp[0] ) );
+            catch( Exception e )
+                stderr.writefln( "log argument '%s' can't conv to LogLevel: %s", ln, e.msg );
+        }
+        else if( sp.length == 2 )
+        {
             try
             {
-            getopt( args, 
-                "log-level", &lv,
-                "log-without", &without,
-                "log-withonly", &withonly
-                );
+                auto level = toLogLevel( sp[1] );
+                log_rule.setLevel( level, sp[0] );
             }
-            catch( Exception e ) stderr.writefln( "bad log arguments: %s", e.msg );
-
-            logLevel ctlv = logLevel.ERROR;
-
-            debug(1) ctlv = logLevel.ERROR;
-            debug(3) ctlv = logLevel.INFO;
-            debug(5) ctlv = logLevel.TRACE;
-
-            if( ctlv < lv )
-                stderr.writefln( "WARNING: log level %s is greather that debug level %s", lv, ctlv );
-
-            ubyte mask = DEBUG | UTEST | VERBOSE;
-
-            import std.traits, std.algorithm, std.string;
-            __emitter = fullyQualifiedName!__emitter;
-            __emitter = __emitter.split(".")[0 .. $-1].join(".");
-            foreach( wo; without )
-                if( __emitter.startsWith(wo) )
-                {
-                    mask = 0;
-                    break;
-                }
-
-            if( withonly.length )
-            {
-                mask = 0;
-                foreach( wo; withonly )
-                    if( __emitter == wo )
-                    {
-                        mask = DEBUG | UTEST | VERBOSE;
-                        break;
-                    }
-            }
-
-            __logger = new StdErrLogger( logAccess( mask, lv ) );
+            catch( Exception e )
+                stderr.writefln( "log argument '%s' can't conv '%s' to LogLevel: %s", ln, sp[1], e.msg );
         }
+        else stderr.writefln( "bad log argument: %s" );
+    }
 
-        nothrow void __log(T...)( logLevel level, string fmt, T args )
-        {
-            import std.string : format;
-            try __logger.log( logMessage( VERBOSE, level, format( fmt, args ), __emitter ) );
-            catch( Exception e ) {}
-        }
-
-        nothrow void log(T...)( string fmt, T args ) { __log( logLevel.TRACE, fmt, args ); }
-        nothrow void log_info(T...)( string fmt, T args ) { __log( logLevel.INFO, fmt, args ); }
-        nothrow void log_error(T...)( string fmt, T args ) { __log( logLevel.ERROR, fmt, args ); }
-    }`;
+    writeln( "[log use min]: ", useMinimal );
+    writeln( "[log rules]:\n", log_rule.print() );
 }
+
+LogLevel toLogLevel( string s ) { return to!LogLevel( s.toUpper ); }

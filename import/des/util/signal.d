@@ -58,8 +58,8 @@ unittest
 {
     uint[] array;
     EmptySignal stest;
-    stest.connect( (){ array ~= 0; } );
-    stest.connect( (){ array ~= 3; } );
+    stest.connect({ array ~= 0; });
+    stest.connect({ array ~= 3; });
     assert( array.length == 0 );
     stest();
     assert( array.length == 2 );
@@ -237,8 +237,8 @@ unittest
 {
     string[] arr;
     SignalBoxNoArgs stest;
-    stest.addPair( (){ arr ~= "open"; }, (){ arr ~= "close"; } );
-    stest.connect( (){ arr ~= "content"; } );
+    stest.addPair({ arr ~= "open"; },{ arr ~= "close"; });
+    stest.connect({ arr ~= "content"; });
     assert( arr.length == 0 );
     stest();
     assert( arr.length == 3 );
@@ -356,13 +356,13 @@ unittest
     int[] arr;
 
     ConditionSignal!() stest;
-    stest.addCondition( (){ return true; }, true );
-    stest.connect( (){ arr ~= 0; } );
-    stest.connectAlt( (){ arr ~= 1; } );
+    stest.addCondition( { return cond; }, true );
+    stest.connect({ arr ~= 0; });
+    stest.connectAlt({ arr ~= 1; });
 
     stest();
     assert( arr == [ 0 ] );
-    stest.addCondition( (){ return true; } );
+    cond = false;
     stest();
     assert( arr == [ 0, 1 ] );
 }

@@ -11,3 +11,5 @@
 *.sh
 bin
 dub.selections.json
+
+test/data

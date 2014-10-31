@@ -55,15 +55,7 @@ import std.path;
 import std.algorithm;
 import std.typecons;
 
-/+ TODO: логирование +/
-void info_log(Args...)(Args args)
-{ stdout.writefln( args ); }
-
-void error_log(Args...)(Args args)
-{ stderr.writefln( args ); }
-
-void debug_log(string file=__FILE__, size_t line=__LINE__, Args...)(Args args)
-{ stderr.writefln( "%s:%d %s", file, line, format(args) ); }
+import des.util.logger;
 
 interface WordConverter { wstring opIndex( string key ); }
 
@@ -80,7 +72,11 @@ class DictionaryLoaderException : Exception
     { super( msg, file, line ); } 
 }
 
-interface DictionaryLoader { Localization[string] load(); }
+interface DictionaryLoader
+{
+    Localization[string] load();
+    void store( lazy string[] keys );
+}
 
 class BaseLocalization : Localization
 {
@@ -109,7 +105,7 @@ protected:
 
     wstring notFound( string key )
     {
-        error_log( "no translation for key '%s' in dict '%s'", key, name );
+        log_error( "no translation for key '%s' in dict '%s'", key, name );
         return "[no_tr]"w ~ to!wstring(key);
     }
 }
@@ -132,7 +128,7 @@ class DirDictionaryLoader : DictionaryLoader
         try base = loadBase( path );
         catch( DictionaryLoaderException e )
         {
-            error_log( e.msg );
+            log_error( e.msg );
             return (Localization[string]).init;
         }
 
@@ -141,12 +137,12 @@ class DirDictionaryLoader : DictionaryLoader
         return ret;
     }
 
-    static void writeBase( string path, lazy string[] keys )
+    void store( lazy string[] keys )
     {
         if( !path.exists )
         {
             mkdirRecurse( path );
-            info_log( "create localization path '%s'", path );
+            log_info( "create localization path '%s'", path );
         }
 
         auto base_dict = buildNormalizedPath( path, "base" );
@@ -238,7 +234,7 @@ protected:
         foreach( lang, loc; locs )
             foreach( key; base.keys )
                 if( !loc.has(key) )
-                    error_log( "dict '%s' has no key '%s'", lang, key );
+                    log_error( "dict '%s' has no key '%s'", lang, key );
     }
 }
 
@@ -263,14 +259,14 @@ private:
     void s_setDictionaryLoader( DictionaryLoader dl )
     {
         dict_loader = dl;
-        reloadLocalizations();
+        s_reloadLocalizations();
     }
 
     void s_reloadLocalizations()
     {
         if( dict_loader is null )
         {
-            error_log( "dictionary loader not setted: no reloading" );
+            log_error( "dictionary loader not setted: no reloading" );
             return;
         }
 
@@ -286,7 +282,7 @@ private:
         if( currentLocalization !is null )
             return currentLocalization[str];
 
-        info_log( "no current localization: use source string" );
+        log_info( "no current localization: use source string" );
 
         return to!wstring(str);
     }
@@ -295,10 +291,28 @@ private:
     {
         if( lang in localizations )
             currentLocalization = localizations[lang];
-        else error_log( "no localization '%s'", lang );
+        else
+        {
+            if( dict_loader is null )
+                log_error( "no dictionary loader -> no localization '%s'", lang );
+            else log_error( "no localization '%s'", lang );
+        }
     }
 
     string[] s_usedKeys() { return used_keys.keys; }
+
+    void s_store()
+    {
+        if( used_keys.length == 0 ) return;
+
+        if( dict_loader is null )
+        {
+            log_error( "dictionary loader not setted: no store" );
+            return;
+        }
+
+        dict_loader.store( used_keys.keys );
+    }
 
 public:
 
@@ -318,6 +332,8 @@ public:
 
         @property string[] usedKeys()
         { return singleton.s_usedKeys(); }
+
+        void store() { singleton.s_store(); }
     }
 
     debug static
@@ -350,10 +366,7 @@ public:
 private string ct_formatKey( string str, string file, size_t line )
 { return format( "localization key '%s' at %s:%d", str, file, line ); }
 
-string useTranslatorMixin( string dir )
-{
-    return format(`
-    Translator.setDictionaryLoader( new DirDictionaryLoader( "%1$s" ) );
-    scope(exit) DirDictionaryLoader.writeBase( "%1$s", Translator.usedKeys );`,
-    dir);
-}
+void setTranslatePath( string dir )
+{ Translator.setDictionaryLoader( new DirDictionaryLoader( dir ) ); }
+
+static ~this() { Translator.store(); }

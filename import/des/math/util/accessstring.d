@@ -22,7 +22,7 @@ The MIT License (MIT)
     THE SOFTWARE.
 +/
 
-module des.util.accessstring;
+module des.math.util.accessstring;
 
 import std.string;
 import std.algorithm;

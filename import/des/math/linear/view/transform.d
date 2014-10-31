@@ -39,15 +39,34 @@ interface Transform
     }
 }
 
+class SimpleTransform : Transform
+{
+protected:
+    mat4 mtr;
+
+public:
+    @property
+    {
+        mat4 matrix() const { return mtr; }
+        void matrix( in mat4 m ) { mtr = m; }
+    }
+}
+
 class TransformList : Transform
 {
     Transform[] list;
+    enum Order { DIRECT, REVERSE }
+    Order order = Order.DIRECT;
 
     @property mat4 matrix() const
     {
         mat4 buf;
-        foreach( tr; list )
-            buf = tr.matrix * buf;
+        if( order == Order.DIRECT )
+            foreach( tr; list )
+                buf *= tr.matrix;
+        else
+            foreach_reverse( tr; list )
+                buf *= tr.matrix;
         return buf;
     }
 }
@@ -56,7 +75,7 @@ class CachedTransform : Transform
 {
 protected:
     mat4 mtr;
-    Transform tform;
+    Transform transform_source;
 
 public:
 
@@ -64,13 +83,14 @@ public:
 
     void setTransform( Transform ntr )
     {
-        tform = ntr;
+        transform_source = ntr;
         recalc();
     }
 
     void recalc()
     {
-        if( tform !is null ) mtr = tform.matrix;
+        if( transform_source !is null )
+            mtr = transform_source.matrix;
         else mtr = mat4.diag(1);
     }
 

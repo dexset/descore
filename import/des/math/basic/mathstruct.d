@@ -4,7 +4,7 @@ import std.string;
 import std.array;
 import std.traits;
 
-import des.util.accessstring;
+import des.math.util;
 import des.math.basic.traits;
 
 private enum SEP = " ";

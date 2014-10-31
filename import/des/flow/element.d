@@ -25,6 +25,7 @@ The MIT License (MIT)
 module des.flow.element;
 
 import des.util.emm;
+import des.util.logger;
 
 import des.flow.event;
 import des.flow.signal;
@@ -39,7 +40,8 @@ action must be in:
 
 abstract class WorkElement : ExternalMemoryManager
 {
-    mixin( getMixinChildEMM );
+    mixin DirectEMM;
+    mixin AnywayLogger;
 
 private:
     SignalProcessor signal_processor;
@@ -52,20 +54,28 @@ public:
     EventProcessor[] getEventProcessors() { return []; }
 
     final void setEventListener( EventProcessor ep )
-    { event_listener = ep; }
+    {
+        event_listener = ep;
+        logger.Debug( "set event listener [%s]", ep );
+    }
 
     final void pushEvent( in Event ev )
     {
+        logger.trace( "push event with code [%d] timestamp [%d] to listener [%s]", ev.code, ev.timestamp, event_listener );
         if( event_listener !is null )
             event_listener.processEvent( ev );
     }
 
     final void setSignalProcessor( SignalProcessor sp )
     in { assert( sp !is null ); } body
-    { signal_processor = sp; }
+    {
+        signal_processor = sp;
+        logger.Debug( "set signal processor [%s]", sp );
+    }
 
     final void sendSignal( in Signal sg )
     {
+        logger.trace( "send signal [%s] to processor [%s]", sg, signal_processor );
         if( signal_processor !is null )
             signal_processor.processSignal( sg );
     }

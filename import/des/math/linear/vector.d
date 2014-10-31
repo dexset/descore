@@ -32,8 +32,8 @@ import std.exception;
 import std.string;
 
 import des.util.testsuite;
-import des.util.accessstring;
-import des.util.flatdata;
+
+import des.math.util;
 
 version(unittest) import std.stdio;
 
@@ -87,6 +87,7 @@ struct Vector( size_t N, T, alias string AS="")
 {
     enum isDynamic = N == 0;
     enum isStatic = N != 0;
+    enum dims = N;
 
     static if( isStatic ) 
     {
@@ -285,11 +286,11 @@ pure:
     {
         static assert( isFloatingPoint!T, "quaterni must be floating point vector" );
 
-        static selftype fromAngle(E,alias string bs)( T alpha, in Vector!(3,E,bs) b )
+        static selftype fromAngle(E,alias string bs)( T alpha, in Vector!(3,E,bs) axis )
             if( isFloatingPoint!E )
         { 
             T a = alpha / cast(T)(2.0);
-            return selftype( b * sin(a), cos(a) ); 
+            return selftype( axis * sin(a), cos(a) );
         }
 
         /++ quaterni mul +/
@@ -311,11 +312,12 @@ pure:
             return Vector!(K,T,bs)( res.ijk );
         }
 
-        @property {
-            T norm() const { return dot(this,this); }
-            T mag() const { return sqrt( norm ); }
-            auto con() const { return selftype( -this.ijk, this.a ); }
-            auto inv() const { return con / norm; }
+        const @property
+        {
+            T norm() { return dot(this,this); }
+            T mag() { return sqrt( norm ); }
+            auto con() { return selftype( -this.ijk, this.a ); }
+            auto inv() { return con / norm; }
         }
     }
 }
@@ -363,15 +365,25 @@ alias Vector!(2,int,"x y") ivec2;
 alias Vector!(3,int,"x y z") ivec3;
 alias Vector!(4,int,"x y z w") ivec4;
 
+alias Vector!(2,uint,"x y") uivec2;
+alias Vector!(3,uint,"x y z") uivec3;
+alias Vector!(4,uint,"x y z w") uivec4;
+
 alias Vector!(3,float,"r g b") col3;
 alias Vector!(4,float,"r g b a") col4;
 
 alias Vector!(3,ubyte,"r g b") ubcol3;
 alias Vector!(4,ubyte,"r g b a") ubcol4;
 
-alias Vector!(0,float) vecD;
-alias Vector!(0,int) ivecD;
+alias Vector!(0,byte)   bvecD;
+alias Vector!(0,ubyte) ubvecD;
+alias Vector!(0,int)    ivecD;
+alias Vector!(0,uint)  uivecD;
+alias Vector!(0,long)   lvecD;
+alias Vector!(0,ulong) ulvecD;
+alias Vector!(0,float)   vecD;
 alias Vector!(0,double) dvecD;
+alias Vector!(0,real)   rvecD;
 
 unittest
 {

@@ -31,9 +31,9 @@ import std.range;
 import std.array;
 import std.exception;
 
-import des.util.flatdata;
 import des.util.testsuite;
 
+import des.math.util;
 import des.math.linear.vector;
 import des.math.basic.traits;
 
@@ -238,7 +238,7 @@ pure:
     auto fillDiag( in E[] vals... )
     {
         enforce( vals.length > 0, "no vals to fill" );
-        static if( isDynamic ) enforce( height == width, "not squared" );
+        enforce( height == width, "not squared" );
         size_t k = 0;
         foreach( i; 0 .. height )
             data[i][i] = vals[k++%$];
@@ -725,7 +725,7 @@ pure:
     }
 }
 
-@property auto quatToMatrix(E)( Vector!(4,E,"i j k a") iq )
+auto quatToMatrix(E)( Vector!(4,E,"i j k a") iq )
 {
     auto q = iq / iq.len2;
 
@@ -741,6 +741,26 @@ pure:
     return Matrix!(3,3,E)( 1.0-(yy+zz),  xy-wz,        xz+wy,
                            xy+wz,        1.0-(xx+zz),  yz-wx,
                            xz-wy,        yz+wx,        1.0-(xx+yy) );
+}
+
+auto quatAndPosToMatrix(A,B,string AS)( in Vector!(4,A,"i j k a") iq, in Vector!(3,B,AS) pos )
+{
+    auto q = iq / iq.len2;
+
+    A wx, wy, wz, xx, yy, yz, xy, xz, zz, x2, y2, z2;
+
+    x2 = q.i + q.i;
+    y2 = q.j + q.j;
+    z2 = q.k + q.k;
+    xx = q.i * x2;   xy = q.i * y2;   xz = q.i * z2;
+    yy = q.j * y2;   yz = q.j * z2;   zz = q.k * z2;
+    wx = q.a * x2;   wy = q.a * y2;   wz = q.a * z2;
+
+    return Matrix!(4,4,A)( 1.0-(yy+zz),  xy-wz,        xz+wy,       pos.x,
+                           xy+wz,        1.0-(xx+zz),  yz-wx,       pos.y,
+                           xz-wy,        yz+wx,        1.0-(xx+yy), pos.z,
+                           0,            0,            0,           1     );
+
 }
 
 alias Matrix!(2,2,float) mat2;
@@ -1214,12 +1234,20 @@ unittest
 {
     auto q = quat.fromAngle( PI_2, vec3(0,0,1) );
 
-    /+ Issue 13417
-    auto m = quatToMatrix(q); // fails with dmd segfault
-    +/
-
-    auto m = quatToMatrix!float(q);
+    auto m = quatToMatrix(q);
     assert( eq( m, [[0,-1,0],
                     [1, 0,0],
                     [0, 0,1]] ));
+}
+
+unittest
+{
+    auto q = quat.fromAngle( PI_2, vec3(0,0,1) );
+
+    auto m = quatAndPosToMatrix(q, vec3(1,2,3) );
+    assert( eq( m, [[0,-1,0,1],
+                    [1, 0,0,2],
+                    [0, 0,1,3],
+                    [0, 0,0,1]] ));
+
 }

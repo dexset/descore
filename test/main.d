@@ -16,4 +16,9 @@ void main()
     {
         stderr.writeln( "build with -unittest flag to test DES" );
     }
+
+    setTranslatePath( "data" );
+    Translator.setLocalization( "ru" );
+
+    assert( _!"hello" == "привет"w, "tranlation not complite" );
 }
