@@ -49,6 +49,7 @@ class FThread
 protected:
     Communication com;
     Thread thread;
+    string self_name;
 
 public:
     enum State { NONE, PAUSE, WORK };
@@ -90,11 +91,13 @@ public:
     {
         thread = new Thread({ tmain( com, func, args ); });
         thread.name = name;
+        self_name = name;
         com.initialize();
         thread.start();
     }
 
     @property auto info() const { return Info(com.info.back); }
+    @property auto name() const { return self_name; }
 
     void pushCommand( Command cmd ) { com.commands.pushBack( cmd ); }
     void pushEvent( in Event ev ) { com.eventbus.pushBack( ev ); }
@@ -192,8 +195,7 @@ private
             if( work )
             {
                 foreach( e; com.eventbus.clearAndReturnAll() )
-                    foreach( ep; evprocs )
-                        ep.processEvent( e );
+                    transmitEvent( e );
 
                 elem.process();
             }
@@ -212,6 +214,12 @@ private
                     case Command.CLOSE:  close();  break;
                 }
             }
+        }
+
+        void transmitEvent( in Event event )
+        {
+            foreach( ep; evprocs )
+                ep.processEvent( event );
         }
 
         // SignalProcessor
@@ -237,16 +245,16 @@ private
 
         void start()
         {
-            work = true;
             pushInfo( FThread.State.WORK );
-            pushEvent( Event.system( SysEvData.work ) );
+            transmitEvent( Event.system( SysEvData.work ) );
+            work = true;
         }
 
         void pause()
         {
-            work = false;
             pushInfo( FThread.State.PAUSE );
-            pushEvent( Event.system( SysEvData.pause ) );
+            transmitEvent( Event.system( SysEvData.pause ) );
+            work = false;
         }
 
         void stop()
@@ -273,8 +281,7 @@ private
 
         void destroy() { stop(); }
 
-        void pushEvent( in Event ev )
-        { com.eventbus.pushBack( ev ); }
+        void pushEvent( in Event ev ) { com.eventbus.pushBack( ev ); }
 
         void pushInfo( FThread.State state, FThread.Error error=FThread.Error.NONE, string msg="" )
         { com.info.pushBack( FThread.Info( state, error, msg ) ); }

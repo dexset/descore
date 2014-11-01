@@ -1,0 +1,8 @@
+{
+    "name": "flowtest",
+    "targetPath": "bin",
+    "targetType": "executable",
+    "dflags": [ "-unittest" ],
+    "sourcePaths": [ ".", "../import/" ],
+    "importPaths": [ "../import/" ]
+}
