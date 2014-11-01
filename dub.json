@@ -3,7 +3,7 @@
     "description": "D Extended Set Core",
     "authors": ["Oleg Butko(deviator)", "Anton Akzhigitov(Akzwar)"],
     "license": "MIT",
-    "version": "~develop",
+    "version": "1.0.2",
 	"targetType": "sourceLibrary",
 	"importPaths": [ "import" ],
 	"sourcePaths": [ "import" ]
