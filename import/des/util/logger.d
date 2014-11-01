@@ -97,6 +97,11 @@ private class SimpleLogger : Logger {}
 
 SimpleLogger simple_logger;
 
+static this()
+{
+    simple_logger = new SimpleLogger;
+}
+
 class InstanceLogger : Logger
 {
 protected:
@@ -202,18 +207,18 @@ nothrow string toMessage(Args...)( Args args )
         return "[MESSAGE CTOR EXCEPTION]: " ~ e.msg;
 }
 
-private class Rule
+private synchronized class Rule
 {
 protected:
-    Rule parent;
+    shared Rule parent;
 
     LogLevel level = LogLevel.ERROR;
-    Rule[string] inner;
+    shared Rule[string] inner;
 
     bool use_minimal = true;
 
 public:
-    this( Rule parent = null ) { this.parent = parent; }
+    this( shared Rule parent = null ) { this.parent = parent; }
 
     @property bool useMinimal() const
     {
@@ -227,7 +232,7 @@ public:
         auto addr = splitAddress( emitter );
         if( addr[0].length == 0 ) { level = lvl; return; }
         auto iname = addr[0];
-        if( iname !in inner ) inner[iname] = new Rule(this);
+        if( iname !in inner ) inner[iname] = new shared Rule(this);
         inner[iname].setLevel( lvl, addr[1] );
     }
 
@@ -275,7 +280,7 @@ unittest { assert( "    ", mlt( " ", 4 ) ); }
 
 unittest
 {
-    auto r = new Rule;
+    auto r = new shared Rule;
 
     r.setLevel( LogLevel.INFO );
     r.setLevel( LogLevel.TRACE, "des.gl" );
@@ -292,20 +297,21 @@ unittest
     assert( r.allow("des.gl") == LogLevel.TRACE );
 }
 
-private Rule log_rule;
+private static shared Rule log_rule;
 
-static this()
+shared static this()
 {
+    if( log_rule !is null ) return;
+
     import core.runtime, std.getopt;
     import std.stdio;
     import std.file;
 
-    log_rule = new Rule;
-    simple_logger = new SimpleLogger;
+    log_rule = new shared Rule;
 
     auto args = thisExePath ~ Runtime.args;
     string[] logging;
-    bool useMinimal;
+    bool useMinimal = false;
     
     try
     {
@@ -340,8 +346,11 @@ static this()
         else stderr.writefln( "bad log argument: %s" );
     }
 
-    writeln( "[log use min]: ", useMinimal );
-    writeln( "[log rules]:\n", log_rule.print() );
+    if( logging.length )
+    {
+        writeln( "[log use min]: ", useMinimal );
+        writeln( "[log rules]:\n", log_rule.print() );
+    }
 }
 
 LogLevel toLogLevel( string s ) { return to!LogLevel( s.toUpper ); }
