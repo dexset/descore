@@ -54,6 +54,14 @@ interface ExternalMemoryManager
             return obj;
         }
 
+        T[] registerChildEMM(T)( T[] objs )
+            if( is( T == class ) || is( T == interface ) )
+        {
+            foreach( obj; objs )
+                registerChildEMM( obj );
+            return objs;
+        }
+
         T newEMM(T,Args...)( Args args )
         { return registerChildEMM( new T(args) ); }
 
