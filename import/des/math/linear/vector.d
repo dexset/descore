@@ -118,21 +118,33 @@ pure:
     else enum length = N;
 
     this(E...)( in E vals )
-        if( E.length > 0 && is(typeof(flatData!T(vals))) )
     {
+        // not in limitation of signature because
+        // not work with dynamic vectors
+        static if( E.length == 0 )
+            static assert( 0, "args length == 0" );
+        static if( !is(typeof(flatData!T(vals))) )
+            static assert( 0, "args not compatible" );
+
         auto buf = flatData!T(vals);
 
         static if( isStatic )
-            enforce( buf.length == length, "bad args length" );
+        {
+            if( buf.length == length )
+                data[] = buf[];
+            else if( buf.length == 1 )
+                data[] = buf[0];
+            else enforce( false, "bad args length" );
+        }
         else
+        {
             length = buf.length;
-
-        data[] = buf[];
+            data[] = buf[];
+        }
     }
 
-    static if( isStatic ) this(E)( in E val ) if( is(typeof(T(val))) ) { data[] = T(val); }
-
-    static if( isDynamic ) this(this) { data = this.data.dup; }
+    static if( isDynamic )
+        this(this) { data = this.data.dup; }
 
     auto opAssign( size_t K, E, alias string oas )( in Vector!(K,E,oas) b )
         if( (K==N||K==0||N==0) && is( typeof(T(E.init)) ) )
@@ -530,6 +542,17 @@ unittest
     assert( !!x );
     x[0] = float.nan;
     assert( !x );
+}
+
+unittest
+{
+    auto a = vecD(1,2,3);
+
+    auto b = vec3(a);
+    auto c = vecD(b);
+
+    assert( eq( a, b ) );
+    assert( eq( a, c ) );
 }
 
 unittest
