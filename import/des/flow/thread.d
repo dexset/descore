@@ -26,10 +26,14 @@ module des.flow.thread;
 
 import std.string;
 
+import std.algorithm;
+import std.array;
+
 import std.datetime;
 import core.thread;
 
 import des.util.emm;
+import des.util.logger;
 
 import des.flow.base;
 import des.flow.event;
@@ -94,20 +98,38 @@ public:
         self_name = name;
         com.initialize();
         thread.start();
+        debug log_debug( "name: '%s'", name );
     }
 
     @property auto info() const { return Info(com.info.back); }
     @property auto name() const { return self_name; }
 
-    void pushCommand( Command cmd ) { com.commands.pushBack( cmd ); }
-    void pushEvent( in Event ev ) { com.eventbus.pushBack( ev ); }
+    void pushCommand( Command cmd )
+    {
+        com.commands.pushBack( cmd );
+        debug log_trace( "thread: '%s', command: '%s'", name, cmd );
+    }
+
+    void pushEvent( in Event ev )
+    {
+        com.eventbus.pushBack( ev );
+        debug log_trace( "thread: '%s', event code: %d", name, ev.code );
+    }
 
     void join() { thread.join(); }
 
     void addListener( FThread[] thrs... )
-    { foreach( t; thrs ) com.listener.add( t.com.eventbus ); }
+    {
+        foreach( t; thrs )
+            com.listener.add( t.com.eventbus );
+        debug log_debug( "thread: '%s', listeners: %s", name, array(map!(a=>a.name)(thrs)) );
+    }
 
-    void delListener( FThread th ) { com.listener.del( th.com.eventbus ); }
+    void delListener( FThread th )
+    {
+        com.listener.del( th.com.eventbus );
+        debug log_debug( "thread: '%s', listener: %s", name, th.name );
+    }
 }
 
 version(none)
@@ -152,18 +174,19 @@ private
 {
     void tmain(Args...)( Communication com, WorkElement function(Args) func, Args args )
     {
-        auto wp = createProcessor( com, func, args );
+        Logger logger = new InstanceLogger( __MODULE__ ~ ".WorkProcessor", Thread.getThis().name );
+        auto wp = createProcessor( com, logger, func, args );
         if( wp is null ) return;
         scope(exit) fullTerminate(wp);
         try while( wp.hasWork ) wp.process();
-        catch( Throwable e ) com.info.pushBack( convertToErrorInfo(e) );
+        catch( Throwable e ) com.info.pushBack( convertToErrorInfo(logger,e) );
     }
 
-    auto createProcessor(Args...)( Communication com, WorkElement function(Args) func, Args args )
+    auto createProcessor(Args...)( Communication com, Logger logger, WorkElement function(Args) func, Args args )
     {
         WorkProcessor!Args ret;
-        try ret = new WorkProcessor!Args( com, func, args );
-        catch( Throwable e ) com.info.pushBack( convertToErrorInfo(e) );
+        try ret = new WorkProcessor!Args( com, logger, func, args );
+        catch( Throwable e ) com.info.pushBack( convertToErrorInfo(logger,e) );
         return ret;
     }
 
@@ -179,32 +202,40 @@ private
         bool work = false;
         bool has_work = true;
 
-        this( Communication com, WorkElement function(Args) func, Args args )
+        Logger logger;
+
+        this( Communication com, Logger logger, WorkElement function(Args) func, Args args )
         {
             this.com = com;
             this.func = func;
             this.args = args;
 
+            this.logger = logger;
+
             init();
+            debug logger.Debug( "pass" );
         }
 
         @property bool hasWork() const { return has_work; }
 
         void process()
         {
+            debug logger.trace( "start process" );
             if( work )
             {
                 foreach( e; com.eventbus.clearAndReturnAll() )
                     transmitEvent( e );
 
                 elem.process();
+
+                debug logger.trace( "events processed" );
             }
 
             foreach( scmd; com.commands.clearAndReturnAll() )
             {
                 auto cmd = cast(Command)scmd;
-                auto state = com.info.back.state;
 
+                debug logger.trace( "process command '%s'", cmd );
                 final switch( cmd )
                 {
                     case Command.START:  start();  break;
@@ -213,7 +244,9 @@ private
                     case Command.REINIT: reinit(); break;
                     case Command.CLOSE:  close();  break;
                 }
+                debug logger.trace( "process command '%s' pass", cmd );
             }
+            debug logger.trace( "process pass" );
         }
 
         void transmitEvent( in Event event )
@@ -230,6 +263,7 @@ private
 
         void init()
         {
+            debug logger.Debug( "start" );
             elem = func(args);
 
             if( elem is null )
@@ -241,6 +275,7 @@ private
             evprocs = elem.getEventProcessors();
 
             pause();
+            debug logger.Debug( "pass" );
         }
 
         void start()
@@ -248,6 +283,7 @@ private
             pushInfo( FThread.State.WORK );
             transmitEvent( Event.system( SysEvData.work ) );
             work = true;
+            debug logger.Debug( "pass" );
         }
 
         void pause()
@@ -255,6 +291,7 @@ private
             pushInfo( FThread.State.PAUSE );
             transmitEvent( Event.system( SysEvData.pause ) );
             work = false;
+            debug logger.Debug( "pass" );
         }
 
         void stop()
@@ -265,6 +302,7 @@ private
             evprocs.length = 0;
             elem.destroy();
             elem = null;
+            debug logger.Debug( "pass" );
         }
 
         void reinit()
@@ -277,9 +315,14 @@ private
         {
             stop();
             has_work = false;
+            debug logger.Debug( "pass" );
         }
 
-        void destroy() { stop(); }
+        void destroy()
+        {
+            stop();
+            debug logger.Debug( "pass" );
+        }
 
         void pushEvent( in Event ev ) { com.eventbus.pushBack( ev ); }
 
@@ -294,26 +337,27 @@ private
         obj = null;
     }
 
-    FThread.Info convertToErrorInfo( Throwable e )
+    FThread.Info convertToErrorInfo( Logger logger, Throwable e )
+    in{ assert( logger !is null ); } body
     {
         if( auto pe = cast(FThreadException)e ) 
         {
-            log_error( "EXCEPTION: fthread exc: %s", pe );
+            logger.error( "EXCEPTION: fthread exc: %s", pe );
             return errorInfo( FThread.Error.FTHREAD, e.msg );
         }
         else if( auto fe = cast(FlowException)e )
         {
-            log_error( "EXCEPTION: flow exc: %s", fe );
+            logger.error( "EXCEPTION: flow exc: %s", fe );
             return errorInfo( FThread.Error.FLOW, e.msg );
         }
         else if( auto se = cast(Exception)e )
         {
-            log_error( "EXCEPTION: %s", se );
+            logger.error( "EXCEPTION: %s", se );
             return errorInfo( FThread.Error.EXCEPT, e.msg );
         }
         else if( auto te = cast(Throwable)e )
         {
-            log_error( "FATAL: %s", te );
+            logger.error( "FATAL: %s", te );
             return errorInfo( FThread.Error.FATAL, e.msg );
         }
         assert(0,"unknown exception");

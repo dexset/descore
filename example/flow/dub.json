@@ -3,6 +3,6 @@
     "targetPath": "bin",
     "targetType": "executable",
     "dflags": [ "-unittest" ],
-    "sourcePaths": [ ".", "../import/" ],
-    "importPaths": [ "../import/" ]
+    "sourcePaths": [ ".", "../../import/" ],
+    "importPaths": [ "../../import/" ]
 }

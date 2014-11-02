@@ -31,8 +31,8 @@ Utility part used in various parts of DES
 
 ### des.isys - itelligence system
 
-- des.isys.neiro -- some neiro net realizations (layered with backprop)
+- des.isys.neiro - some neiro net implementation (layered with backprop)
 
 ### des.flow - multithreading wrapper
 
-- [simple example](example/flow/)
+- [simple example](example/flow/main.d)

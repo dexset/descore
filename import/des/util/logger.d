@@ -115,6 +115,12 @@ public:
         inst_name = inst;
     }
 
+    this( string obj, string inst="" )
+    {
+        class_name = obj;
+        inst_name = inst;
+    }
+
     nothrow @property
     {
         void instance( string i ) { inst_name = i; }
