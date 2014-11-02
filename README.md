@@ -34,3 +34,5 @@ Utility part used in various parts of DES
 - des.isys.neiro -- some neiro net realizations (layered with backprop)
 
 ### des.flow - multithreading wrapper
+
+- [simple example](example/flow/)
