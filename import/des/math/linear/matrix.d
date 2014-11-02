@@ -402,7 +402,7 @@ pure:
         static if( isDynamic || mtr.isDynamic )
             enforce( width == mtr.height, "incompatible sizes for mul" );
         Matrix!(H,bW,E) ret;
-        static if( ret.isDynamic ) ret.resize(height,width);
+        static if( ret.isDynamic ) ret.resize(height,mtr.width);
 
         foreach( i; 0 .. height )
             foreach( j; 0 .. mtr.width )
@@ -1012,6 +1012,37 @@ unittest
 {
     auto a = mat3( 1,2,3,4,5,6,7,8,9 );
     assert( a.asArray == [1.0f,2,3,4,5,6,7,8,9] );
+}
+
+unittest
+{
+    matD a;
+    a.resize( 4, 4 );
+    a[0][0] = 1;
+    a[1][1] = 1;
+    a[2][2] = 1;
+    a[3][3] = 1;
+
+    assert( eq( a, mat4() ) );
+    assert( eq( a.inv, a ) );
+}
+
+unittest
+{
+    auto a = mat4x2( 1,2,3,4,5,6,7,8 );
+    auto b = mat4( 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16 );
+    auto c = a.T * b * a;
+    static assert( c.height == 2 && c.width == 2 );
+}
+
+unittest
+{
+    matD a;
+    matD b;
+    a.resize( 100, 4 );
+    b.resize( 100, 100 );
+    auto c = a.T * b * a;
+    assert( c.height == 4 && c.width == 4 );
 }
 
 unittest
