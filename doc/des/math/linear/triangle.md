@@ -1,16 +1,16 @@
 Provides work with triangle.
 
-### `struct Triangle(T) if( isFloatingPoint!T )`
+#### `struct Triangle(T) if( isFloatingPoint!T )`
 
-aliases: 
+##### aliases: 
 
 - `alias Vector!(3,T,"x y z") vectype`
 
-public fields:
+##### fields:
 
 - `vectype[3] pnt`
 
-public const properties:
+##### const properties:
 
 - `vectype perp()` - perpendicular calced as cross mul
     of segments [p0 to p1] and [p0 to p2]
@@ -18,7 +18,7 @@ public const properties:
 - `T area()` - `perp.len / 2` - area of triangle
 - `vectype center()` - center point
 
-public const methods:
+##### const methods:
 
 - `Triangle!T tr(X)( in Matrix!(4,4,X) mtr )` - transform all 3 points of
     triangle with transform matrix `mtr`

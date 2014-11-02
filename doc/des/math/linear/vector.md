@@ -1,40 +1,47 @@
-### Using vector
+Provides work with vector and some aliases and functions.
+
+#### `struct Vector( size_t N, T, alias string AS="")`
+
+`AS` must be valid access string with space separator or must be a empty string.
+
+Vector can be dynamic (`N==0`) or static (`N>0`).
+
+##### aliases:
+
+- `alias data this` - vector can used as array
+- `alias T datatype`
+- `alias AS access_string`
+- `alias Vector!(N,T,AS) selftype`
+
+##### enums:
+
+- `enum isDynamic = N == 0`
+- `enum isStatic = N != 0`
+- `enum dims = N`
+
+##### fields:
+
+If vector is static:
+
+- `T[N] data` - if `isNumeric!datatype` initialize by zeros
+
+else:
+
+- `T[] data`
 
 ```d
-struct Vector( size_t N, T, alias string AS="")
-    if( isCompatibleArrayAccessString(N,AS,SEP) || AS.length == 0 );
+assert( Vector!(4,float).sizeof == float.sizeof * 4 );
 ```
 
-Vector can be dynamic (N=0) and static (N>0).
+##### `length` value
 
-Vector has `alias data this` and can used as array.
+It mean length of elements. For static vector it's enum, for
+dynamic it's a property:
 
-Vector has aliases and enums (static fields):
+- `pure @property auto length() const`
+- `pure @property auto length( size_t nl )`
 
-```d
-alias Vector!(3,float,"x y z") vec3;
-alias Vector!(0,float) vecD;
-
-assert( is( vec3.datatype == float ) );
-assert( is( vecD.datatype == float ) );
-assert( vec3.access_string == "x y z" );
-assert( vecD.access_string == "" ); // not allowed for dynamic vectors
-assert( is( vec3.selftype == vec3 ) );
-assert( is( vecD.selftype == vecD ) );
-
-assert( vec3.isDynamic == false );
-assert( vecD.isDynamic == true );
-assert( vec3.isStatic == true );
-assert( vecD.isStatic == false );
-assert( vec3.dims == 3 );
-assert( vecD.dims == 0 );
-
-assert( vec3.length == 3 );
-assert( !__traits(__compiles,vecD.length) ); // for dynamic its a property
-auto a = vecD(1,2);
-assert( a.length == 2 );
-```
-Static vector inits by zeros if `isNumeric!datatype`
+##### ctors
 
 Vector can construct with different ways:
 
@@ -73,53 +80,13 @@ a.Vy = 12;
 ```
 
 If access string has one symbol per element
-vector can return vector from elements:
+vector can return and set vector from elements:
 
 ```d
 auto a = Vector!(3,float,"x y z")(1,2,3);
-auto b = a.zy; // equals vec2( a.z, a.y )
-```
+auto b = a.zy; // equals vec2( a.z, a.y );
 
-Provides some aliases:
-
-`alias Vector!(<N>,<Type>,<Access>) <T>vec<N>` where:
-
-- `<N>` - `size_t` - element count [0,2,3,4,D] where `D` is dynamic
-- `<T>` type id, associated with `<Type>` as:
-
-    - NoID : `float`
-    - `d`  : `double`
-    - `r`  : `real`
-    - `i`  : `int`
-    - `ui` : `uint`
-    - `b`  : `byte`
-    - `ub` : `ubyte`
-
-- `<Access>` only for static "x y z w"[0..N]
-
-Example:
-```d
-alias Vector!(3,float,"x y z") vec3;
-alias Vector!(2,double,"x y") dvec2;
-```
-
-and some special:
-
-```d
-alias Vector!(4,float,"i j k a") quat;
-alias Vector!(4,double,"i j k a") dquat;
-
-alias Vector!(3,float,"r g b") col3;
-alias Vector!(4,float,"r g b a") col4;
-
-alias Vector!(3,ubyte,"r g b") ubcol3;
-alias Vector!(4,ubyte,"r g b a") ubcol4;
-```
-
-Static vectors store data in static arrays:
-
-```d
-assert( Vector!(4,float).sizeof == float.sizeof * 4 );
+a.xz = a.yx; // a == [ 2, 2, 1 ]
 ```
 
 #### Math operations
@@ -199,6 +166,42 @@ const @property
     auto con() { return selftype( -this.ijk, this.a ); }
     auto inv() { return con / norm; }
 }
+```
+
+#### Module aliases:
+
+`alias Vector!(<N>,<Type>,<Access>) <T>vec<N>` where:
+
+- `<N>` - `size_t` - element count [0,2,3,4,D] where `D` is dynamic
+- `<T>` type id, associated with `<Type>` as:
+
+    - NoID : `float`
+    - `d`  : `double`
+    - `r`  : `real`
+    - `i`  : `int`
+    - `ui` : `uint`
+    - `b`  : `byte`
+    - `ub` : `ubyte`
+
+- `<Access>` only for static "x y z w"[0..N]
+
+Example:
+```d
+alias Vector!(3,float,"x y z") vec3;
+alias Vector!(2,double,"x y") dvec2;
+```
+
+and some special:
+
+```d
+alias Vector!(4,float,"i j k a") quat;
+alias Vector!(4,double,"i j k a") dquat;
+
+alias Vector!(3,float,"r g b") col3;
+alias Vector!(4,float,"r g b a") col4;
+
+alias Vector!(3,ubyte,"r g b") ubcol3;
+alias Vector!(4,ubyte,"r g b a") ubcol4;
 ```
 
 For more information see unittest in `des.math.linear.vector`

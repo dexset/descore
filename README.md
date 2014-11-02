@@ -2,7 +2,7 @@
 
 ### des.util
 
-Utility part used in all parts of DES
+Utility part used in various parts of DES
 
 - [external memory manager (EMM) interface](doc/des/util/emm.md)
 - [logger](doc/des/util/logger.md)
@@ -24,13 +24,13 @@ Utility part used in all parts of DES
 - [combinatorics](doc/des/math/combin.md)
 - [some math methods](doc/des/math/method.md)
 
-### des.il -- minimal image library
+### des.il - minimal image library
 
 - [region](doc/des/il/region.md) - N-dim region of space
 - [image](doc/des/il/image.md) - N-dim image
 
-### des.isys -- itelligence system
+### des.isys - itelligence system
 
 - des.isys.neiro -- some neiro net realizations (layered with backprop)
 
-### des.flow -- multithreading wrapper
+### des.flow - multithreading wrapper

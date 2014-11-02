@@ -1,17 +1,17 @@
-## Module view
+### Module view
 
-Package view provides 4 modules:
+Package `des.math.view` provides 4 modules:
 
-- transform - basic module
+- transform - basic conception of module view
 - node - interface for drawing objects
-- resolver - calc full transform matrix
+- resolver - calculator of full transform matrix
 - camera - node for using as camera
 
 ### Module transform
 
 #### `interface Transform`
 
-methods:
+##### methods:
 
 - `@property mat4 matrix() const;` - you must implement in your realisation
     of Transform interface. This method must return transform matrix from local
@@ -34,24 +34,24 @@ implement matrix
 
 #### `class TransformList : Transform`
 
-fields:
+##### fields:
 
 - `Transform[] list`
 - `Order order = Order.DIRECT` - can be `Order.REVERSE`
 
-methods:
+##### methods:
 
 - `@property mat4 matrix() const` - return result of multiplication
 of `list` matrix by order.
 
 #### `class CachedTransform : Transform`
 
-protected fields: 
+##### protected fields: 
 
 - `mat4 mtr` - cached matrix
 - `Transform transform_source`
 
-methods:
+##### methods:
 
 - `void setTransform( Transform ntr )` - set new transform source and recalc
 - `void recalc()` - set `mtr` as `transform_source.matrix` if `transform_source`
@@ -61,7 +61,7 @@ methods:
 
 #### `interface Node : Transform`
 
-methods:
+##### methods:
 
 - `@property mat4 matrix() const` - need implement (`Transform`) - local to
   parent transform matrix
@@ -76,7 +76,7 @@ methods:
 
 #### `class Resolver`
 
-public methods:
+##### public methods:
 
 - `mat4 opCall( const(Node) obj, const(Node) cam ) const` - calc full transform
   matrix from `obj` coord system to `cam` coord system
@@ -85,17 +85,17 @@ public methods:
 
 #### `class Camera: Node`
 
-protected fields:
+##### protected fields:
 
 - `Node _parent`
 
-public fields:
+##### public fields:
 
 - `Resolver resolver` - for full transform matrix calculation
 - `Transform projection` - present projection matrix
 - `Transform transform` - present view matrix
 
-public methods:
+##### public methods:
 
 - `this( Node parent=null )` - set parent and create new resolver
 - `mat4 resolve( const(Node) obj ) const` - return full transform matrix
@@ -107,23 +107,23 @@ public methods:
 
 #### `class LookAtTransform : Transform`
 
-public fields:
+##### public fields:
 
 - `vec3 pos=vec3(0)` - point from which looks
 - `vec3 target=vec3(0)` - point where looks
 - `vec3 up=vec3(0,0,1)` - up direction
 
-public methods:
+##### public methods:
 
 - `@property mat4 matrix() const` - return lookAt transform matrix
 
 #### `abstract class ResolveTransform : Transform`
 
-protected fields:
+##### protected fields:
 
 - `Resolver resolver`
 
-public methods:
+##### public methods:
 
 - `void setResolver( Resolver rsl )`
 - `abstract @property mat4 matrix() const`
@@ -132,26 +132,26 @@ public methods:
 
 use `Node` instead of `vec3`
 
-public fields:
+##### public fields:
 
 - `Node center` - as pos
 - `Node target`
 - `Node up`
 
-public methods:
+##### public methods:
 
 - `@property mat4 matrix() const` - return lookAt transform matrix
 
 #### `class PerspectiveTransform : Transform`
 
-public fields:
+##### public fields:
 
 - `float fov = 70`
 - `float ratio = 4.0f / 3.0f`
 - `float near = 1e-1`
 - `float far = 1e5`
 
-public methods:
+##### public methods:
 
 - `@property mat4 matrix() const` - return perspective projection matrix
 
@@ -160,18 +160,17 @@ public methods:
 Camera with `LookAtTransform` as `transform` and `PerspectiveTransform` as
 `projection`
 
-protected fields:
+##### protected fields:
 
 - `LookAtTransform look_tr`
 - `PerspectiveTransform perspective`
 
-public methods:
+##### public methods:
 
 - `this( Node parent=null )` - create new `LookAtTransform` and
   `PerspectiveTransform` objects and sets to `transform` and `projection`
 
-public propertyes (meaning same in `LookAtTransform` and
-`PerspectiveTransform`):
+##### public propertyes (meaning same in `LookAtTransform` and `PerspectiveTransform`):
 
 - `void fov( float val )`
 - `float fov() const`

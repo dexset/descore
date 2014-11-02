@@ -2,9 +2,9 @@ Provides work with region of N-dim space. Region described as
 two point. First point is a start of rectangle region. Second point
 is a size of rectingle region.
 
-### `struct Region(size_t N,T) if( N >= 1 && isNumeric!T )`
+#### `struct Region(size_t N,T) if( N >= 1 && isNumeric!T )`
 
-public aliases: 
+##### public aliases: 
 
 if `N<=3`:
 
@@ -21,7 +21,7 @@ in any case:
 - `alias Region!(N,T) selftype`
 - `alias vr this`
 
-public unions:
+##### public unions:
 
 ```d
 union
@@ -33,7 +33,7 @@ union
 
 Region can construct as `Vector!(N*2,T)`
 
-public properties:
+##### properties:
 
 - `ref ptype pos()` - return ref to pt[0]
 - `ref ptype size()` - return ref to pt[1]
@@ -48,7 +48,7 @@ Binary operations allowed as for `Vector!(N*2,T)`.
 Has two `opBinaryRight` methods, each of them receives 
 `op == "in"`.
 
-Example: 
+##### Example: 
 
 ```d
 alias Region!(2,float) fRegion2;
@@ -63,7 +63,7 @@ auto c = fRegion2( vec2( 4,6 ), vec2(2,2) );
 assert( c !in a );
 ```
 
-const public methods:
+##### const methods:
 
 - `Region!(N,T) overlap(E)( in Region!(N,E) reg )` - return overlap of `this`
   and `reg`

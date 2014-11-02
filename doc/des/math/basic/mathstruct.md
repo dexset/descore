@@ -1,6 +1,12 @@
-### Using mathstruct
+Module provides function for generation mixin for creation
+structs with basic math operations such as
+summation and multiplying by double.
 
-Example:
+#### `@property string BasicMathOp( string fields_str )()`
+
+`fields_str` must be a valid access string with space ` ` separator.
+
+##### Examples:
 
 ```d
 struct Val

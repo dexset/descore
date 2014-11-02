@@ -37,8 +37,8 @@ struct Segment(T) if( isFloatingPoint!T )
     vectype pnt, dir;
     mixin( BasicMathOp!"pnt dir" );
 
-    static auto fromPoints( in vectype s, in vectype e )
-    { return Segment!T( s, e - s ); }
+    static auto fromPoints( in vectype start, in vectype end )
+    { return Segment!T( start, end - start ); }
 
     @property
     {
@@ -90,7 +90,7 @@ struct Segment(T) if( isFloatingPoint!T )
 
         /+ переносим отрезок на плоскость первой прямой
            и сразу находим пересечение +/
-        auto pp = intersect( Segment!T( seg.pnt + dist, seg.dir ) );
+        auto pp = calcIntersection( Segment!T( seg.pnt + dist, seg.dir ) );
 
         return Segment!T( pp, -dist );
     }
@@ -98,6 +98,12 @@ struct Segment(T) if( isFloatingPoint!T )
     /+ пересечение с другой прямой 
        если она в той же плоскости +/
     auto intersect(F)( in Segment!F seg ) const
+    {
+        auto a = altitude( seg );
+        return a.pnt + a.dir * 0.5;
+    }
+
+    auto calcIntersection(F)( in Segment!F seg ) const
     {
         auto a = pnt;
         auto v = dir;

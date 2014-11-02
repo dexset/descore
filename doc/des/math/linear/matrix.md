@@ -1,46 +1,40 @@
-### Using matrix
+Module provides struct for working with matrix and some functions and aliases.
 
 ```d
 struct Matrix(size_t H, size_t W, E);
 ```
 
-Matrix can be dynamic ( H=0 || W==0 ) and static ( H>0 && W>0 ).
+Some functions added depending on type `E`.
+
+Matrix can be dynamic ( `H=0 || W==0` ) and static ( `H>0 && W>0` ).
 
 Matrix data is 2-dim array, static or dynamic depending on
 values of H and W. Row-major data layout.
 
-Matrix has aliases and enums (static fields):
+##### aliases:
 
-```d
-alias Matrix!(4,4,float) mat4;
-// float[4][4] data;
+- `alias Matrix!(H,W,E) selftype`
+- `alias E datatype`
+- `alias data this`
 
-assert( is( mat4.selftype == mat4 ) );
-assert( is( mat4.datatype == float ) );
+##### enums:
 
-assert( mat4.isDynamic == false );
-assert( mat4.isStatic == true );
-assert( mat4.isDynamicHeight == false );
-assert( mat4.isStaticHeight == true );
-assert( mat4.isDynamicWidth == false );
-assert( mat4.isStaticWidth == true );
-
-alias Matrix!(3,0,float) mat3xD;
-// float[][3] data;
-
-assert( mat3xD.isStaticHeight == true );
-assert( mat3xD.isStaticWidth == false );
-
-assert( mat3xD.isStaticHeightOnly == true );
-assert( mat3xD.isDynamicAll == false );
-assert( mat3xD.isDynamicOne == true );
-```
+- `enum isDynamic = H == 0 || W == 0`
+- `enum isStatic = H != 0 && W != 0`
+- `enum isDynamicHeight = H == 0`
+- `enum isStaticHeight = H != 0`
+- `enum isDynamicWidth = W == 0`
+- `enum isStaticWidth = W != 0`
+- `enum isStaticHeightOnly = isStaticHeight && isDynamicWidth`
+- `enum isStaticWidthOnly = isStaticWidth && isDynamicHeight`
+- `enum isDynamicAll = isDynamicHeight && isDynamicWidth`
+- `enum isDynamicOne = isStaticWidthOnly || isStaticHeightOnly`
 
 Static matrix inits by zeros if `isNumeric!datatype` and if `H!=W`,
-if `H==W` matrix inits by identity matrix.
+else if `H==W` matrix inits as identity matrix.
 
-If matrix has static dim it can be initialized as vector by
-values, arrays, vectors etc. Result count of elements must be:
+If matrix has static dim it can be initialized such as Vector
+(by values, arrays, vectors etc). Result count of elements must be:
 
 - `H*W` if matrix is full static
 - `cnt % W == 0` if only width is static
@@ -96,7 +90,7 @@ m.resize(3,10);
 m.resize(5,5); // throw exception
 ```
 
-All matrix can be expand by two methods:
+All matrix can be expanded by two methods:
 
 ```d
     auto expandHeight(size_t bH, size_t bW, X)( in Matrix!(bH,bW,X) mtr ) const
@@ -163,7 +157,7 @@ Matrix-vector mul can save vector access string if matrix is squared.
 
 Transposition as `@property auto T() const`.
 
-Floating point and squared matrix has propertyes:
+Floating point and squared matrix has properties:
 ```d
 @property auto det() const; // determinant
 @property auto inv() const; // inversion matrix
@@ -175,7 +169,7 @@ Only for transform matrix `Matrix!(4,4,float)`
 @property auto speedTransformInv() const;
 ```
 
-Module `matrix.d` provides some functions:
+Module provides some functions:
 
 ```d
 Matrix!(3,3,E) quatToMatrix(E)( Vector!(4,E,"i j k a") iq );

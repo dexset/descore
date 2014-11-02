@@ -1,6 +1,6 @@
 Provide simple work with image.
 
-### `enum ComponentType`
+#### `enum ComponentType`
 
 Used as label of type of stored data
 
@@ -16,7 +16,7 @@ Used as label of type of stored data
 - `DOUBLE`
 - `NORM_DOUBL`
 
-### `struct PixelType`
+#### `struct PixelType`
 
 Pixel information
 
@@ -35,7 +35,7 @@ Pixel information
 - `size_t bpp()` - bytes per pixel
 - `size_t compSize()` - bytes per channel
 
-### `struct Header`
+#### `struct Header`
 
 _Internal_ struct of Image. Contains info of image.
 
@@ -49,7 +49,7 @@ _Internal_ struct of Image. Contains info of image.
 - `size_t dataSize()`
 - `size_t pixelCount()`
 
-### `struct Image(size_t N) if( N > 0 )`
+#### `struct Image(size_t N) if( N > 0 )`
 
 All methods are pure.
 
