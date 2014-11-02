@@ -189,6 +189,8 @@ pure:
         return true;
     }
 
+    const(T[]) opCast(E)() const if( is( E == T[] ) ) { return data; }
+
     const @property
     {
         static if( is( typeof( dot(selftype.init,selftype.init) ) ) )
@@ -277,6 +279,15 @@ pure:
                             isCompatibleArrayAccessString(v.length,v)?v.split("").join(SEP):"",
                             array( map!(a=>format( `data[%d]`,getIndex(AS,a,SEP)))(v.split("")) ).join(",")
                             ));
+            }
+
+            @property auto opDispatch( string v, U )( in U b )
+                if( v.length > 1 && oneOfAccessAll(AS,v,SEP) && isCompatibleArrayAccessString(v.length,v) &&
+                        ( isCompatibleVector!(v.length,T,U) || ( isDynamicVector!U && is(typeof(T(U.datatype.init))) ) ) )
+            {
+                static if( b.isDynamic ) enforce( v.length == b.length );
+                foreach( i; 0 .. v.length ) data[getIndex(AS,""~v[i],SEP)] = T( b[i] );
+                return opDispatch!v;
             }
         }
     }
@@ -590,6 +601,26 @@ unittest
     assert( eq( b, [1,2] ) );
     assert( eq( c, [1,1] ) );
     assert( eq( d, [1,1,1,2,2,3,2,1] ) );
+}
+
+unittest
+{
+    auto a = vec3(1,2,3);
+    auto b = dvec4(4,5,6,7);
+    auto c = vecD( 9, 10 );
+    a.xz = b.yw;
+    assert( eq( a, [5,2,7] ) );
+    a.zy = c;
+    assert( eq( a, [5,10,9] ) );
+    static assert( !__traits(compiles, a.xy=vec3(1,2,3)) );
+    static assert( !__traits(compiles, a.xx=vec2(1,2)) );
+    auto d = a.zxy = b.wyx;
+    static assert( d.access_string == "z x y" );
+    static assert( is( d.datatype == float ) );
+    assert( eq( d, [ 7,5,4 ] ) );
+    assert( eq( a, [ 5,4,7 ] ) );
+    a.yzx = a.zxz;
+    assert( eq( a, [ 7,7,5 ] ) );
 }
 
 unittest
