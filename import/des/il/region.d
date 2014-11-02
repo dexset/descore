@@ -32,8 +32,16 @@ import des.math.linear.vector;
 struct Region(size_t N,T)
     if( N >= 1 && isNumeric!T )
 {
-    alias Vector!(N,T,"xyz"[0..N].spaceSep) ptype;
-    alias Vector!(N*2,T,("xyz"[0..N]~"whd"[0..N]).spaceSep) rtype;
+    static if( N <= 3 )
+    {
+        alias Vector!(N,T,"xyz"[0..N].spaceSep) ptype;
+        alias Vector!(N*2,T,("xyz"[0..N]~"whd"[0..N]).spaceSep) rtype;
+    }
+    else
+    {
+        alias Vector!(N,T) ptype;
+        alias Vector!(N*2,T) rtype;
+    }
 
     alias Region!(N,T) selftype;
 
@@ -53,8 +61,8 @@ struct Region(size_t N,T)
 
     @property
     {
-        ref ptype pos(){ return pt[0]; }
-        ref ptype size(){ return pt[1]; }
+        ref ptype pos() { return pt[0]; }
+        ref ptype size() { return pt[1]; }
 
         ptype pos() const { return pt[0]; }
         ptype size() const { return pt[1]; }
@@ -178,4 +186,12 @@ unittest
     assert( a != a.expand( vec3(1.2,.3,.4) ) );
     assert( fRegion3( vec3(0,0,0), vec3(1.2,1,1) ) == 
              a.expand( vec3(1.2,.3,.4) ) );
+}
+
+unittest
+{
+    alias Region!(5,float) MSR; // MultiSpaceRegtion
+    alias MSR.ptype msrvec;
+    auto a = MSR( msrvec(1,0,3,4,3), msrvec(3,2,4,8,4) );
+    assert( msrvec(2,1,4,5,5) in a );
 }

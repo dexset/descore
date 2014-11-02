@@ -22,7 +22,7 @@ The MIT License (MIT)
     THE SOFTWARE.
 +/
 
-module des.math.linear.poly;
+module des.math.linear.triangle;
 
 import std.traits;
 import des.math.linear.vector;
@@ -30,7 +30,7 @@ import des.math.linear.matrix;
 import des.math.linear.segment;
 import des.math.basic;
 
-struct Poly(T) if( isFloatingPoint!T )
+struct Triangle(T) if( isFloatingPoint!T )
 {
     alias Vector!(3,T,"x y z") vectype;
     vectype[3] pnt;
@@ -52,9 +52,9 @@ struct Poly(T) if( isFloatingPoint!T )
 
     auto tr(X)( in Matrix!(4,4,X) mtr ) const
     {
-        return Poly!T( (mtr * vec!(4,T,"x y z w")( pnt[0], 1 )).xyz,
-                       (mtr * vec!(4,T,"x y z w")( pnt[1], 1 )).xyz,
-                       (mtr * vec!(4,T,"x y z w")( pnt[2], 1 )).xyz );
+        return Triangle!T( (mtr * vec!(4,T,"x y z w")( pnt[0], 1 )).xyz,
+                           (mtr * vec!(4,T,"x y z w")( pnt[1], 1 )).xyz,
+                           (mtr * vec!(4,T,"x y z w")( pnt[2], 1 )).xyz );
     }
 
     Segment!(T)[3] toSegments() const
@@ -89,13 +89,13 @@ struct Poly(T) if( isFloatingPoint!T )
     { return seg.intersect( project(seg) ); }
 }
 
-alias Poly!float  fPoly;
-alias Poly!double dPoly;
-alias Poly!real   rPoly;
+alias Triangle!float  fTriangle;
+alias Triangle!double dTriangle;
+alias Triangle!real   rTriangle;
 
 unittest
 {
-    auto poly = fPoly( vec3(0,0,0), vec3(1,0,0), vec3(0,1,0) );
+    auto poly = fTriangle( vec3(0,0,0), vec3(1,0,0), vec3(0,1,0) );
     assert( poly.area == 0.5f );
     assert( poly.norm == vec3(0,0,1) );
 

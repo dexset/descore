@@ -121,9 +121,18 @@ struct Image(size_t N) if( N > 0 )
 {
     alias Image!N selftype;
 
-    alias Vector!(N,size_t,"whd"[0..N].spaceSep) imsize_t;
-    alias Vector!(N,size_t,"xyz"[0..N].spaceSep) imcrd_t;
-    alias Vector!(N,ptrdiff_t,"xyz"[0..N].spaceSep) imdiff_t;
+    static if( N <= 3 )
+    {
+        alias Vector!(N,size_t,"whd"[0..N].spaceSep) imsize_t;
+        alias Vector!(N,size_t,"xyz"[0..N].spaceSep) imcrd_t;
+        alias Vector!(N,ptrdiff_t,"xyz"[0..N].spaceSep) imdiff_t;
+    }
+    else
+    {
+        alias Vector!(N,size_t) imsize_t;
+        alias Vector!(N,size_t) imcrd_t;
+        alias Vector!(N,ptrdiff_t) imdiff_t;
+    }
 
     alias Region!(N,ptrdiff_t) imregion_t;
 
