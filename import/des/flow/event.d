@@ -94,6 +94,7 @@ struct Event
 }
 
 interface EventProcessor { void processEvent( in Event ); }
+interface EventBus { void pushEvent( in Event ); }
 
 final class FunctionEventProcessor : EventProcessor
 {

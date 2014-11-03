@@ -33,12 +33,13 @@ import des.flow.signal;
 /+
 action must be in:
     preparation -> ctor
-    last actions before start processing -> process special input event
+    last actions before start -> process special input event
+    actions on pause -> process special input event
     processing -> process
     terminate all -> selfDestroy( external memory manager )
 +/
 
-abstract class WorkElement : ExternalMemoryManager
+abstract class WorkElement : EventBus, SignalBus, ExternalMemoryManager
 {
     mixin DirectEMM;
     mixin AnywayLogger;

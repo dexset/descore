@@ -30,15 +30,13 @@ struct Signal
 {
     ulong code;
 
-    pure this( ulong code )
-    { this.code = code; }
-
-    pure this( in Signal s )
-    { this.code = s.code; }
+pure nothrow @nogc:
+    this( ulong code ) { this.code = code; }
+    this( in Signal s ) { this.code = s.code; }
 }
 
-interface SignalProcessor
-{ void processSignal( in Signal ); }
+interface SignalProcessor { void processSignal( in Signal ); }
+interface SignalBus { void sendSignal( in Signal ); }
 
 unittest
 {
