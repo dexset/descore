@@ -55,7 +55,7 @@ Matrix can initialize from other matrix if dim sizes is compatible.
     auto fill( in E[] vals... ); // fill data same in ctor
 ```
 
-If matrix is static and squared or if has one dynamic dim it 
+If matrix is static and squared or has one dynamic dim it 
 can be created with static method `diag`
 
 ```d
@@ -66,7 +66,7 @@ assert( eq( m, [[1,0,0,0],
                 [0,0,0,1]] ));
 ```
 
-If matrix has static dim it field sets as enum, and as property otherwise
+If matrix has static dim, this static dim sets both as enum and property
 ```d
     static if( isStaticHeight ) enum height = H;
     else
@@ -81,8 +81,9 @@ If matrix has static dim it field sets as enum, and as property otherwise
 ```
 
 Dynamic matrix has method `void resize( size_t nh, size_t nw )`.
-If call `resize` for matrix with one static field method parameter
-must be equal static dim value:
+
+If matrix has one static dim, then proper parameter in method must be
+equal to static dim value.
 
 ```d
 auto m = mat3xD(1,2,3,4,5,6);
@@ -124,7 +125,7 @@ All matrix can return slice:
     auto sliceWidth( size_t start, size_t count=0 ) const;
 ```
 
-its returns dynamic matrix with `count = count ? count : height - start` of
+The return of `slice*` is dynamic matrix with `count = count ? count : height - start` of
 lines (rows or columns) from start pos:
 
 ```d
@@ -133,7 +134,7 @@ m.sliceHeight( 1,1 ); // -> matDxD [[3,4]]
 m.sliceWidth( 1 ); // -> mat3xD [[4],[5],[6]]
 ```
 
-All matrix support setting rows and cols,
+All matrixes support rows and cols setting,
 and can return one dim matrix from row and cols
 
 ```d
@@ -145,10 +146,10 @@ auto mr = m.row(0); // mc -> [[10,2]]
 auto mc = m.col(0); // mc -> [[10],[10],[10]]
 ```
 
-Binary operations (`+` and `-`) allows with compatible matrix
+Binary operations (`+` and `-`) allowed with compatible matrix
 (equal sizes and compatible types for operation).
 
-Other binary operations allows with matrix and some type if
+Other binary operations allowed with matrix and some type only if
 operation is valid with matrix element type and input type.
 Mul to double for example.
 
