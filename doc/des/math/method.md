@@ -2,7 +2,7 @@
 
 ### `math.method.approx.interp`
 
-Provides some interpolation functions and helps types
+Provides some interpolation functions and help types
 
 #### Linear interpolation
 
