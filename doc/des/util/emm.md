@@ -7,7 +7,7 @@ it `destroy()` calls for all stored EMM's.
 
 ExternalMemoryManager can store other EMM's and call `destroy()` for all of them when necessary.
 
-Example:
+##### Example:
 
 ```d
 import des.util.emm;
