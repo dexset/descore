@@ -1,4 +1,4 @@
-Provide simple work with image.
+Provides simple work with image.
 
 #### `enum ComponentType`
 
@@ -20,15 +20,15 @@ Used as label of type of stored data
 
 Pixel information
 
-##### fiels:
+##### fields:
 
 - `ComponentType comp = ComponentType.RAWBYTE` - data type
-- `size_t channels = 1` - count of chanels
+- `size_t channels = 1` - channels count
 
 ##### methods:
 
 - `this( ComponentType ict, size_t ch )`
-- `this( size_t ch )` - component type setted as `RAWBYTE`
+- `this( size_t ch )` - component type set as `RAWBYTE`
 
 ##### const properties:
 
@@ -37,7 +37,7 @@ Pixel information
 
 #### `struct Header`
 
-_Internal_ struct of Image. Contains info of image.
+_Internal_ struct of Image. Contains image info.
 
 ##### fields:
 
@@ -92,9 +92,9 @@ in any case:
 - `this(T)( in size_t[N] sz, in T[] data=[] )`
 - `this(V,T)( in V v, in T[] data=[] ) if( isCompatibleVector!(N,size_t,V) )`
 
-if `N>1` image can create from `Image!(N-1)`
+if `N>1` image can be created from `Image!(N-1)`
 
-`this( in Image!(N-1) img, size_t dim=N-1 )` - `dim` is dimension what replaced by 1,
+`this( in Image!(N-1) img, size_t dim=N-1 )` - `dim` is dimension that replaced by 1,
 data copies as is by linear.
 
 ##### properties:
@@ -107,23 +107,22 @@ data copies as is by linear.
 - `PixelType type( in PixelType tp )` - set image type
 - `auto header() const` - get header
 
-if `N>1` image can be reduce to `Image!(N-1)` by
+if `N>1` image can be reduce to `Image!(N-1)` by `@property Image!(N-1) histoConv(size_t K, T)() const if( K < N )` where
 
-`@property Image!(N-1) histoConv(size_t K, T)() const if( K < N )` - `K` - dim
-in which image be reduced, `T` - type, using for summation of pixels
+`K` - dim in which image would be reduced, `T` - type, using for summation of pixels
 
 ##### methods:
 
 - `void clear()` - fill data by zeros
-- `immutable(void[]) dump() const` - return immutable array what containts
+- `immutable(void[]) dump() const` - return immutable array that contains
   header and data
 
 - `ref T pixel(T)( in size_t[N] crd... )` - pixel access
 - `ref T pixel(T,V)( in V v ) if( isCompatibleVector!(N,size_t,V) )` - dito
 - `ref const(T) pixel(T)( in size_t[N] crd... ) const` - dito but const
 - `ref const(T) pixel(T,V)( in V v ) const if( isCompatibleVector!(N,size_t,V) )` - dito
-- `@property T[] mapAs(T)()` - cast `data` to `T[]` with checking type `T` for
-  compatible with stored PixelType
+- `@property T[] mapAs(T)()` - cast `data` to `T[]` with checking type `T` for compatibility
+- with stored PixelType
 - `@property const(T)[] mapAs(T)() const` - dito
 - `Image!N copy(T)( in Region!(N,T) r ) const if( isIntegral!T )` - copy region of image
 - `void paste(V)( in V pos, in Image!N im )` - paste image in pos
