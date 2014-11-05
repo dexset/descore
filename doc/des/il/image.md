@@ -95,7 +95,7 @@ in any case:
 if `N>1` image can be created from `Image!(N-1)`
 
 `this( in Image!(N-1) img, size_t dim=N-1 )` - `dim` is dimension that replaced by 1,
-data copies as is by linear.
+data will be copied as is.
 
 ##### properties:
 
@@ -107,7 +107,7 @@ data copies as is by linear.
 - `PixelType type( in PixelType tp )` - set image type
 - `auto header() const` - get header
 
-if `N>1` image can be reduce to `Image!(N-1)` by `@property Image!(N-1) histoConv(size_t K, T)() const if( K < N )` where
+if `N>1` image can be reduce to `Image!(N-1)` by `@property Image!(N-1) histoConv(size_t K, T)() const if( K < N )` where:
 
 `K` - dim in which image would be reduced, `T` - type, using for summation of pixels
 
