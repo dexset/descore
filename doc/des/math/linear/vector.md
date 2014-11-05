@@ -2,13 +2,13 @@ Provides work with vector and some aliases and functions.
 
 #### `struct Vector( size_t N, T, alias string AS="")`
 
-`AS` must be valid access string with space separator or must be a empty string.
+`AS` must be valid access string with space separator or must be an empty string.
 
 Vector can be dynamic (`N==0`) or static (`N>0`).
 
 ##### aliases:
 
-- `alias data this` - vector can used as array
+- `alias data this` - vector can be used as array
 - `alias T datatype`
 - `alias AS access_string`
 - `alias Vector!(N,T,AS) selftype`
@@ -23,7 +23,7 @@ Vector can be dynamic (`N==0`) or static (`N>0`).
 
 If vector is static:
 
-- `T[N] data` - if `isNumeric!datatype` initialize by zeros
+- `T[N] data` - if `isNumeric!datatype` initialized by zeros
 
 else:
 
@@ -35,7 +35,7 @@ assert( Vector!(4,float).sizeof == float.sizeof * 4 );
 
 ##### `length` value
 
-It mean length of elements. For static vector it's enum, for
+It means the length of elements. For static vector it's enum, for
 dynamic it's a property:
 
 - `pure @property auto length() const`
@@ -43,7 +43,7 @@ dynamic it's a property:
 
 ##### ctors
 
-Vector can construct with different ways:
+Vector can be constructed with different ways:
 
 - from single values
 
@@ -51,7 +51,7 @@ Vector can construct with different ways:
 
 - from other vectors
 
-they ways can combined:
+this ways can be combined:
 
 ```d
 alias Vector!(8,float) MegaVector;
@@ -63,14 +63,14 @@ auto a = MegaVector( 0, v2, v3, [6,7] );
 assert( eq( a, [0,1,2,3,4,5,6,7] ) );
 ```
 
-and static vector can construct from one value:
+and static vector can be constructed from one value:
 
 ```d
 auto a = vec4(1);
 assert( eq( a, [1,1,1,1] ) );
 ```
 
-For static vector data can access by names.
+One can assess static vector data by names:
 
 ```d
 alias Vector!(4,float,"x y Vx Vy") Phase;
@@ -79,7 +79,7 @@ a.x = 10;
 a.Vy = 12;
 ```
 
-If access string has one symbol per element
+If access string has one symbol per element,
 vector can return and set vector from elements:
 
 ```d
@@ -105,9 +105,9 @@ a /= 0.5;
 auto f = b ^^ 2; // [4,9,16]
 ```
 
-Only multiplication `*` allows as opBinaryRight, and works per element.
+Only multiplication `*` allowed as opBinaryRight, and works per element.
 
-Cast to `bool` checks all elements is finite.
+Cast to `bool` checks all elements on finiteness.
 
 If type of vector elements allows self multiplication and summation:
 
@@ -115,7 +115,7 @@ If type of vector elements allows self multiplication and summation:
 
 `cross(a,b)` cross mul operation for vectors with length == 3
 
-If allows dot mul vectors has some const properties:
+If allowed dot mul vectors has some const properties:
 
 ```d
 auto a = ivec3(1,2,3);
@@ -147,7 +147,7 @@ auto b = a.rebase(nx,ny,nz);
 assert( eq( b, [0.5,0.5,0.5] ) );
 ```
 
-If N==4 and access string is "i j k a" appends quaternion methods:
+If N==4 and access string is "i j k a" quaternion methods are appended:
 
 ```d
 static selftype fromAngle(E,alias string bs)( T alpha, in Vector!(3,E,bs) axis )
