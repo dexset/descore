@@ -44,7 +44,7 @@ Region can be constructed as `Vector!(N*2,T)`
 - `ptype lim() const` - returns sum of pos and size
 - `ptype lim( in ptype nl )` - sets new lim
 
-Binary operations allowed as for `Vector!(N*2,T)`.
+Binary operations like in `Vector!(N*2,T)`.
 Has two `opBinaryRight` methods, each of them receives 
 `op == "in"`.
 
