@@ -33,7 +33,7 @@ values of H and W. Row-major data layout.
 Static matrix inits by zeros if `isNumeric!datatype` and if `H!=W`,
 else if `H==W` matrix inits as identity matrix.
 
-If matrix has static dim it can be initialized such as Vector
+If matrix has static dim it can be initialized as Vector
 (by values, arrays, vectors etc). Result count of elements must be:
 
 - `H*W` if matrix is full static
@@ -49,7 +49,7 @@ this(X...)( size_t iH, size_t iW, in X vals );
 and `vals` can be values, arrays, vectors, etc.
 Count of them must be `iH*iW`.
 
-Matrix can initialize from other matrix if dim sizes is compatible.
+Matrix can be initialized from other matrix if dim sizes is compatible.
 
 ```d
     auto fill( in E[] vals... ); // fill data same in ctor
