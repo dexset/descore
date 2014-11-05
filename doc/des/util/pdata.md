@@ -1,5 +1,5 @@
-Provide `struct PData`. It usable in multithreading 
-programs for pass data to other thread.
+Provides `struct PData`. It usable in multithreading 
+programs for passing data to other thread.
 
 Example:
 
