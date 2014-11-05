@@ -1,4 +1,4 @@
-Provides 4 struct
+Provides 4 structures
 
 ```d
 struct Signal(Args...);
