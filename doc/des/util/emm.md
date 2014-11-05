@@ -1,9 +1,11 @@
-It used if class manipulate some raw data and must free it then finish work.
-For example OpenGL wrapers must free data when it destroy.
+ExternalMemoryManager is used when class manipulate some raw data and must free it then work is finished.
+For example OpenGL wrapers must free data when on destroy.
 Standart destructor mechanism does not provide immediate free data.
 
 ExternalMemoryManager can store other EMM's and then call `destroy()` for
 it `destroy()` calls for all stored EMM's.
+
+ExternalMemoryManager can store other EMM's and call `destroy()` for all of them when necessary.
 
 Example:
 
@@ -28,16 +30,16 @@ class Parent : ExternalMemoryManager
 
     this()
     {
-        // all childs EMM's must be stored
+        // all child EMM's must be stored
 
-        // use if get child EMM from function
+        // when child EMM is returned from function
         a = registerChildEMM( func() );
 
-        // use if create here
+        // when child EMM is created
         b = newEMM!RawHandler( ... args for RawHandler ctor ... );
     }
 }
 ```
 
-If object isn't EMM `registerChildEMM` and `newEMM` not throw any exception,
-object return as is.
+If object isn't EMM `registerChildEMM` and `newEMM` doesn't throw any exceptions,
+object will be returned as is.
