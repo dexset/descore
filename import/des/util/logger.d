@@ -322,6 +322,7 @@ shared static this()
     try
     {
         getopt( args,
+                std.getopt.config.passThrough,
                 "log", &logging,
                 "log-use-min", &useMinimal,
               );
