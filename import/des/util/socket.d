@@ -79,6 +79,7 @@ protected override void selfDestroy()
 private:
     Socket server;
     Socket client;
+    SocketStream ss;
     alias void[] delegate( void[] ) callback;
     callback cb;
 
@@ -94,11 +95,12 @@ private:
                 log_info( "locking" );
                 server.blocking(true);
                 client = server.accept();
+                ss = new SocketStream( client );
                 server.blocking(false);
             }
         }
     }
-    int block_size = 16;
+    int block_size = 128;
 public:
     this( Address addr )
     {
@@ -126,7 +128,8 @@ public:
 
         auto set = new SocketSet;
         set.add( client );
-        if( Socket.select(set,null,null,dur!"msecs"(0) ) <= 0 || !set.isSet(client) ) return;
+        if( Socket.select(set,null,null,dur!"msecs"(0) ) <= 0 || !set.isSet(client) ) 
+            return;
 
         auto data = formReceive( &client.receive );
         if( data.length == 0 )
@@ -139,7 +142,8 @@ public:
         {
             auto send_data = cb( data );
             if( send_data.length != 0 )
-                formSend( (const(void)[] dd, size_t block_size){return client.send(dd);}, send_data, block_size );
+                formSend( (const (void)[] dd, size_t block_size ){ return cast(ptrdiff_t)(ss.writeBlock( cast(void*)dd.ptr, block_size )); }, send_data, block_size );
+                //formSend( (const(void)[] dd, size_t block_size){return client.send(dd);}, send_data, block_size );
         }
     }
 }
@@ -175,7 +179,7 @@ public:
     {
         auto data = formReceive(( void[] data ) 
         { 
-            auto ptr = sender.receiveFrom(data, address);
+            auto ptr = sender.receiveFrom(data);
             return ptr; 
         });
         if( cb !is null )
@@ -194,20 +198,25 @@ unittest
     SListener ll = new SListener( 4040 );
     SSender ss = new SSender( 4040 );
     ubyte[] data;
+    ubyte[] retdata = [1,2,3,4,5];
     data.length = 100;
     foreach( ref d; data )
         d = cast(ubyte)uniform( 100, 255 );
-    ubyte[] rdata;
-    rdata.length = 100;
+    ubyte[] lrdata;
+    ubyte[] srdata;
 
-    auto cb = ( void[] data )
+    auto lcb = ( void[] data )
     {
-        void[] res;
-        rdata = cast(ubyte[])data.dup;
-        return res;
+        lrdata = cast(ubyte[])data.dup;
+        return retdata;
     };
-    ll.setReceiveCB( cb );
+
+    auto scb = ( void[] data ){ srdata = cast(ubyte[])data.dup; };
+    ll.setReceiveCB( lcb );
+    ss.setReceiveCB( scb );
     ss.send( data );
     ll.step();
-    assert( data == rdata );
+    ss.step();
+    assert( data == lrdata );
+    assert( srdata == retdata );
 }
