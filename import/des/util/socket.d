@@ -6,12 +6,7 @@ import std.socketstream;
 import des.util.pdata;
 import des.util.helpers;
 import des.util.emm;
-
-void log(string file=__FILE__, size_t line=__LINE__, Args...)( Args args )
-{ 
-    std.stdio.stderr.writef( "%s:%d ", file, line );
-    std.stdio.stderr.writeln( args );
-}
+import des.util.logger;
 
 class SocketException: Exception
 { 
@@ -91,12 +86,12 @@ private:
     {
         if( client is null )
         {
-            version(socketlog) log( "client is null" );
+            log_info( "client is null" );
             auto set = new SocketSet;
             set.add( server );
             if( Socket.select(set,null,null,dur!"msecs"(500) ) > 0 && set.isSet(server) )
             {
-                version(socketlog) log( "locking" );
+                log_info( "locking" );
                 server.blocking(true);
                 client = server.accept();
                 server.blocking(false);
@@ -121,12 +116,12 @@ public:
 
     void step()
     {
-        version(socketlog) log("step");
+        log_info("step");
         checkClient();
 
         if( client is null )
             return;
-        version(socketlog) log("   client not null");
+        log_info("   client not null");
 
 
         auto set = new SocketSet;
@@ -139,7 +134,7 @@ public:
             client = null;
             return;
         }
-        version(socketlog) log("   data recived");
+        log_info("   data recived");
         if( cb !is null )
         {
             auto send_data = cb( data );
@@ -187,7 +182,7 @@ public:
             cb( data );
     }
 
-    void send( in ubyte[] data )
+    void send( in void[] data )
     {
         formSend( (const (void)[] dd, size_t block_size ){ return cast(ptrdiff_t)(ss.writeBlock( cast(void*)dd.ptr, block_size )); }, data, bs );
     }
