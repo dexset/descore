@@ -104,6 +104,9 @@ public:
     @property auto info() const { return Info(com.info.back); }
     @property auto name() const { return self_name; }
 
+    auto takeAllSignals()
+    { return com.signals.clearAndReturnAll(); }
+
     void pushCommand( Command cmd )
     {
         com.commands.pushBack( cmd );
