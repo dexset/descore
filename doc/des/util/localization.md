@@ -1,4 +1,4 @@
-Provides tool for localization program.
+Provides tool for program localization.
 
 Example:
 

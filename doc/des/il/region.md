@@ -1,6 +1,6 @@
-Provides work with region of N-dim space. Region described as
+Provides work with region of N-dim space. Region presented as
 two point. First point is a start of rectangle region. Second point
-is a size of rectingle region.
+is a size of rectangle region.
 
 #### `struct Region(size_t N,T) if( N >= 1 && isNumeric!T )`
 
@@ -31,20 +31,20 @@ union
 }
 ```
 
-Region can construct as `Vector!(N*2,T)`
+Region can be constructed as `Vector!(N*2,T)`
 
 ##### properties:
 
-- `ref ptype pos()` - return ref to pt[0]
-- `ref ptype size()` - return ref to pt[1]
+- `ref ptype pos()` - returns ref to pt[0]
+- `ref ptype size()` - returns ref to pt[1]
 
-- `ptype pos() const` - return copy of pt[0]
-- `ptype size() const` - return copy of pt[1]
+- `ptype pos() const` - returns copy of pt[0]
+- `ptype size() const` - returns copy of pt[1]
 
-- `ptype lim() const` - return sum of pos and size
-- `ptype lim( in ptype nl )` - set new lim
+- `ptype lim() const` - returns sum of pos and size
+- `ptype lim( in ptype nl )` - sets new lim
 
-Binary operations allowed as for `Vector!(N*2,T)`.
+Binary operations like in `Vector!(N*2,T)`.
 Has two `opBinaryRight` methods, each of them receives 
 `op == "in"`.
 
@@ -65,14 +65,14 @@ assert( c !in a );
 
 ##### const methods:
 
-- `Region!(N,T) overlap(E)( in Region!(N,E) reg )` - return overlap of `this`
+- `Region!(N,T) overlap(E)( in Region!(N,E) reg )` - returns overlap of `this`
   and `reg`
 
-- `Region!(N,T) overlapLocal(E)( in Region!(N,E) reg )` - return overlap of `this`
+- `Region!(N,T) overlapLocal(E)( in Region!(N,E) reg )` - returns overlap of `this`
   and `reg`. `reg` pos in local coords of `this`
 
-- `Region!(N,T) expand(E)( in Region!(N,E) reg )` - return region that contains
+- `Region!(N,T) expand(E)( in Region!(N,E) reg )` - returns region that contains
   `this` and `reg`
 
-- `Region!(N,T) expand(E)( in E pnt ) if( isCompatibleVector!(N,T,E) )` - return region that contains
+- `Region!(N,T) expand(E)( in E pnt ) if( isCompatibleVector!(N,T,E) )` - returns region that contains
   `this` and point `pnt`

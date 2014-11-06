@@ -18,7 +18,7 @@ void log_trace(Args...)( Args args );
 ...
 ```
 
-If start program as `./program --log trace` output must be like this
+If program starts as `./program --log trace` output must be like this
 
 ```
 [000000.111427128][ INFO][module.function]: format str 3.14 4
@@ -26,10 +26,10 @@ If start program as `./program --log trace` output must be like this
 [000000.111938579][TRACE][module.function]: 12
 ```
 
-If log function get string as first argument it try to format other args to this
+If log function has string as first argument it tries to format other args to this
 string, if it failed print converted to string and concatenated args.
 
-If start program as `./program --log debug` output must be like this (without trace)
+If program starts as `./program --log debug` output must be like this (without trace)
 
 ```
 [000000.111427128][ INFO][module.function]: format str 3.14 4
@@ -39,14 +39,14 @@ Flag `--log` used for setting max level of logging output.
 Default level is `error`. If log function called with greater level it's skipped.
 Level has attitude `off < error < warn < info < debug < trace`.
 
-Flag `--log` may used with module name `./program --log draw.point:debug`.
-It's set `debug` level for module `draw.point` and default to other.
+Flag `--log` can be used with module name `./program --log draw.point:debug`.
+It will set `debug` level for module `draw.point` and default to other.
 
-Flag `--log-use-min` is boolean flag. It makes logging system skips output from
-all child modules if their level greater that parent. Default is `false`.
+Flag `--log-use-min` is boolean flag. It forces logging system to skip output from
+all child modules if their level greater than parent. Default is `false`.
 
 `./program --log trace --log draw:info --log draw.point:trace --log-use-min=true` 
-skips all `log_trace` and `log_debug` from whole draw.point, and not skip from
+skips all `log_trace` and `log_debug` from whole draw.point, and doesn't skip from
 other modules.
 
 `./program --log trace --log draw:info --log draw.point:trace` allow `log_trace`

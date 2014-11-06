@@ -2,7 +2,7 @@
 
 Package `des.math.view` provides 4 modules:
 
-- transform - basic conception of module view
+- transform - basic concept of module view
 - node - interface for drawing objects
 - resolver - calculator of full transform matrix
 - camera - node for using as camera
@@ -13,7 +13,7 @@ Package `des.math.view` provides 4 modules:
 
 ##### methods:
 
-- `@property mat4 matrix() const;` - you must implement in your realisation
+- `@property mat4 matrix() const;` - you must implement it in your own realisation
     of Transform interface. This method must return transform matrix from local
     coord system to global.
 
@@ -41,7 +41,7 @@ implement matrix
 
 ##### methods:
 
-- `@property mat4 matrix() const` - return result of multiplication
+- `@property mat4 matrix() const` - returns the result of multiplication
 of `list` matrix by order.
 
 #### `class CachedTransform : Transform`
@@ -63,7 +63,7 @@ of `list` matrix by order.
 
 ##### methods:
 
-- `@property mat4 matrix() const` - need implement (`Transform`) - local to
+- `@property mat4 matrix() const` - needs to implement (`Transform`) - local to
   parent transform matrix
 - `@property const(Node) parent() const` - needs for resolving full transform
   matrix
@@ -98,8 +98,8 @@ of `list` matrix by order.
 ##### public methods:
 
 - `this( Node parent=null )` - set parent and create new resolver
-- `mat4 resolve( const(Node) obj ) const` - return full transform matrix
-- `mat4 opCall( const(Node) obj ) const` - return full transform matrix with projection if it
+- `mat4 resolve( const(Node) obj ) const` - returns full transform matrix
+- `mat4 opCall( const(Node) obj ) const` - returns full transform matrix with projection if it
   isn't `null`
 - `@property mat4 matrix() const` - return `transform.matrix` if it isn't
   `null`, identity otherwise
@@ -109,13 +109,13 @@ of `list` matrix by order.
 
 ##### public fields:
 
-- `vec3 pos=vec3(0)` - point from which looks
-- `vec3 target=vec3(0)` - point where looks
+- `vec3 pos=vec3(0)` - obserber point
+- `vec3 target=vec3(0)` - view direction vector
 - `vec3 up=vec3(0,0,1)` - up direction
 
 ##### public methods:
 
-- `@property mat4 matrix() const` - return lookAt transform matrix
+- `@property mat4 matrix() const` - returns lookAt transform matrix
 
 #### `abstract class ResolveTransform : Transform`
 
@@ -140,7 +140,7 @@ use `Node` instead of `vec3`
 
 ##### public methods:
 
-- `@property mat4 matrix() const` - return lookAt transform matrix
+- `@property mat4 matrix() const` - returns lookAt transform matrix
 
 #### `class PerspectiveTransform : Transform`
 
@@ -153,7 +153,7 @@ use `Node` instead of `vec3`
 
 ##### public methods:
 
-- `@property mat4 matrix() const` - return perspective projection matrix
+- `@property mat4 matrix() const` - returns perspective projection matrix
 
 #### `class SimpleCamera : Camera`
 
@@ -167,10 +167,10 @@ Camera with `LookAtTransform` as `transform` and `PerspectiveTransform` as
 
 ##### public methods:
 
-- `this( Node parent=null )` - create new `LookAtTransform` and
+- `this( Node parent=null )` - creates new `LookAtTransform` and
   `PerspectiveTransform` objects and sets to `transform` and `projection`
 
-##### public propertyes (meaning same in `LookAtTransform` and `PerspectiveTransform`):
+##### public properties (meaning same in `LookAtTransform` and `PerspectiveTransform`):
 
 - `void fov( float val )`
 - `float fov() const`

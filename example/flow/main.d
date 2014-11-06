@@ -71,8 +71,8 @@ void batchCommandWithSleep( FThread[] list, Command cmd, size_t sleep_time )
     log_info( "##### %s", cmd );
     batchCommand( list, cmd );
 
-    // may print wrong info because command in
-    // thread may not processed yet
+    // can print wrong info because command in
+    // thread can be not processed yet
     printInfo( list );
 
     Thread.sleep( dur!"msecs"(sleep_time) );

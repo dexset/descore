@@ -14,13 +14,13 @@ vector.
 
 ##### properties:
 
-- `ref vectype start()` - return ref to pnt
-- `ref const(vectype) start()` - return copy of pnt
-- `vectype end() const` - return sum of pnt and dir
-- `vectype end( in vectype p )` - sets end point and return it
-- `Segment!T revert() const` - swap start and end
-- `T len2() const` - return squared length of dir
-- `T len() const` - return length of dir
+- `ref vectype start()` - returns ref to pnt
+- `ref const(vectype) start()` - returns copy of pnt
+- `vectype end() const` - returns sum of pnt and dir
+- `vectype end( in vectype p )` - sets end point and returns it
+- `Segment!T revert() const` - swaps start and end
+- `T len2() const` - returns squared length of dir
+- `T len() const` - returns length of dir
 
 ##### static methods:
 
@@ -33,12 +33,12 @@ vector.
  - `seg*double`
  - `seg/double`
 
- implements by `mixin( BasicMathOp!"pnt dir" )`
+ implemented by `mixin( BasicMathOp!"pnt dir" )`
 
 ##### const methods: 
 
-- `Segment!T tr(X)( in Matrix!(4,4,X) mtr )` - apply transform matrix to
-  copy and return it
+- `Segment!T tr(X)( in Matrix!(4,4,X) mtr )` - applies transform matrix to
+  copy and returns it
 
 - `Segment!T altitude( in vectype pp )` - altitude from segment line to point
 - `Segment!T altitude(F)( in Segment!F seg )` - altitude from `this` segment line
