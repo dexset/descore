@@ -86,12 +86,12 @@ private:
     {
         if( client is null )
         {
-            log_info( "client is null" );
+            log_debug( "client is null" );
             auto set = new SocketSet;
             set.add( server );
             if( Socket.select(set,null,null,dur!"msecs"(500) ) > 0 && set.isSet(server) )
             {
-                log_info( "locking" );
+                log_debug( "locking" );
                 server.blocking(true);
                 client = server.accept();
                 server.blocking(false);
@@ -116,12 +116,12 @@ public:
 
     void step()
     {
-        log_info("step");
+        log_debug("step");
         checkClient();
 
         if( client is null )
             return;
-        log_info("   client not null");
+        log_debug("   client not null");
 
 
         auto set = new SocketSet;
@@ -134,7 +134,7 @@ public:
             client = null;
             return;
         }
-        log_info("   data recived");
+        log_debug("   data recived");
         if( cb !is null )
         {
             auto send_data = cb( data );
