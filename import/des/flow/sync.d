@@ -46,6 +46,8 @@ struct Communication
         info     = new shared SyncList!(FThread.Info);
         eventbus = new shared SyncList!Event;
         listener = new shared HubOutput!Event;
+
+        info.pushBack( FThread.Info( FThread.State.NONE, FThread.Error.NONE, "" ) );
     }
 }
 

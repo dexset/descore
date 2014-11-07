@@ -177,6 +177,7 @@ private
 {
     void tmain(Args...)( Communication com, WorkElement function(Args) func, Args args )
     {
+
         Logger logger = new InstanceLogger( __MODULE__ ~ ".WorkProcessor", Thread.getThis().name );
         auto wp = createProcessor( com, logger, func, args );
         if( wp is null ) return;
@@ -187,14 +188,18 @@ private
 
     auto createProcessor(Args...)( Communication com, Logger logger, WorkElement function(Args) func, Args args )
     {
-        WorkProcessor!Args ret;
-        try ret = new WorkProcessor!Args( com, logger, func, args );
-        catch( Throwable e ) com.info.pushBack( convertToErrorInfo(logger,e) );
-        return ret;
+        try return new WorkProcessor!Args( com, logger, func, args );
+        catch( Throwable e )
+        {
+            com.info.pushBack( convertToErrorInfo(logger,e) );
+            return null;
+        }
     }
 
-    final class WorkProcessor(Args...) : SignalProcessor, EventProcessor
+    final class WorkProcessor(Args...) : ExternalMemoryManager, SignalProcessor, EventProcessor
     {
+        mixin ParentEMM;
+
         Args args;
         WorkElement function(Args) func;
         WorkElement elem;
@@ -264,6 +269,11 @@ private
         // EventProcessor
         void processEvent( in Event ev ) { com.listener.pushBack(ev); }
 
+        void pushEvent( in Event ev ) { com.eventbus.pushBack( ev ); }
+
+        void pushInfo( FThread.State state, FThread.Error error=FThread.Error.NONE, string msg="" )
+        { com.info.pushBack( FThread.Info( state, error, msg ) ); }
+
         void init()
         {
             debug logger.Debug( "start" );
@@ -321,16 +331,13 @@ private
             debug logger.Debug( "pass" );
         }
 
-        void destroy()
+    protected:
+
+        void selfDestroy()
         {
             stop();
             debug logger.Debug( "pass" );
         }
-
-        void pushEvent( in Event ev ) { com.eventbus.pushBack( ev ); }
-
-        void pushInfo( FThread.State state, FThread.Error error=FThread.Error.NONE, string msg="" )
-        { com.info.pushBack( FThread.Info( state, error, msg ) ); }
     }
 
     void fullTerminate(T)( ref T obj )
