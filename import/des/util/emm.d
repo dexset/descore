@@ -29,7 +29,12 @@ interface ExternalMemoryManager
     mixin template DirectEMM()
     {
         private ExternalMemoryManager[] chemm;
+        private bool is_destroyed = false;
+
         protected final ref ExternalMemoryManager[] childEMM() { return chemm; }
+
+        public final bool isDestroyed() const { return is_destroyed; }
+        protected final void isDestroyed( bool d ) { is_destroyed = d; }
     }
 
     mixin template ParentEMM()
@@ -42,7 +47,11 @@ interface ExternalMemoryManager
     {
         @property ref ExternalMemoryManager[] childEMM();
         void selfDestroy();
+
+        @property void isDestroyed( bool d );
     }
+
+    @property bool isDestroyed() const;
 
     final
     {
@@ -67,9 +76,11 @@ interface ExternalMemoryManager
 
         void destroy()
         {
+            if( isDestroyed ) return;
             foreach( cemm; childEMM )
                 cemm.destroy();
             selfDestroy();
+            isDestroyed = true;
         }
     }
 }
