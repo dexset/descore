@@ -84,12 +84,13 @@ struct Event
         ulong elapsed() const
         { return currentTick - timestamp; }
 
-        @property
-        {
-            T as(T)() const { return data.as!T; }
-            T as(T)() shared const { return data.as!T; }
-            T as(T)() immutable { return data.as!T; }
-        }
+        T as(T)() const { return data.as!T; }
+        T as(T)() shared const { return data.as!T; }
+        T as(T)() immutable { return data.as!T; }
+
+        immutable(void)[] pdata() const { return data.data; }
+        immutable(void)[] pdata() shared const { return data.data; }
+        immutable(void)[] pdata() immutable { return data.data; }
     }
 }
 
