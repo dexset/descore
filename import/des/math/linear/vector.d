@@ -61,7 +61,7 @@ unittest
 pure bool isCompatibleVector(size_t N,T,E)()
 {
     static if( !isVector!E ) return false;
-    else return E.init.length == N && is( E.datatype : T );
+    else return E.dims == N && is( E.datatype : T );
 }
 
 pure bool isValidOp(string op,T,E,K=T)()
@@ -126,21 +126,33 @@ pure:
         static if( !is(typeof(flatData!T(vals))) )
             static assert( 0, "args not compatible" );
 
-        auto buf = flatData!T(vals);
-
         static if( isStatic )
         {
-            if( buf.length == length )
-                data[] = buf[];
-            else if( buf.length == 1 )
-                data[] = buf[0];
-            else enforce( false, "bad args length" );
+            static if( isNumeric!T && allSatisfy!(isNumeric,E) &&
+                    ( E.length == N || E.length == 1 ) )
+            {
+                static if( E.length == N )
+                    foreach( i, val; vals )
+                        data[i] = cast(T)( val );
+                else data[] = cast(T)( vals[0] );
+            }
+            else static if( E.length == 1 && isCompatibleVector!(N,T,E[0]) )
+            {
+                foreach( i; 0 .. N )
+                    data[i] = cast(T)(vals[0][i]);
+            }
+            else
+            {
+                auto buf = flatData!T(vals);
+
+                if( buf.length == length )
+                    data[] = buf[];
+                else if( buf.length == 1 )
+                    data[] = buf[0];
+                else enforce( false, "bad args length" );
+            }
         }
-        else
-        {
-            length = buf.length;
-            data[] = buf[];
-        }
+        else data = flatData!T(vals);
     }
 
     static if( isDynamic )
@@ -505,6 +517,13 @@ unittest
     assert( eq( a, a10 ) );
 
     a = vec3(a4.data);
+}
+
+unittest
+{
+    auto a = ivec2(1,2);
+    auto b = vec2(a);
+    assert( eq( a, b ) );
 }
 
 unittest

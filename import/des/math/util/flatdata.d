@@ -34,8 +34,7 @@ import des.math.basic.traits;
 pure auto flatData(T,E...)( in E vals ) if( E.length > 0 )
 {
     T[] buf;
-    foreach( e; vals )
-        buf ~= flatValue!T(e);
+    foreach( e; vals ) buf ~= flatValue!T(e);
     return buf;
 }
 
@@ -53,12 +52,16 @@ template hasIterableData(T)
 
 pure auto flatValue(T,E)( in E val )
 {
-    T[] buf;
-    static if( isNumeric!T && isNumeric!E ) buf ~= cast(T)val;
-    else static if( isComplex!T && ( isNumeric!E || isImaginary!E) ) buf ~= T(0+0i+val);
-    else static if( is(typeof(T(val))) ) buf ~= T(val);
-    else static if( isIterable!E ) foreach( v; val ) buf ~= flatValue!T(v);
-    else static if( hasIterableData!E ) buf ~= flatValue!T(val.data);
+    static if( isNumeric!T && isNumeric!E ) return [ cast(T)val ];
+    else static if( isComplex!T && ( isNumeric!E || isImaginary!E) ) return [ T(0+0i+val) ];
+    else static if( is(typeof(T(val))) ) return [ T(val) ];
+    else static if( isIterable!E )
+    {
+        T[] buf;
+        foreach( v; val )
+            buf ~= flatValue!T(v);
+        return buf;
+    }
+    else static if( hasIterableData!E ) return flatValue!T(val.data);
     else static assert(0, format("uncompatible types %s and %s", T.stringof, E.stringof ) );
-    return buf;
 }

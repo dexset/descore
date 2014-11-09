@@ -1039,8 +1039,8 @@ unittest
 {
     matD a;
     matD b;
-    a.resize( 100, 4 );
-    b.resize( 100, 100 );
+    a.resize( 10, 4 );
+    b.resize( 10, 10 );
     auto c = a.T * b * a;
     assert( c.height == 4 && c.width == 4 );
 }
