@@ -75,7 +75,11 @@ class SListener : DSocket, ExternalMemoryManager
     mixin DirectEMM;
 
 protected override void selfDestroy()
-{ server.close(); }
+{ 
+    server.shutdown( SocketShutdown.BOTH );
+    server.close(); 
+}
+
 private:
     Socket server;
     Socket client;
@@ -149,7 +153,11 @@ class SSender : DSocket, ExternalMemoryManager
     mixin DirectEMM;
 
 protected override void selfDestroy()
-{ sender.close(); }
+{ 
+    sender.shutdown( SocketShutdown.BOTH );
+    sender.close(); 
+}
+
 private:
     Socket sender;
     int bs = 128;
