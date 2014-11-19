@@ -75,9 +75,9 @@ class SListener : DSocket, ExternalMemoryManager
     mixin DirectEMM;
 
 protected override void selfDestroy()
-{ 
+{
     server.shutdown( SocketShutdown.BOTH );
-    server.close(); 
+    server.close();
 }
 
 private:
