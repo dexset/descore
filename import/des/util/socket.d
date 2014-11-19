@@ -199,8 +199,8 @@ public:
 unittest
 {
     import std.random;
-    SListener ll = new SListener( 65535 );
-    SSender ss = new SSender( 65535 );
+    SListener ll = new SListener( 12345 );
+    SSender ss = new SSender( 12345 );
     ubyte[] data;
     data.length = 100;
     foreach( ref d; data )
