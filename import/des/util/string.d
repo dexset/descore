@@ -44,9 +44,9 @@ import std.algorithm;
         return buf.join("_");
     }
 
-    @property string toCamelCase( in string str, bool first_capitalize=true )
+    string toCamelCaseBySep( in string str, string sep="_", bool first_capitalize=true )
     {
-        auto arr = array( filter!"a.length > 0"( str.split("_") ) );
+        auto arr = array( filter!"a.length > 0"( str.split(sep) ) );
         string[] ret;
         foreach( i, v; arr )
         {
@@ -57,6 +57,9 @@ import std.algorithm;
         }
         return ret.join("");
     }
+
+    @property string toCamelCase( in string str, bool first_capitalize=true )
+    { return toCamelCaseBySep( str, "_", first_capitalize ); }
 
     nothrow string toDString( const(char*) c_str )
     {
@@ -90,4 +93,6 @@ unittest
     assert( "some_func".toCamelCase(false) == "someFunc" );
     assert( "_some_func".toCamelCase(false) == "someFunc" );
     assert( "a_r_b".toCamelCase == "ARB" );
+    assert( toCamelCase( "program_build" ) == "ProgramBuild" );
+    assert( toCamelCaseBySep( "single-precision-constant", "-", false ) == "singlePrecisionConstant" );
 }

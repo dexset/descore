@@ -33,7 +33,7 @@ template amap(fun...) if ( fun.length >= 1 )
 {
     auto amap(Range)(Range r) 
         if (isInputRange!(Unqual!Range))
-    { return array( map!fun(r) ); }
+    { return array( map!(fun)(r) ); }
 }
 
 unittest
