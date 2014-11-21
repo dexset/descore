@@ -69,17 +69,20 @@ string formatLogMessage( in LogMessage lm )
 
 mixin template AnywayLogger()
 {
-    private Logger __logger;
-    protected nothrow final @property
+    static if( !is( typeof( logger ) ) )
     {
-        const(Logger) logger() const
+        private Logger __logger;
+        protected nothrow final @property
         {
-            static import des.util.logger;
-            if( __logger is null )
-                return des.util.logger.simple_logger;
-            else return __logger;
+            const(Logger) logger() const
+            {
+                static import des.util.logger;
+                if( __logger is null )
+                    return des.util.logger.simple_logger;
+                else return __logger;
+            }
+            void logger( Logger lg ) { __logger = lg; }
         }
-        void logger( Logger lg ) { __logger = lg; }
     }
 }
 
