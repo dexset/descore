@@ -140,7 +140,39 @@ pure:
 
     static if( isStatic )
     {
-        this(X...)( in X vals ) { _fillData( flatData!E(vals) ); }
+        this(X...)( in X vals )
+        {
+            static if( X.length == 0 )
+                static assert( 0, "args length == 0" );
+            static if( !is(typeof(flatData!E(vals))) )
+                static assert( 0, "args not compatible" );
+
+            static if( isStatic )
+            {
+                static if( hasNoDynamic!X )
+                {
+                    static if( X.length > 1 )
+                    {
+                        static assert( getElemCount!X == W*H, "wrong args count" );
+                        static assert( isConvertable!(E,X), "wrong args type" );
+                        mixin( matrixStaticFill!("E","data","vals",W,E,X) );
+                    }
+                    else static if( X.length == 1 && isStaticMatrix!(X[0]) )
+                    {
+                        static assert( X[0].width == W && X[0].height == H );
+                        foreach( y; 0 .. H )
+                            foreach( x; 0 .. W )
+                                data[y][x] = vals[0][y][x];
+                    }
+                    else enum __DF=true;
+                }
+                else enum __DF=true;
+            }
+            else enum __DF=true;
+
+            static if( is(typeof(__DF)) )
+                _fillData( flatData!E(vals) );
+        }
     }
     else static if( isStaticWidthOnly )
     {
@@ -831,9 +863,24 @@ unittest
 
 unittest
 {
+    static assert( isStaticMatrix!(mat3) );
+    static assert( !isStaticMatrix!(matD) );
+    static assert( !isStaticMatrix!(int[]) );
+}
+
+unittest
+{
     assert( eq( mat3.init, [[1,0,0],[0,1,0],[0,0,1]] ) );
     assert( eq( mat2.init, [[1,0],[0,1]] ) );
     assert( eq( mat2x3.init, [[0,0,0],[0,0,0]] ) );
+}
+
+unittest
+{
+    auto a = Matrix!(3,2,double)( 36, 0, 3, 3, 0, 0 );
+    auto b = Matrix!(3,2,double)( [ 36, 0, 3, 3, 0, 0 ] );
+    assert( eq( a.asArray, b.asArray ) );
+    assert( eq( a.asArray, [ 36, 0, 3, 3, 0, 0 ] ) );
 }
 
 unittest

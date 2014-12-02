@@ -22,77 +22,54 @@ The MIT License (MIT)
     THE SOFTWARE.
 +/
 
-module des.math.linear.view.transform;
+module des.view.node;
 
 public import des.math.linear.vector;
 public import des.math.linear.matrix;
+public import des.view.transform;
 
-interface Transform
+import des.util.tree;
+
+interface SpaceNode : Transform, TNode!(SpaceNode,"space")
 {
-    @property mat4 matrix() const;
-
-    protected final static mat4 getMatrix( const(Transform) tr )
+    mixin template SpaceNodeHelper(bool with_matrix_property=true)
     {
-        if( tr !is null )
-            return tr.matrix;
-        return mat4.diag(1);
+        mixin spaceTNodeHelper!(true,true,true);
+
+        protected mat4 self_mtr;
+
+        static if( with_matrix_property )
+            mat4 matrix() @property const { return self_mtr; }
+    }
+
+    const @property
+    {
+        /+ local to parent transform +/
+        mat4 matrix();
+
+        final
+        {
+            vec3 baseX() { return vec3( matrix.col(0).data[0 .. 3] ); }
+            vec3 baseY() { return vec3( matrix.col(1).data[0 .. 3] ); }
+            vec3 baseZ() { return vec3( matrix.col(2).data[0 .. 3] ); }
+
+            /+ in parent system +/
+            vec3 offset() { return vec3( matrix.col(3).data[0 .. 3] ); }
+        }
     }
 }
 
-class SimpleTransform : Transform
+final class DimmyNode : SpaceNode
 {
-protected:
-    mat4 mtr;
+    mixin SpaceNodeHelper!false;
 
-public:
+    this( SpaceNode par = null ) { spaceParent = par; }
+
     @property
     {
-        mat4 matrix() const { return mtr; }
-        void matrix( in mat4 m ) { mtr = m; }
-    }
-}
-
-class TransformList : Transform
-{
-    Transform[] list;
-    enum Order { DIRECT, REVERSE }
-    Order order = Order.DIRECT;
-
-    @property mat4 matrix() const
-    {
-        mat4 buf;
-        if( order == Order.DIRECT )
-            foreach( tr; list )
-                buf *= tr.matrix;
-        else
-            foreach_reverse( tr; list )
-                buf *= tr.matrix;
-        return buf;
-    }
-}
-
-class CachedTransform : Transform
-{
-protected:
-    mat4 mtr;
-    Transform transform_source;
-
-public:
-
-    this( Transform ntr ) { setTransform( ntr ); }
-
-    void setTransform( Transform ntr )
-    {
-        transform_source = ntr;
-        recalc();
+        mat4 matrix() const { return self_mtr; }
+        ref mat4 matrix() { return self_mtr; }
     }
 
-    void recalc()
-    {
-        if( transform_source !is null )
-            mtr = transform_source.matrix;
-        else mtr = mat4.diag(1);
-    }
-
-    @property mat4 matrix() const { return mtr; }
+    void setOffset( in vec3 pnt ) { self_mtr.setCol(3,vec4(pnt,1)); }
 }

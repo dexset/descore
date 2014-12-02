@@ -128,18 +128,11 @@ pure:
 
         static if( isStatic )
         {
-            static if( isNumeric!T && allSatisfy!(isNumeric,E) &&
-                    ( E.length == N || E.length == 1 ) )
+            static if( hasNoDynamic!E && E.length > 1 )
             {
-                static if( E.length == N )
-                    foreach( i, val; vals )
-                        data[i] = cast(T)( val );
-                else data[] = cast(T)( vals[0] );
-            }
-            else static if( E.length == 1 && isCompatibleVector!(N,T,E[0]) )
-            {
-                foreach( i; 0 .. N )
-                    data[i] = cast(T)(vals[0][i]);
+                static assert( getElemCount!E == N * getElemCount!T, "wrong args count" );
+                static assert( isConvertable!(T,E), "wrong args type" );
+                mixin( vectorStaticFill!("T","data","vals",T,E) );
             }
             else
             {
@@ -155,8 +148,7 @@ pure:
         else data = flatData!T(vals);
     }
 
-    static if( isDynamic )
-        this(this) { data = this.data.dup; }
+    static if( isDynamic ) this(this) { data = this.data.dup; }
 
     auto opAssign( size_t K, E, alias string oas )( in Vector!(K,E,oas) b )
         if( (K==N||K==0||N==0) && is( typeof(T(E.init)) ) )
@@ -325,7 +317,8 @@ pure:
             if( isFloatingPoint!E )
         { 
             T a = alpha / cast(T)(2.0);
-            return selftype( axis * sin(a), cos(a) );
+            auto vv = axis * sin(a);
+            return selftype( vv[0], vv[1], vv[2], cos(a) );
         }
 
         /++ quaterni mul +/
@@ -335,8 +328,8 @@ pure:
             alias this a;
             auto aijk = a.ijk;
             auto bijk = b.ijk;
-            return selftype( cross(aijk, bijk) + aijk * b.a + bijk * a.a,
-                    a.a * b.a - dot(aijk, bijk) );
+            auto vv = cross(aijk, bijk) + aijk * b.a + bijk * a.a;
+            return selftype( vv[0], vv[1], vv[2], a.a * b.a - dot(aijk, bijk) );
         }
 
         auto rot(size_t K,E,alias string bs)( in Vector!(K,E,bs) b ) const
@@ -470,7 +463,7 @@ unittest
     auto a = Vector!(3,float)(1,2,3);
     assert( eq( Vector!(5,int)(0,a,4), [0,1,2,3,4] ) );
 
-    assert( mustExcept( { auto v = Vector!(2,int)(1,2,3); } ) );
+    static assert( !__traits(compiles, { auto v = Vector!(2,int)(1,2,3); } ) );
     assert( !mustExcept( { auto v = Vector!(0,int)(1,2,3); } ) );
     assert( !mustExcept( { auto v = Vector!(3,int)(1); } ) );
     auto b = Vector!(0,float)(1,2,3);

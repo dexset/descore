@@ -22,43 +22,77 @@ The MIT License (MIT)
     THE SOFTWARE.
 +/
 
-module des.math.linear.view.resolver;
+module des.view.transform;
 
 public import des.math.linear.vector;
 public import des.math.linear.matrix;
-public import des.math.linear.view.node;
 
-class Resolver
+interface Transform
 {
-    mat4 opCall( const(Node) obj, const(Node) cam ) const
+    mat4 matrix() @property const;
+
+    protected final static mat4 getMatrix( const(Transform) tr )
     {
-        const(Node)[] obj_branch, cam_branch;
-        obj_branch ~= obj;
-        cam_branch ~= cam;
-
-        while( obj_branch[$-1] )
-            obj_branch ~= obj_branch[$-1].parent;
-        while( cam_branch[$-1] )
-            cam_branch ~= cam_branch[$-1].parent;
-
-        top:
-        foreach( cbi, cam_parent; cam_branch )
-            foreach( obi, obj_parent; obj_branch )
-                if( cam_parent == obj_parent )
-                {
-                    cam_branch = cam_branch[0 .. cbi];
-                    obj_branch = obj_branch[0 .. obi];
-                    break top;
-                }
-
-        mat4 obj_mtr, cam_mtr;
-
-        foreach( node; obj_branch )
-            obj_mtr = node.matrix * obj_mtr;
-
-        foreach( node; cam_branch )
-            cam_mtr = cam_mtr * node.matrix.speedTransformInv;
-
-        return cam_mtr * obj_mtr;
+        if( tr !is null )
+            return tr.matrix;
+        return mat4.diag(1);
     }
+}
+
+class SimpleTransform : Transform
+{
+protected:
+    mat4 mtr;
+
+public:
+    @property
+    {
+        mat4 matrix() const { return mtr; }
+        void matrix( in mat4 m ) { mtr = m; }
+    }
+}
+
+class TransformList : Transform
+{
+    Transform[] list;
+    enum Order { DIRECT, REVERSE }
+    Order order = Order.DIRECT;
+
+    @property mat4 matrix() const
+    {
+        mat4 buf;
+        if( order == Order.DIRECT )
+            foreach( tr; list )
+                buf *= tr.matrix;
+        else
+            foreach_reverse( tr; list )
+                buf *= tr.matrix;
+        return buf;
+    }
+}
+
+class CachedTransform : Transform
+{
+protected:
+    mat4 mtr;
+    Transform transform_source;
+
+public:
+
+    this( Transform ntr ) { setTransform( ntr ); }
+
+    void setTransform( Transform ntr )
+    {
+        transform_source = ntr;
+        recalc();
+    }
+
+    void recalc()
+    {
+        if( transform_source !is null )
+            mtr = transform_source.matrix;
+        else mtr = mat4.diag(1);
+    }
+
+    @property mat4 matrix() const { return mtr; }
 }

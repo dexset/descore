@@ -817,7 +817,7 @@ unittest
 
     assert( !mustExcept({ img.pixel!col3(1,0) = col3(1,1,1); }) );
     assert(  mustExcept({ img.pixel!vec2(1,0) = vec2(1,1); }) );
-    assert(  mustExcept({ img.pixel!vec3(4,4) = vec3(1,1); }) );
+    static assert(  !__traits(compiles, { img.pixel!vec3(4,4) = vec3(1,1); }) );
 }
 
 unittest

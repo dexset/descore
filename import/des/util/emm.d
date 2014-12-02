@@ -24,29 +24,40 @@ The MIT License (MIT)
 
 module des.util.emm;
 
-interface ExternalMemoryManager
+import des.util.tree;
+
+interface ExternalMemoryManager : TNode!(ExternalMemoryManager,"","EMM")
 {
-    mixin template DirectEMM()
+    mixin template DirectEMM(bool with_self_construct=true)
     {
-        private ExternalMemoryManager[] chemm;
+        mixin TNodeHelperEMM!(true,true,true);
+
         private bool is_destroyed = false;
-
-        protected final ref ExternalMemoryManager[] childEMM() { return chemm; }
-
         public final bool isDestroyed() const { return is_destroyed; }
-        protected final void isDestroyed( bool d ) { is_destroyed = d; }
+        protected final void isDestroyed( bool d )
+        {
+            bool change = is_destroyed != d;
+            is_destroyed = d;
+            if( change && !is_destroyed )
+                selfConstruct();
+        }
+
+        static if( with_self_construct )
+            protected void selfConstruct() {}
     }
 
     mixin template ParentEMM()
     {
-        mixin DirectEMM;
+        mixin DirectEMM!false;
+
         protected void selfDestroy() {}
+        protected void selfConstruct() {}
     }
 
     protected
     {
-        @property ref ExternalMemoryManager[] childEMM();
         void selfDestroy();
+        void selfConstruct();
 
         @property void isDestroyed( bool d );
     }
@@ -55,29 +66,29 @@ interface ExternalMemoryManager
 
     final
     {
-        T registerChildEMM(T)( T obj )
+        T registerChildsEMM(T)( T obj )
             if( is( T == class ) || is( T == interface ) )
         {
             auto cemm = cast(ExternalMemoryManager)obj;
-            if( cemm ) childEMM ~= cemm; 
+            if( cemm ) attachChildsEMM( cemm );
             return obj;
         }
 
-        T[] registerChildEMM(T)( T[] objs )
+        T[] registerChildsEMM(T)( T[] objs )
             if( is( T == class ) || is( T == interface ) )
         {
             foreach( obj; objs )
-                registerChildEMM( obj );
+                registerChildsEMM( obj );
             return objs;
         }
 
         T newEMM(T,Args...)( Args args )
-        { return registerChildEMM( new T(args) ); }
+        { return registerChildsEMM( new T(args) ); }
 
         void destroy()
         {
             if( isDestroyed ) return;
-            foreach( cemm; childEMM )
+            foreach( cemm; childsEMM )
                 cemm.destroy();
             selfDestroy();
             isDestroyed = true;

@@ -22,41 +22,30 @@ The MIT License (MIT)
     THE SOFTWARE.
 +/
 
-module des.math.linear.view.camera;
+module des.view.camera;
 
-public import des.math.linear.view.node;
-public import des.math.linear.view.resolver;
+public import des.view.node;
+public import des.view.resolver;
 
 import std.math;
 
-class Camera: Node
+class Camera: SpaceNode
 {
-protected:
-    Node _parent;
-
-public:
+    mixin SpaceNodeHelper!false;
 
     Resolver resolver;
     Transform projection, transform;
 
-    this( Node par=null )
+    this( SpaceNode par=null )
     {
-        _parent = par;
+        spaceParent = par;
         resolver = new Resolver;
     }
 
     const
     {
-        mat4 resolve( const(Node) obj ) { return resolver(obj, this); }
-
-        mat4 opCall( const(Node) obj )
-        { return getMatrix( projection ) * resolve(obj); }
-
-        @property
-        {
-            mat4 matrix() { return getMatrix( transform ); }
-            const(Node) parent() { return _parent; }
-        }
+        mat4 resolve( const(SpaceNode) obj ) { return resolver(obj, this); }
+        mat4 matrix() @property { return getMatrix( transform ); }
     }
 }
 
@@ -67,56 +56,40 @@ class LookAtTransform : Transform
     { return calcLookAt( pos, target, up ); }
 }
 
-class ResolveTransform : Transform
-{
-protected:
-    Resolver resolver;
-public:
-    void setResolver( Resolver rsl ) { resolver = rsl; }
-    abstract @property mat4 matrix() const;
-}
-
-class LookAtNodeTransform : ResolveTransform
-{
-    Node center, target, up;
-
-    override @property mat4 matrix() const
-    in
-    {
-        assert( center !is null );
-        assert( target !is null );
-        assert( up !is null );
-        assert( resolver !is null );
-    }
-    body
-    {
-        return calcLookAt( center.offset,
-                           resolveOffset(target),
-                           resolveOffset(up) );
-    }
-
-protected:
-
-    vec3 resolveOffset( const(Node) node ) const
-    { return vec3( resolver(node,center).col(3)[0..3] ); }
-}
-
 class PerspectiveTransform : Transform
 {
-    float fov = 70;
-    float ratio = 4.0f / 3.0f;
-    float near = 1e-1;
-    float far = 1e5;
+protected:
+    float _fov = 70;
+    float _ratio = 4.0f / 3.0f;
+    float _near = 1e-1;
+    float _far = 1e5;
 
-    @property mat4 matrix() const
-    in
+    mat4 self_mtr;
+
+    void recalc() { self_mtr = calcPerspective( _fov, _ratio, _near, _far ); }
+
+public:
+
+    @property
     {
-        assert( fov > 0 );
-        assert( ratio > 0 );
-        assert( near > 0 );
-        assert( far > 0 );
+        float fov() const { return _fov; }
+        float fov( float v ) in { assert(v>0); }
+        body { _fov = v; recalc(); return _fov; }
+
+        float ratio() const { return _ratio; }
+        float ratio( float v ) in { assert(v>0); }
+        body { _ratio = v; recalc(); return _ratio; }
+
+        float near() const { return _near; }
+        float near( float v ) in { assert(v>0); }
+        body { _near = v; recalc(); return _near; }
+
+        float far() const { return _far; }
+        float far( float v ) in { assert(v>0); }
+        body { _far = v; recalc(); return _far; }
+
+        mat4 matrix() const { return self_mtr; }
     }
-    body { return calcPerspective( fov, ratio, near, far ); }
 }
 
 /+ simple lookAt perspective camera +/
@@ -128,7 +101,7 @@ protected:
 
 public:
 
-    this( Node p=null )
+    this( SpaceNode p=null )
     {
         super(p);
         look_tr = new LookAtTransform;

@@ -53,6 +53,7 @@ import std.stdio;
 import std.file;
 import std.path;
 import std.algorithm;
+import std.exception;
 import std.typecons;
 
 import des.util.logger;
@@ -68,7 +69,7 @@ interface Localization : WordConverter
 
 class DictionaryLoaderException : Exception
 {
-    @safe pure nothrow this( string msg, string file=__FILE__, int line=__LINE__ ) 
+    @safe pure nothrow this( string msg, string file=__FILE__, size_t line=__LINE__ ) 
     { super( msg, file, line ); } 
 }
 
@@ -193,27 +194,28 @@ protected:
         auto f = File( fname );
         scope(exit) f.close();
 
-        //auto name = splitLine( f.byLine().front.idup )[0];
         auto name = getLabel( fname );
 
         wstring[string] dict;
 
+        size_t i = 0;
         foreach( ln; f.byLine() )
-            processLine( dict, strip(ln.idup) );
+            processLine( dict, i++, fname, strip(ln.idup) );
 
         return new BaseLocalization( name, dict );
     }
 
-    static auto splitLine( string ln )
+    static auto splitLine( size_t no, string fname, string ln )
     {
         auto bf = ln.split(":");
+        enforce( bf.length == 2, new DictionaryLoaderException( "bad localization: " ~ ln, fname, no ) );
         return tuple( bf[0], to!wstring(bf[1]) );
     }
 
-    static void processLine( ref wstring[string] d, string line )
+    static void processLine( ref wstring[string] d, size_t no, string fname, string line )
     {
         if( line.length == 0 ) return;
-        auto ln = splitLine( line );
+        auto ln = splitLine( no, fname, line );
         auto key = strip(ln[0]);
         auto value = strip(ln[1]);
         checkKeyExests( d, key, value );
@@ -294,8 +296,8 @@ private:
         else
         {
             if( dict_loader is null )
-                log_error( "no dictionary loader -> no localization '%s'", lang );
-            else log_error( "no localization '%s'", lang );
+                log_error( "no dictionary loader -> no localization '%1$s', (copy 'base' to '%1$s')", lang );
+            else log_error( "no localization '%1$s', (copy 'base' to '%1$s.lt')", lang );
         }
     }
 

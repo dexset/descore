@@ -59,7 +59,7 @@ unittest
     auto func( in dvec2 p ) { return dvec3( p.x^^2, sqrt(p.y) * p.x, 3 ); }
 
     auto res = df( &func, dvec2(18,9), 1e-5 );
-    auto must = Matrix!(3,2,double)( [ 36, 0, 3, 3, 0, 0 ] );
+    auto must = Matrix!(3,2,double)( 36, 0, 3, 3, 0, 0 );
 
     assert( eq_approx( res.asArray, must.asArray, 1e-5 ) );
 }
