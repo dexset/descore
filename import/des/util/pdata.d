@@ -29,234 +29,155 @@ import std.string;
 
 import des.util.testsuite;
 
-alias immutable(void)[] data_t;
-
-bool isPData(T)() { return is( Unqual!T == PData ); }
-
-private pure data_t pureDumpData(T)( in T val )
+version(unittest)
 {
-    static if( isPData!T ) return val.data.idup;
-    else static if( isArray!T ) return val.idup;
-    else static if( !hasUnsharedAliasing!T ) return [val].idup;
-    else static assert( 0, format( "unsupported type '%s' for pure read data", T.stringof ) );
+    private
+    {
+        struct Msg { string data; }
+        struct Vec { float x,y,z; }
+        struct Arr { int[3] data; }
+
+        struct Some
+        {
+            float f = 8;
+            Vec v = Vec(1,2,3);
+            Arr a = Arr([4,5,6]);
+        }
+
+        struct Bad { int[] data; }
+    }
 }
 
-@property @safe pure nothrow isPureDump(T)()
-{ return is( typeof( pureDumpData( T.init ) ) ); }
+bool isPureData(T)() pure @property
+{ return !hasUnsharedAliasing!T && !isArray!T; }
 
 unittest
 {
-    static assert( isPureDump!(data_t) );
-    static assert( isPureDump!(string) );
-    static assert( isPureDump!(double) );
-    static assert( isPureDump!(PData) );
-    static assert( isPureDump!(const(PData)) );
-    static assert( isPureDump!(shared(PData)) );
-    static assert( isPureDump!(immutable(PData)) );
-    static assert( isPureDump!(double[]) );
-    static assert( !isPureDump!(int[string]) );
-
-    static struct TS { int[string] val; }
-    static assert( !isPureDump!(TS) );
+    static assert(  isPureData!int );
+    static assert(  isPureData!float );
+    static assert(  isPureData!Vec );
+    static assert(  isPureData!Arr );
+    static assert(  isPureData!Some );
+    static assert( !isPureData!string );
+    static assert( !isPureData!Bad );
 }
 
-private T conv(T)( in data_t data )
+bool isPureType(T)() pure @property
 {
-    static if( isArray!T ) return cast(T)data.dup;
-    else static if( !hasUnsharedAliasing!T )
-    {
-        if( data.length * void.sizeof != T.sizeof )
-            throw new Exception( format( "PData unable convert to '%s': wrong data length", T.stringof ) );
-        return (cast(T[])data.dup)[0];
-    }
-    else static if( __traits(compiles, T.load(data)) )
-        return T.load(data);
-    else static assert( 0, format( "unsupported type '%s'", T.stringof ) );
+    static if( !isArray!T ) return isPureData!T;
+    else return isPureType!(ForeachType!T);
 }
+
+unittest
+{
+    static assert(  isPureType!int );
+    static assert(  isPureType!float );
+    static assert(  isPureType!Vec );
+    static assert(  isPureType!Arr );
+    static assert(  isPureType!Some );
+    static assert(  isPureType!string );
+    static assert(  isPureType!(string[]) );
+    static assert( !isPureType!Bad );
+}
+
+auto pureConv(T)( in immutable(void)[] data ) pure
+{
+    static if( isPureData!T )
+        return (cast(T[])(data.dup))[0];
+    else static if( isPureType!T )
+        return cast(T)(data.dup);
+    else static assert( 0, format( "unsuported type %s", T.stringof ) );
+}
+
+bool isPData(T)() pure @property
+{ return is( typeof( (( PData a ){})( T.init ) ) ); }
 
 struct PData
 {
-    data_t data;
+    immutable(void)[] data;
     alias data this;
 
-    private void readData(T)( in T val )
+    pure
     {
-        static if( isPureDump!T ) 
-            data = pureDumpData( val );
-        else static if( __traits(compiles, val.dump()) )
-            data = val.dump().idup;
-        else static assert( 0, format( "unsupported type '%s'", T.stringof ) );
-    }
+        this( in typeof(this) pd ) { data = pd.data; }
 
-    pure this( in void[] dd ) { data = dd.idup; }
+        this(T)( in T val ) if( isPureData!T )
+        { data = [val].idup; }
 
-    pure this(T)( in T val ) if( isPureDump!T ) 
-    { data = pureDumpData( val ); }
+        this(T)( in T[] arr ) if( isPureType!T )
+        { data = arr.idup; }
 
-    this(T)( in T val ) if( !isPureDump!T ) 
-    { readData( val ); }
-
-    T opAssign(T)( in T val )
-    {
-        readData( val );
-        return val;
-    }
-
-    @property
-    {
-        T as(T)() const { return conv!T( data ); }
-        T as(T)() shared const { return conv!T( data ); }
-        T as(T)() immutable { return conv!T( data ); }
-    }
-}
-
-unittest
-{
-    static assert( isPureDump!PData );
-}
-
-unittest
-{
-    auto a = PData( [ .1, .2, .3 ] );
-    assert( eq( a.as!(double[]), [ .1, .2, .3 ] ) );
-    a = "hello";
-    assert( eq( a.as!string, "hello" ) );
-
-    static struct TestStruct 
-    { double x, y; string info; immutable(int)[] data; }
-    auto ts = TestStruct( 10.1, 12.3, "hello", [1,2,3,4] );
-
-    auto xx = PData( ts );
-
-    auto xa = shared PData( xx );
-    auto xb = const PData( xx );
-    auto xc = shared const PData( xx );
-    auto xd = immutable PData( xx );
-    auto xe = shared immutable PData( xx );
-
-    assert( xx == xa );
-    assert( xx == xb );
-    assert( xx == xc );
-    assert( xx == xd );
-    assert( xx == xe );
-
-    assert( xa.as!TestStruct == ts );
-    assert( xb.as!TestStruct == ts );
-    assert( xc.as!TestStruct == ts );
-    assert( xd.as!TestStruct == ts );
-    assert( xe.as!TestStruct == ts );
-
-    auto ax = PData( xa );
-    auto bx = PData( xb );
-    auto cx = PData( xc );
-    auto dx = PData( xd );
-    auto ex = PData( xe );
-
-    assert( xx == ax );
-    assert( xx == bx );
-    assert( xx == cx );
-    assert( xx == dx );
-    assert( xx == ex );
-
-    assert( ax.data == xx.data );
-    assert( bx.data == xx.data );
-    assert( cx.data == xx.data );
-    assert( dx.data == xx.data );
-    assert( ex.data == xx.data );
-
-    assert( ax.as!TestStruct == ts );
-    assert( bx.as!TestStruct == ts );
-    assert( cx.as!TestStruct == ts );
-    assert( dx.as!TestStruct == ts );
-    assert( ex.as!TestStruct == ts );
-}
-
-unittest
-{
-    import std.conv;
-    static class TestClass
-    {
-        int[string] info;
-
-        static auto load( in void[] data )
+        @property
         {
-            auto str = cast(string)data.dup;
-            auto elems = str.split(",");
-            int[string] buf;
-            foreach( elem; elems )
-            {
-                auto key = elem.split(":")[0];
-                auto val = to!int( elem.split(":")[1] );
-                buf[key] = val;
-            }
-            return new TestClass( buf );
-        }
-
-        this( in int[string] I ) 
-        {
-            foreach( key, val; I )
-                info[key] = val;
-            info.rehash();
-        }
-
-        auto dump() const
-        {
-            string[] buf;
-            foreach( key, val; info ) buf ~= format( "%s:%s", key, val );
-            return cast(void[])( buf.join(",").dup );
+            auto as(T)() const { return pureConv!T(data); }
+            auto as(T)() shared const { return pureConv!T(data); }
+            auto as(T)() immutable { return pureConv!T(data); }
         }
     }
-
-    auto tc = new TestClass( [ "ok":1, "no":3, "yes":5 ] );
-
-    auto a = PData( tc );
-    auto ta = a.as!TestClass;
-    assert( ta.info == tc.info );
-
-    auto b = a;
-    b = "ok:1,no:3";
-    auto tb = b.as!TestClass;
-    tc.info.remove( "yes" );
-
-    assert( tb.info == tc.info );
-
-    tc.info["yes"] = 5;
-    b = a;
-    tb = b.as!TestClass;
-    assert( tb.info == tc.info );
 }
 
 unittest
 {
-    auto fnc_a() { return cast(immutable(ubyte)[])("hello_a".idup); }
-    auto fnc_b() { return cast(ubyte[])("hello_b".dup); }
-    auto a = PData( fnc_a() );
-    assert( a.as!string == "hello_a" );
-    auto b = PData( fnc_b() );
-    assert( b.as!string == "hello_b" );
+    static assert( isPData!PData );
+    static assert( isPData!(const(PData)) );
+    static assert( isPData!(immutable(PData)) );
+    static assert( isPData!(shared(PData)) );
+    static assert( isPureData!PData );
+    static assert( isPureType!PData );
+}
 
-    auto ca = const PData( fnc_a() );
-    assert( ca.as!string == "hello_a" );
-    auto cb = const PData( fnc_b() );
-    assert( cb.as!string == "hello_b" );
+void asTest(A,B)( in A val, in B orig )
+{
+    assert( (PData(val)).as!B              == orig || isPData!B );
+    assert( (const PData(val)).as!B        == orig || isPData!B );
+    assert( (immutable PData(val)).as!B    == orig || isPData!B );
+    assert( (shared PData(val)).as!B       == orig || isPData!B );
+    assert( (shared const PData(val)).as!B == orig || isPData!B );
+}
 
-    auto ia = immutable PData( fnc_a() );
-    assert( ia.as!string == "hello_a" );
-    auto ib = immutable PData( fnc_b() );
-    assert( ib.as!string == "hello_b" );
+void creationTest(T)( in T val )
+{
+    asTest( val, val );
 
-    auto sa = shared PData( fnc_a() );
-    assert( sa.as!string == "hello_a" );
-    auto sb = shared PData( fnc_b() );
-    assert( sb.as!string == "hello_b" );
+    auto a = PData( val );
+    auto ac = const PData( val );
+    auto ai = immutable PData( val );
+    auto as = shared PData( val );
+    auto asc = shared const PData( val );
 
-    auto sca = shared const PData( fnc_a() );
-    assert( sca.as!string == "hello_a" );
-    auto scb = shared const PData( fnc_b() );
-    assert( scb.as!string == "hello_b" );
+    asTest( a, val );
+    asTest( ac, val );
+    asTest( ai, val );
+    asTest( as, val );
+    asTest( asc, val );
+}
 
-    auto sia = shared immutable PData( fnc_a() );
-    assert( sia.as!string == "hello_a" );
-    auto sib = shared immutable PData( fnc_b() );
-    assert( sib.as!string == "hello_b" );
+unittest
+{
+    creationTest( "hello" );
+    creationTest( 12.5 );
+    creationTest( 12 );
+    creationTest( [1,2,3] );
+    creationTest( PData( ["a","b","c"] ) );
+    creationTest( Vec(1,2,3) );
+    creationTest( Arr([1,2,3]) );
+    creationTest( Some.init );
+}
+
+unittest
+{
+    auto msg = Msg("ok");
+    //auto a = shared PData( msg ); FIXME: not work
+
+    auto a = shared PData( PData( msg ) );
+    assert( a.as!Msg == msg );
+
+    auto b = immutable PData( PData( [msg] ) );
+    assert( b.as!(Msg[]) == [msg] );
+}
+
+unittest
+{
+    static assert( !__traits(compiles, PData( Bad([1,2]) ) ) );
+    static assert( !__traits(compiles, PData( [Bad([1,2])] ) ) );
 }
