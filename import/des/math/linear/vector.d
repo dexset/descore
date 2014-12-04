@@ -384,6 +384,7 @@ alias Vector!(4,float,"x y z w") vec4;
 
 alias Vector!(4,float,"i j k a") quat;
 alias Vector!(4,double,"i j k a") dquat;
+alias Vector!(4,real,"i j k a") rquat;
 
 alias Vector!(2,double,"x y") dvec2;
 alias Vector!(3,double,"x y z") dvec3;
