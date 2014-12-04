@@ -78,7 +78,7 @@ struct Event
 
     @property
     {
-        bool isSystem() const
+        bool isSystem() pure const
         { return code == system_code; }
 
         ulong elapsed() const
@@ -138,18 +138,12 @@ unittest
 
     auto f = shared Event( e );
     auto g = immutable Event( e );
-    auto h = shared immutable Event( e );
-    auto i = immutable shared Event( e );
-    auto j = shared const Event( e );
-    auto k = const shared Event( e );
+    auto h = shared const Event( e );
 
     assert( e.as!TestStruct == ts );
     assert( f.as!TestStruct == ts );
     assert( g.as!TestStruct == ts );
     assert( h.as!TestStruct == ts );
-    assert( h.as!TestStruct == ts );
-    assert( j.as!TestStruct == ts );
-    assert( k.as!TestStruct == ts );
 
     auto l = Event( f );
     auto m = Event( g );
@@ -213,13 +207,31 @@ unittest
     }
 
     auto tt = new Test( [ "ok":1, "no":3, "yes":5 ] );
-    auto a = Event( 1, tt );
-    auto ft = a.as!Test;
+    auto a = Event( 1, tt.dump() );
+    auto ft = Test.load( a.data );
     assert( tt.info == ft.info );
     tt.info.remove("yes");
     assert( tt.info != ft.info );
 
     auto b = Event( 1, "ok:1,no:3" );
-    auto ft2 = b.as!Test;
+    auto ft2 = Test.load( b.data );
     assert( tt.info == ft2.info );
+}
+
+unittest
+{
+    static struct TestStruct { double x, y; string info; immutable(int)[] data; }
+    auto ts = TestStruct( 3.14, 2.7, "hello", [ 2, 3, 4 ] );
+
+    auto a = Event( 8, ts );
+    auto ac = const Event( a );
+    auto ai = immutable Event( a );
+    auto as = shared Event( a );
+    auto acs = const shared Event( a );
+
+    assert( a.as!TestStruct == ts );
+    assert( ac.as!TestStruct == ts );
+    assert( ai.as!TestStruct == ts );
+    assert( as.as!TestStruct == ts );
+    assert( acs.as!TestStruct == ts );
 }
