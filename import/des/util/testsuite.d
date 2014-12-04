@@ -1,15 +1,37 @@
 module des.util.testsuite;
 
 import std.traits;
+import std.typetuple;
 import std.math;
 
-bool isLikeArray(A)()
-{ return is( typeof( A.init[0] ) ) && is( typeof( A.init.length ) == size_t ); }
+bool isElemHandler(A)()
+{
+    return !is( Unqual!A == void[] ) &&
+            is( typeof(A.init[0]) ) &&
+           !is( Unqual!(typeof(A.init[0])) == void ) &&
+            is( typeof( A.init.length ) == size_t );
+}
+
+unittest
+{
+    static assert(  isElemHandler!(int[]) );
+    static assert(  isElemHandler!(float[]) );
+    static assert(  isElemHandler!(string) );
+    static assert( !isElemHandler!int );
+    static assert( !isElemHandler!float );
+    static assert( !isElemHandler!(immutable(void)[]) );
+}
 
 bool eq(A,B)( in A a, in B b )
-    if( is(typeof(A.init!=B.init)) && !isLikeArray!A && !isLikeArray!B )
 {
-    static if( isFloatingPoint!A || isFloatingPoint!B )
+    static if( allSatisfy!(isElemHandler,A,B) )
+    {
+        if( a.length != b.length ) return false;
+        foreach( i; 0 .. a.length )
+            if( !eq(a[i],b[i]) ) return false;
+        return true;
+    }
+    else static if( allSatisfy!(isNumeric,A,B) && anySatisfy!(isFloatingPoint,A,B) )
     {
         static if( isFloatingPoint!A && !isFloatingPoint!B )
             auto epsilon = A.epsilon;
@@ -17,59 +39,51 @@ bool eq(A,B)( in A a, in B b )
             auto epsilon = B.epsilon;
         else
             auto epsilon = fmax( A.epsilon, B.epsilon );
-        if( abs( a - b ) > epsilon ) return false;
+        return abs(a-b) < epsilon;
     }
-    else
-    {
-        if( a != b ) return false;
-    }
-    return true;
+    else return a == b;
 }
 
 unittest
 {
-    assert( eq(1,1.0) );
-    assert( eq("hello","hello"w) );
+    assert(  eq( 1, 1.0 ) );
+    assert(  eq( "hello", "hello"w ) );
+    assert( !eq( cast(void[])"hello", cast(void[])"hello"w ) );
+    assert(  eq( cast(void[])"hello", cast(void[])"hello" ) );
+    assert(  eq( cast(void[])"hello", "hello" ) );
+    assert( !eq( cast(void[])"hello", "hello"w ) );
+    assert(  eq( [[1,2],[3,4]], [[1.0f,2],[3.0f,4]] ) );
+    assert( !eq( [[1,2],[3,4]], [[1.1f,2],[3.0f,4]] ) );
+    assert( !eq( [[1,2],[3,4]], [[1.0f,2],[3.0f]] ) );
+    assert(  eq( [1,2,3], [1.0,2,3] ) );
+    assert(  eq( [1.0f,2,3], [1.0,2,3] ) );
+    assert(  eq( [1,2,3], [1,2,3] ) );
+    assert( !eq( [1.0000001,2,3], [1,2,3] ) );
+    assert(  eq( ["hello","world"], ["hello","world"] ) );
+    assert( !eq( "hello", [1,2,3] ) );
+    static assert( !__traits(compiles, eq(["hello"],1)) );
+    static assert( !__traits(compiles, eq(["hello"],[1,2,3])) );
 }
 
-bool eq(A,B)( in A a, in B b )
-    if( isLikeArray!A && isLikeArray!B && is(typeof(A.init[0]!=B.init[0])) )
+bool eq_approx(A,B,E)( in A a, in B b, in E eps )
+    if( allSatisfy!(isNumeric,A,B,E) || allSatisfy!(isElemHandler,A,B) )
 {
-    static if( is(Unqual!A == void[] ) )
-        return a == b; 
-    else
+    static if( allSatisfy!(isElemHandler,A,B) )
     {
         if( a.length != b.length ) return false;
         foreach( i; 0 .. a.length )
-            if( !eq(a[i],b[i]) ) return false;
+            if( !eq_approx(a[i],b[i],eps) ) return false;
         return true;
     }
+    else return abs(a-b) < eps;
 }
 
 unittest
 {
-    assert( eq( [1,2,3], [1.0,2,3] ) );
-    assert( eq( [1.0f,2,3], [1.0,2,3] ) );
-    assert( eq( [1,2,3], [1,2,3] ) );
-    assert( !eq( [1.0000001,2,3], [1,2,3] ) );
-    assert( eq( ["hello","world"], ["hello","world"] ) );
-    static assert( !__traits(compiles, eq(["hello"],1)) );
+    assert(  eq_approx( [1.1f,2,3], [1,2,3], 0.2 ) );
+    assert( !eq_approx( [1.1f,2,3], [1,2,3], 0.1 ) );
+    assert( !eq_approx( [1.0f,2], [1,2,3], 1 ) );
 }
-
-bool eq_approx(A,B,E)( in A a, in B b, in E eps )
-    if( isLikeArray!A && isLikeArray!B && 
-        is(typeof(-E.init)) &&
-        is(typeof( (A.init[0]-B.init[0]) < eps )) )
-{
-    if( a.length != b.length ) return false;
-    foreach( i; 0 .. a.length )
-        if( !eq_approx(a[i],b[i],eps) ) return false;
-    return true;
-}
-
-bool eq_approx(A,B,E)( in A a, in B b, in E eps )
-    if( is(typeof( (A.init-B.init) < eps )) )
-{ return (a-b < eps) && (a-b > -eps); }
 
 bool mustExcept(E=Exception)( void delegate() fnc, bool throwUnexpected=false )
 if( is( E : Throwable ) )
