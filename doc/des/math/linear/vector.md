@@ -185,7 +185,7 @@ const @property
 
 - `<Access>` only for static "x y z w"[0..N]
 
-Example:
+##### Example:
 ```d
 alias Vector!(3,float,"x y z") vec3;
 alias Vector!(2,double,"x y") dvec2;

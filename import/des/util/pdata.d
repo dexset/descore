@@ -71,7 +71,9 @@ bool isPureType(T)() pure @property
 unittest
 {
     static assert(  isPureType!int );
+    static assert(  isPureType!(int[]) );
     static assert(  isPureType!float );
+    static assert(  isPureType!(float[]) );
     static assert(  isPureType!Vec );
     static assert(  isPureType!Arr );
     static assert(  isPureType!Some );
@@ -89,6 +91,13 @@ auto pureConv(T)( in immutable(void)[] data ) pure
     else static assert( 0, format( "unsuported type %s", T.stringof ) );
 }
 
+immutable(void)[] pureDump(T)( in T val ) pure
+{
+    static assert( !is( T == void[] ) );
+    static if( isArray!T ) return (cast(void[])val).idup;
+    else return (cast(void[])[val]).idup;
+}
+
 bool isPData(T)() pure @property
 { return is( typeof( (( PData a ){})( T.init ) ) ); }
 
@@ -101,11 +110,11 @@ struct PData
     {
         this( in typeof(this) pd ) { data = pd.data; }
 
-        this(T)( in T val ) if( isPureData!T )
-        { data = [val].idup; }
+        this(T)( in T val ) if( isPureData!T ) { data = pureDump(val); }
+        this(T)( in T[] val ) if( isPureType!T ) { data = pureDump(val); }
 
-        this(T)( in T[] arr ) if( isPureType!T )
-        { data = arr.idup; }
+        auto opAssign(T)( in T val ) if( isPureData!T ) { data = pureDump(val); return val; }
+        auto opAssign(T)( in T[] val ) if( isPureType!T ) { data = pureDump(val); return val; }
 
         @property
         {
@@ -122,6 +131,7 @@ unittest
     static assert( isPData!(const(PData)) );
     static assert( isPData!(immutable(PData)) );
     static assert( isPData!(shared(PData)) );
+    static assert( isPData!(shared const(PData)) );
     static assert( isPureData!PData );
     static assert( isPureType!PData );
 }
@@ -158,7 +168,7 @@ unittest
     creationTest( 12.5 );
     creationTest( 12 );
     creationTest( [1,2,3] );
-    creationTest( PData( ["a","b","c"] ) );
+    creationTest( [.1,.2,.3] );
     creationTest( Vec(1,2,3) );
     creationTest( Arr([1,2,3]) );
     creationTest( Some.init );
@@ -167,7 +177,6 @@ unittest
 unittest
 {
     auto msg = Msg("ok");
-    //auto a = shared PData( msg ); FIXME: not work
 
     auto a = shared PData( PData( msg ) );
     assert( a.as!Msg == msg );
@@ -180,4 +189,47 @@ unittest
 {
     static assert( !__traits(compiles, PData( Bad([1,2]) ) ) );
     static assert( !__traits(compiles, PData( [Bad([1,2])] ) ) );
+}
+
+unittest
+{
+    auto a = PData( [.1,.2,.3] );
+    assert( eq( a.as!(double[]), [.1,.2,.3] ) );
+    a = "hello";
+    assert( eq( a.as!string, "hello" ) );
+}
+
+unittest // Known problems
+{
+    // shared or immutable PData can't create from structs or arrays with strings 
+    enum arr = ["a","b","c"];
+    enum msg = Msg("abc");
+
+    static assert(  __traits(compiles, PData( arr ) ) );
+    static assert(  __traits(compiles, PData( msg ) ) );
+    static assert(  __traits(compiles, PData( [arr] ) ) );
+    static assert(  __traits(compiles, PData( [msg] ) ) );
+    static assert(  __traits(compiles, const PData( arr ) ) );
+    static assert(  __traits(compiles, const PData( msg ) ) );
+
+    static assert( !__traits(compiles, shared PData( arr ) ) );
+    static assert( !__traits(compiles, shared PData( msg ) ) );
+    static assert( !__traits(compiles, shared PData( [arr] ) ) );
+    static assert( !__traits(compiles, shared PData( [msg] ) ) );
+    static assert(  __traits(compiles, shared PData( PData( arr ) ) ) );
+    static assert(  __traits(compiles, shared PData( PData( msg ) ) ) );
+
+    static assert( !__traits(compiles, shared const PData( arr ) ) );
+    static assert( !__traits(compiles, shared const PData( msg ) ) );
+    static assert( !__traits(compiles, shared const PData( [arr] ) ) );
+    static assert( !__traits(compiles, shared const PData( [msg] ) ) );
+    static assert(  __traits(compiles, shared const PData( PData( arr ) ) ) );
+    static assert(  __traits(compiles, shared const PData( PData( msg ) ) ) );
+
+    static assert( !__traits(compiles, immutable PData( arr ) ) );
+    static assert( !__traits(compiles, immutable PData( msg ) ) );
+    static assert( !__traits(compiles, immutable PData( [arr] ) ) );
+    static assert( !__traits(compiles, immutable PData( [msg] ) ) );
+    static assert(  __traits(compiles, immutable PData( PData( arr ) ) ) );
+    static assert(  __traits(compiles, immutable PData( PData( msg ) ) ) );
 }
