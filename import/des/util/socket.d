@@ -6,7 +6,7 @@ import std.socketstream;
 import des.util.pdata;
 import des.util.helpers;
 import des.util.emm;
-import des.util.logger;
+import des.util.logsys;
 
 class SocketException: Exception
 { 
@@ -90,12 +90,12 @@ private:
     {
         if( client is null )
         {
-            log_debug( "client is null" );
+            logger.Debug( "client is null" );
             auto set = new SocketSet;
             set.add( server );
             if( Socket.select(set,null,null,dur!"msecs"(500) ) > 0 && set.isSet(server) )
             {
-                log_debug( "locking" );
+                logger.Debug( "locking" );
                 server.blocking(true);
                 client = server.accept();
                 server.blocking(false);
@@ -120,12 +120,12 @@ public:
 
     void step()
     {
-        log_debug("step");
+        logger.Debug("step");
         checkClient();
 
         if( client is null )
             return;
-        log_debug("   client not null");
+        logger.Debug("   client not null");
 
 
         auto set = new SocketSet;
@@ -138,7 +138,7 @@ public:
             client = null;
             return;
         }
-        log_debug("   data recived");
+        logger.Debug("   data recived");
         if( cb !is null )
         {
             auto send_data = cb( data );

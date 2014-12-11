@@ -56,7 +56,7 @@ import std.algorithm;
 import std.exception;
 import std.typecons;
 
-import des.util.logger;
+import des.util.logsys;
 
 interface WordConverter { wstring opIndex( string key ); }
 
@@ -106,7 +106,7 @@ protected:
 
     wstring notFound( string key )
     {
-        log_error( "no translation for key '%s' in dict '%s'", key, name );
+        logger.error( "no translation for key '%s' in dict '%s'", key, name );
         return "[no_tr]"w ~ to!wstring(key);
     }
 }
@@ -129,7 +129,7 @@ class DirDictionaryLoader : DictionaryLoader
         try base = loadBase( path );
         catch( DictionaryLoaderException e )
         {
-            log_error( e.msg );
+            logger.error( e.msg );
             return (Localization[string]).init;
         }
 
@@ -143,7 +143,7 @@ class DirDictionaryLoader : DictionaryLoader
         if( !path.exists )
         {
             mkdirRecurse( path );
-            log_info( "create localization path '%s'", path );
+            logger.info( "create localization path '%s'", path );
         }
 
         auto base_dict = buildNormalizedPath( path, "base" );
@@ -236,7 +236,7 @@ protected:
         foreach( lang, loc; locs )
             foreach( key; base.keys )
                 if( !loc.has(key) )
-                    log_error( "dict '%s' has no key '%s'", lang, key );
+                    logger.error( "dict '%s' has no key '%s'", lang, key );
     }
 }
 
@@ -268,7 +268,7 @@ private:
     {
         if( dict_loader is null )
         {
-            log_error( "dictionary loader not setted: no reloading" );
+            logger.error( "dictionary loader not setted: no reloading" );
             return;
         }
 
@@ -284,7 +284,7 @@ private:
         if( currentLocalization !is null )
             return currentLocalization[str];
 
-        log_info( "no current localization: use source string" );
+        logger.info( "no current localization: use source string" );
 
         return to!wstring(str);
     }
@@ -296,8 +296,8 @@ private:
         else
         {
             if( dict_loader is null )
-                log_error( "no dictionary loader -> no localization '%1$s', (copy 'base' to '%1$s')", lang );
-            else log_error( "no localization '%1$s', (copy 'base' to '%1$s.lt')", lang );
+                logger.error( "no dictionary loader -> no localization '%1$s', (copy 'base' to '%1$s')", lang );
+            else logger.error( "no localization '%1$s', (copy 'base' to '%1$s.lt')", lang );
         }
     }
 
@@ -309,7 +309,7 @@ private:
 
         if( dict_loader is null )
         {
-            log_error( "dictionary loader not setted: no store" );
+            logger.error( "dictionary loader not setted: no store" );
             return;
         }
 

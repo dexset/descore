@@ -25,7 +25,7 @@ The MIT License (MIT)
 module des.flow.base;
 
 import std.datetime;
-public import des.util.logger;
+public import des.util.logsys;
 
 class FlowException : Exception
 {

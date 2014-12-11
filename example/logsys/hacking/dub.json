@@ -1,0 +1,7 @@
+{
+    "name": "app",
+    "targetPath": "bin",
+    "targetType": "executable",
+    "sourcePaths": [ ".", "../../../import/" ],
+    "importPaths": [ "../../../import/" ]
+}

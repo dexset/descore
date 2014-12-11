@@ -12,14 +12,14 @@ class TestWorkElement : WorkElement, EventProcessor
     this( string name )
     {
         this.name = name;
-        log_info( "create '%s'", name );
+        logger.info( "create '%s'", name );
     }
 
     override void process()
     {
         string msg = toMessage( " element '%s' step %d", name, step++ );
         pushEvent( Event( 0, msg ) );
-        log_info( "'%s' generate message event", name );
+        logger.info( "'%s' generate message event", name );
         Thread.sleep(dur!"msecs"(100+uniform(-50,50)));
     }
 
@@ -28,20 +28,20 @@ class TestWorkElement : WorkElement, EventProcessor
         switch( ev.code )
         {
         case 0:
-            log_info( "'%s' get message event: %s", name, ev.as!string );
+            logger.info( "'%s' get message event: %s", name, ev.as!string );
             break;
         case Event.system_code:
-            log_info( "'%s' get system event: %s", name, ev.as!SysEvData );
+            logger.info( "'%s' get system event: %s", name, ev.as!SysEvData );
             break;
         default:
-            log_info( "'%s' get unknown event", name );
+            logger.info( "'%s' get unknown event", name );
             break;
         }
     }
 
     override EventProcessor[] getEventProcessors() { return [this]; }
 
-    protected void selfDestroy() { log_info( "destroy '%s'", name ); }
+    protected void selfDestroy() { logger.info( "destroy '%s'", name ); }
 }
 
 // it must be a function, not delegate
@@ -64,11 +64,11 @@ void batchJoin( FThread[] list )
 { foreach( th; list ) th.join(); }
 
 void printInfo( FThread[] list )
-{ foreach( th; list ) log_info( "thread info: '%s' %s", th.name, th.info.state ); }
+{ foreach( th; list ) logger.info( "thread info: '%s' %s", th.name, th.info.state ); }
 
 void batchCommandWithSleep( FThread[] list, Command cmd, size_t sleep_time )
 {
-    log_info( "##### %s", cmd );
+    logger.info( "##### %s", cmd );
     batchCommand( list, cmd );
 
     // can print wrong info because command in
@@ -88,8 +88,8 @@ void main()
     batchCommandWithSleep( list, Command.REINIT, 200 );
     batchCommandWithSleep( list, Command.START, 400 );
     batchCommandWithSleep( list, Command.CLOSE, 200 );
-    log_info( "join threads" );
+    logger.info( "join threads" );
     batchJoin( list );
     Thread.sleep(dur!"msecs"(10));
-    log_info( "finish" );
+    logger.info( "finish" );
 }

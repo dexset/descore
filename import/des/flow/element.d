@@ -25,7 +25,7 @@ The MIT License (MIT)
 module des.flow.element;
 
 import des.util.emm;
-import des.util.logger;
+import des.util.logsys;
 
 import des.flow.event;
 import des.flow.signal;
@@ -42,7 +42,7 @@ action must be in:
 abstract class WorkElement : EventBus, SignalBus, ExternalMemoryManager
 {
     mixin DirectEMM;
-    mixin AnywayLogger;
+    mixin ClassLogger;
 
 private:
     SignalProcessor signal_processor;

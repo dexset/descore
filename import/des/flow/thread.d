@@ -33,7 +33,7 @@ import std.datetime;
 import core.thread;
 
 import des.util.emm;
-import des.util.logger;
+import des.util.logsys;
 
 import des.flow.base;
 import des.flow.event;
@@ -98,7 +98,7 @@ public:
         self_name = name;
         com.initialize();
         thread.start();
-        debug log_debug( "name: '%s'", name );
+        debug logger.Debug( "name: '%s'", name );
     }
 
     @property auto info() const { return Info(com.info.back); }
@@ -110,13 +110,13 @@ public:
     void pushCommand( Command cmd )
     {
         com.commands.pushBack( cmd );
-        debug log_trace( "thread: '%s', command: '%s'", name, cmd );
+        debug logger.trace( "thread: '%s', command: '%s'", name, cmd );
     }
 
     void pushEvent( in Event ev )
     {
         com.eventbus.pushBack( ev );
-        debug log_trace( "thread: '%s', event code: %d", name, ev.code );
+        debug logger.trace( "thread: '%s', event code: %d", name, ev.code );
     }
 
     void join() { thread.join(); }
@@ -125,13 +125,13 @@ public:
     {
         foreach( t; thrs )
             com.listener.add( t.com.eventbus );
-        debug log_debug( "thread: '%s', listeners: %s", name, array(map!(a=>a.name)(thrs)) );
+        debug logger.Debug( "thread: '%s', listeners: %s", name, array(map!(a=>a.name)(thrs)) );
     }
 
     void delListener( FThread th )
     {
         com.listener.del( th.com.eventbus );
-        debug log_debug( "thread: '%s', listener: %s", name, th.name );
+        debug logger.Debug( "thread: '%s', listener: %s", name, th.name );
     }
 }
 

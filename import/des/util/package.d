@@ -7,7 +7,7 @@ public
     import des.util.emm;
     import des.util.helpers;
     import des.util.localization;
-    import des.util.logger;
+    import des.util.logsys;
     import des.util.pdata;
     import des.util.pseudointerface;
     import des.util.signal;
