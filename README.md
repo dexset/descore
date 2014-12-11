@@ -5,7 +5,7 @@
 Utility part used in various parts of DES
 
 - [external memory manager (EMM) interface](doc/des/util/emm.md)
-- [logger](doc/des/util/logger.md)
+- [log system](doc/des/util/logsys.md)
 - [signal-slot structs](doc/des/util/signal.md)
 - [localization](doc/des/util/localization.md)
 - [testsuite utilites](doc/des/util/testsuite.md)
