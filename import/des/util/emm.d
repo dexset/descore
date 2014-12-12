@@ -28,7 +28,7 @@ import des.util.tree;
 
 interface ExternalMemoryManager : TNode!(ExternalMemoryManager,"","EMM")
 {
-    mixin template DirectEMM(bool with_self_construct=true)
+    mixin template DirectEMM(bool self_construct=true, bool pre_childs_destroy=true)
     {
         mixin TNodeHelperEMM!(true,true,true);
 
@@ -42,8 +42,11 @@ interface ExternalMemoryManager : TNode!(ExternalMemoryManager,"","EMM")
                 selfConstruct();
         }
 
-        static if( with_self_construct )
+        static if( self_construct )
             protected void selfConstruct() {}
+
+        static if( pre_childs_destroy )
+            protected void preChildsDestroy() {}
     }
 
     mixin template ParentEMM()
@@ -57,6 +60,7 @@ interface ExternalMemoryManager : TNode!(ExternalMemoryManager,"","EMM")
     protected
     {
         void selfDestroy();
+        void preChildsDestroy();
         void selfConstruct();
 
         @property void isDestroyed( bool d );
@@ -88,6 +92,7 @@ interface ExternalMemoryManager : TNode!(ExternalMemoryManager,"","EMM")
         void destroy()
         {
             if( isDestroyed ) return;
+            preChildsDestroy();
             foreach( cemm; childsEMM )
                 cemm.destroy();
             selfDestroy();
