@@ -22,7 +22,7 @@ The MIT License (MIT)
     THE SOFTWARE.
 +/
 
-module des.math.linear.segment;
+module des.math.linear.ray;
 
 import std.math;
 import std.traits;
@@ -31,28 +31,28 @@ import des.math.linear.vector;
 import des.math.linear.matrix;
 import des.math.basic;
 
-struct Segment(T) if( isFloatingPoint!T )
+struct Ray(T) if( isFloatingPoint!T )
 {
     alias Vector!(3,T,"x y z") vectype;
-    vectype pnt, dir;
-    mixin( BasicMathOp!"pnt dir" );
+    vectype pos, dir;
+    mixin( BasicMathOp!"pos dir" );
 
     static auto fromPoints( in vectype start, in vectype end )
-    { return Segment!T( start, end - start ); }
+    { return Ray!T( start, end - start ); }
 
     @property
     {
-        ref vectype start() { return pnt; }
-        ref const(vectype) start() const { return pnt; }
-        vectype end() const { return pnt + dir; }
+        ref vectype start() { return pos; }
+        ref const(vectype) start() const { return pos; }
+        vectype end() const { return pos + dir; }
         vectype end( in vectype p )
         {
-            dir = p - pnt;
+            dir = p - pos;
             return p;
         }
 
         auto revert() const
-        { return Segment!(T).fromPoints( end, start ); }
+        { return Ray!(T).fromPoints( end, start ); }
 
         T len2() const { return dir.len2; }
         T len() const { return dir.len; }
@@ -61,54 +61,54 @@ struct Segment(T) if( isFloatingPoint!T )
     /+ аффинное преобразование +/
     auto tr(X)( in Matrix!(4,4,X) mtr ) const
     {
-        return Segment!T( (mtr * Vector!(4,T,"x y z w")( pnt, 1 )).xyz,
+        return Ray!T( (mtr * Vector!(4,T,"x y z w")( pos, 1 )).xyz,
                           (mtr * Vector!(4,T,"x y z w")( dir, 0 )).xyz );
     }
 
     /+ высота проведённая из точки это отрезок, 
        соединяющий проекцию точки на прямую и 
-       саму точку (Segment) +/
+       саму точку (Ray) +/
     auto altitude( in vectype pp ) const
     {
         auto n = dir.e;
-        auto dd = pnt + n * dot(n,(pp-pnt));
-        return Segment!T( dd, pp - dd );
+        auto dd = pos + n * dot(n,(pp-pos));
+        return Ray!T( dd, pp - dd );
     }
 
     /+ общий перпендикуляр +/
-    auto altitude(F)( in Segment!F seg ) const
+    auto altitude(F)( in Ray!F seg ) const
     {
         /+ находим нормаль для паралельных 
         плоскостей в которых лежат s1 и s2 +/
         auto norm = cross(dir,seg.dir).e;
 
         /+ расстояние между началами точками на прямых +/
-        auto mv = pnt - seg.pnt;
+        auto mv = pos - seg.pos;
 
         /+ нормальный вектор, длиной в расстояние между плоскостями +/
         auto dist = norm * dot(norm,mv);
 
         /+ переносим отрезок на плоскость первой прямой
            и сразу находим пересечение +/
-        auto pp = calcIntersection( Segment!T( seg.pnt + dist, seg.dir ) );
+        auto pp = calcIntersection( Ray!T( seg.pos + dist, seg.dir ) );
 
-        return Segment!T( pp, -dist );
+        return Ray!T( pp, -dist );
     }
 
     /+ пересечение с другой прямой 
        если она в той же плоскости +/
-    auto intersect(F)( in Segment!F seg ) const
+    auto intersect(F)( in Ray!F seg ) const
     {
         auto a = altitude( seg );
-        return a.pnt + a.dir * 0.5;
+        return a.pos + a.dir * 0.5;
     }
 
-    auto calcIntersection(F)( in Segment!F seg ) const
+    auto calcIntersection(F)( in Ray!F seg ) const
     {
-        auto a = pnt;
+        auto a = pos;
         auto v = dir;
 
-        auto b = seg.pnt;
+        auto b = seg.pos;
         auto w = seg.dir;
 
         static T resolve( T a0, T r, T a1, T q, T b0, T p, T b1, T s )
@@ -125,29 +125,29 @@ struct Segment(T) if( isFloatingPoint!T )
         y = isFinite(y) ? y : resolve( a.y, v.y, b.y, w.y,  a.z, v.z, b.z, w.z );
         z = isFinite(z) ? z : resolve( a.z, v.z, b.z, w.z,  a.x, v.x, b.x, w.x );
 
-        if( !isFinite(x) ) x = pnt.x;
-        if( !isFinite(y) ) y = pnt.y;
-        if( !isFinite(z) ) z = pnt.z;
+        if( !isFinite(x) ) x = pos.x;
+        if( !isFinite(y) ) y = pos.y;
+        if( !isFinite(z) ) z = pos.z;
 
         return vectype( x, y, z );
     }
 }
 
-alias Segment!float  fSeg;
-alias Segment!double dSeg;
-alias Segment!real   rSeg;
+alias Ray!float  fRay;
+alias Ray!double dRay;
+alias Ray!real   rRay;
 
 version(unittest)
 {
-    bool eq_seg(A,B,E=float)( in Segment!A a, in Segment!B b, in E eps=E.epsilon )
-    { return eq_approx( a.pnt.data ~ a.dir.data, b.pnt.data ~ b.dir.data, eps ); }
+    bool eq_seg(A,B,E=float)( in Ray!A a, in Ray!B b, in E eps=E.epsilon )
+    { return eq_approx( a.pos.data ~ a.dir.data, b.pos.data ~ b.dir.data, eps ); }
 }
 
 unittest
 {
-    auto r1 = fSeg( vec3(1,2,3), vec3(2,3,4) );
-    auto r2 = fSeg( vec3(4,5,6), vec3(5,2,3) );
-    auto rs = fSeg( vec3(5,7,9), vec3(7,5,7) );
+    auto r1 = fRay( vec3(1,2,3), vec3(2,3,4) );
+    auto r2 = fRay( vec3(4,5,6), vec3(5,2,3) );
+    auto rs = fRay( vec3(5,7,9), vec3(7,5,7) );
     assert( r1 + r2 == rs );
 }
 
@@ -155,7 +155,7 @@ unittest
 {
     auto a = vec3(1,2,3);
     auto b = vec3(2,3,4);
-    auto r1 = fSeg( a, b );
+    auto r1 = fRay( a, b );
     assert( r1.start == a );
     assert( r1.end == a + b );
     r1.start = b;
@@ -174,7 +174,7 @@ unittest
                      0.1, 0.02, 3, 1,
                      0, 0, 0, 1 );
 
-    auto s = fSeg( vec3(1,2,3), vec3(2,3,4) );
+    auto s = fRay( vec3(1,2,3), vec3(2,3,4) );
     
     auto ta = (mtr * vec4(s.start,1)).xyz;
     auto tb = (mtr * vec4(s.end,1)).xyz;
@@ -186,16 +186,16 @@ unittest
 
 unittest
 {
-    auto s = fSeg( vec3(2,0,0), vec3(-4,4,0) );
+    auto s = fRay( vec3(2,0,0), vec3(-4,4,0) );
     auto p = vec3( 0,0,0 );
     auto r = s.altitude(p);
     assert( eq( p, r.end ) );
-    assert( eq( r.pnt, vec3(1,1,0) ) );
+    assert( eq( r.pos, vec3(1,1,0) ) );
 }
 
 unittest
 {
-    auto s = fSeg( vec3(2,0,0), vec3(0,4,0) );
+    auto s = fRay( vec3(2,0,0), vec3(0,4,0) );
     auto p = vec3( 0,0,0 );
     auto r = s.altitude(p).len;
     assert( r == 2.0f );
@@ -203,29 +203,29 @@ unittest
 
 unittest
 {
-    auto s1 = fSeg( vec3(0,0,1), vec3(2,2,0) );
-    auto s2 = fSeg( vec3(2,0,-1), vec3(-4,4,0) );
+    auto s1 = fRay( vec3(0,0,1), vec3(2,2,0) );
+    auto s2 = fRay( vec3(2,0,-1), vec3(-4,4,0) );
     auto a1 = s1.altitude(s2);
     auto a2 = s2.altitude(s1);
     assert( eq_seg( a1, a2.revert ) );
     assert( a1.len == 2 );
-    assert( eq( a1.pnt, vec3(1,1,1) ) );
+    assert( eq( a1.pos, vec3(1,1,1) ) );
     assert( eq( a1.dir, vec3(0,0,-2) ) );
 }
 
 unittest
 {
-    auto s1 = fSeg( vec3(-2,0,0), vec3(1,0,0) );
-    auto s2 = fSeg( vec3(0,0,2), vec3(0,1,-1) );
+    auto s1 = fRay( vec3(-2,0,0), vec3(1,0,0) );
+    auto s2 = fRay( vec3(0,0,2), vec3(0,1,-1) );
 
     auto a1 = s1.altitude(s2);
-    assert( eq_seg( a1, fSeg(vec3(0,0,0), vec3(0,1,1)) ) );
+    assert( eq_seg( a1, fRay(vec3(0,0,0), vec3(0,1,1)) ) );
 }
 
 unittest
 {
-    auto s1 = fSeg( vec3(0,0,0), vec3(2,2,0) );
-    auto s2 = fSeg( vec3(2,0,0), vec3(-4,4,0) );
+    auto s1 = fRay( vec3(0,0,0), vec3(2,2,0) );
+    auto s2 = fRay( vec3(2,0,0), vec3(-4,4,0) );
     assert( eq( s1.intersect(s2), s2.intersect(s1) ) );
     assert( eq( s1.intersect(s2), vec3(1,1,0) ) );
 }

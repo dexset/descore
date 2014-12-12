@@ -27,7 +27,7 @@ module des.math.linear.triangle;
 import std.traits;
 import des.math.linear.vector;
 import des.math.linear.matrix;
-import des.math.linear.segment;
+import des.math.linear.ray;
 import des.math.basic;
 
 struct Triangle(T) if( isFloatingPoint!T )
@@ -57,9 +57,9 @@ struct Triangle(T) if( isFloatingPoint!T )
                            (mtr * vec!(4,T,"x y z w")( pnt[2], 1 )).xyz );
     }
 
-    Segment!(T)[3] toSegments() const
+    Ray!(T)[3] toRays() const
     {
-        alias Segment!T st;
+        alias Ray!T st;
         return [ st.fromPoints( pnt[0], pnt[1] ),
                  st.fromPoints( pnt[1], pnt[2] ),
                  st.fromPoints( pnt[2], pnt[0] ) ];
@@ -67,25 +67,25 @@ struct Triangle(T) if( isFloatingPoint!T )
 
     /+ высота проведённая из точки это отрезок, 
        соединяющий проекцию точки на плоскость и 
-       саму точку (Segment) +/
+       саму точку (Ray) +/
     auto altitude( in vectype pp ) const
     {
         auto n = norm;
         auto dst = n * dot( n, pp-pnt[0] );
-        return Segment!T( pp - dst, dst );
+        return Ray!T( pp - dst, dst );
     }
 
-    auto project(F)( in Segment!F seg ) const
+    auto project(F)( in Ray!F seg ) const
     {
         auto n = norm;
-        auto dst1 = dot( n, seg.pnt-pnt[0] );
+        auto dst1 = dot( n, seg.pos-pnt[0] );
         auto dst2 = dot( n, seg.end-pnt[0] );
         auto diff = dst1 - dst2;
-        return Segment!T( seg.png - n * dst1,
+        return Ray!T( seg.png - n * dst1,
                           seg.dir + n * diff );
     }
 
-    auto intersect(F)( in Segment!F seg ) const
+    auto intersect(F)( in Ray!F seg ) const
     { return seg.intersect( project(seg) ); }
 }
 
@@ -101,6 +101,6 @@ unittest
 
     auto pnt = vec3( 2,2,2 );
     auto a = poly.altitude( pnt );
-    assert( a.pnt == vec3(2,2,0) );
+    assert( a.pos == vec3(2,2,0) );
     assert( a.dir == vec3(0,0,2) );
 }

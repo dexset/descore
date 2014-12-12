@@ -307,47 +307,6 @@ pure:
             }
         }
     }
-
-    /++ для кватернионов +/
-    static if( AS == "i j k a" )
-    {
-        static assert( isFloatingPoint!T, "quaterni must be floating point vector" );
-
-        static selftype fromAngle(E,alias string bs)( T alpha, in Vector!(3,E,bs) axis )
-            if( isFloatingPoint!E )
-        { 
-            T a = alpha / cast(T)(2.0);
-            auto vv = axis * sin(a);
-            return selftype( vv[0], vv[1], vv[2], cos(a) );
-        }
-
-        /++ quaterni mul +/
-        auto quatMlt(E)( in Vector!(4,E,AS) b ) const
-            if( is( CommonType!(T,E) : T ) )
-        {
-            alias this a;
-            auto aijk = a.ijk;
-            auto bijk = b.ijk;
-            auto vv = cross(aijk, bijk) + aijk * b.a + bijk * a.a;
-            return selftype( vv[0], vv[1], vv[2], a.a * b.a - dot(aijk, bijk) );
-        }
-
-        auto rot(size_t K,E,alias string bs)( in Vector!(K,E,bs) b ) const
-            if( (K==0||K==3) && is( CommonType!(T,E) : T ) )
-        {
-            static if( K==0 ) enforce( b.length == 3, "wrong length" );
-            auto res = (this.quatMlt( selftype(b,0).quatMlt(inv) ));
-            return Vector!(K,T,bs)( res.ijk );
-        }
-
-        const @property
-        {
-            T norm() { return dot(this,this); }
-            T mag() { return sqrt( norm ); }
-            auto con() { return selftype( -this.ijk, this.a ); }
-            auto inv() { return con / norm; }
-        }
-    }
 }
 
 auto dot( size_t N, size_t K, T,E, alias string S1, alias string S2 )( in Vector!(N,T,S1) a, in Vector!(K,E,S2) b )
@@ -382,10 +341,6 @@ alias Vector!(2,float,"x y") vec2;
 alias Vector!(3,float,"x y z") vec3;
 alias Vector!(4,float,"x y z w") vec4;
 
-alias Vector!(4,float,"i j k a") quat;
-alias Vector!(4,double,"i j k a") dquat;
-alias Vector!(4,real,"i j k a") rquat;
-
 alias Vector!(2,double,"x y") dvec2;
 alias Vector!(3,double,"x y z") dvec3;
 alias Vector!(4,double,"x y z w") dvec4;
@@ -419,8 +374,6 @@ unittest
     static assert( isVector!vec2 );
     static assert( isVector!vec3 );
     static assert( isVector!vec4 );
-    static assert( isVector!quat );
-    static assert( isVector!dquat );
     static assert( isVector!dvec2 );
     static assert( isVector!dvec3 );
     static assert( isVector!dvec4 );
@@ -657,16 +610,6 @@ unittest
     assert( eq( a, [ 5,4,7 ] ) );
     a.yzx = a.zxz;
     assert( eq( a, [ 7,7,5 ] ) );
-}
-
-unittest
-{
-    auto r = quat.fromAngle( PI_2, vec3(0,0,1) );
-
-    auto a = vec3( 1,0,0 );
-    auto b = r.rot(a);
-    assert( is( typeof(b) == vec3 ) );
-    assert( eq( b.data, [ 0, 1, 0 ] ) );
 }
 
 unittest

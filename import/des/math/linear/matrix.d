@@ -35,6 +35,7 @@ import des.util.testsuite;
 
 import des.math.util;
 import des.math.linear.vector;
+import des.math.linear.quaterni;
 import des.math.basic.traits;
 
 private pure void isMatrixImpl(size_t H,size_t W,T)( Matrix!(H,W,T) ){}
