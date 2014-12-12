@@ -5,6 +5,7 @@ import std.string : toLower, format, split;
 import std.stdio : stderr;
 
 import des.util.logsys.base;
+import des.util.logsys.output;
 
 class Logger
 {
@@ -28,7 +29,7 @@ protected:
     { __writeLog( chooseOutputName(lm), lm ); }
 
     string chooseOutputName( in LogMessage lvl ) const
-    { return "console"; }
+    { return LogOutputHandler.console_name; }
 
     string procEmitterName( string name ) const nothrow
     in{ assert( name.length ); }
