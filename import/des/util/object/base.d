@@ -41,6 +41,7 @@ interface DesBase : ExternalMemoryManager, SlotHandler
 
     mixin template DES()
     {
+        import des.util.stdext.traits;
         mixin DefineTemplateVars!( Slot, findAndPrepareSlotTemplateVarDefs!(typeof(this)) );
 
         static if( is(typeof(__DES_BASE_CLASS)) )
