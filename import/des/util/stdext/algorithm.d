@@ -22,43 +22,65 @@ The MIT License (MIT)
     THE SOFTWARE.
 +/
 
-module des.view.resolver;
+module des.util.stdext.algorithm;
 
-public import des.math.linear.vector;
-public import des.math.linear.matrix;
-public import des.view.node;
+public import std.array;
+public import std.algorithm;
+public import std.range;
+public import std.traits;
 
-class Resolver
+template amap(fun...) if ( fun.length >= 1 )
 {
-    mat4 opCall( const(SpaceNode) obj, const(SpaceNode) cam ) const
+    auto amap(Range)(Range r) 
+        if (isInputRange!(Unqual!Range))
+    { return array( map!(fun)(r) ); }
+}
+
+unittest
+{
+    int[] res = [ 1, 2, 3 ];
+    void func( int[] arr ) { res ~= arr; }
+    func( amap!(a=>a^^2)(res) );
+    assert( res == [ 1, 2, 3, 1, 4, 9 ] );
+}
+
+bool oneOf(E,T)( T val )
+    if( is( E == enum ) )
+{
+    foreach( pv; [EnumMembers!E] )
+        if( pv == val ) return true;
+    return false;
+}
+
+private version(unittest)
+{
+    enum TestEnum
     {
-        const(SpaceNode)[] obj_branch, cam_branch;
-        obj_branch ~= obj;
-        cam_branch ~= cam;
-
-        while( obj_branch[$-1] )
-            obj_branch ~= obj_branch[$-1].spaceParent;
-        while( cam_branch[$-1] )
-            cam_branch ~= cam_branch[$-1].spaceParent;
-
-        top:
-        foreach( cbi, cam_parent; cam_branch )
-            foreach( obi, obj_parent; obj_branch )
-                if( cam_parent == obj_parent )
-                {
-                    cam_branch = cam_branch[0 .. cbi];
-                    obj_branch = obj_branch[0 .. obi];
-                    break top;
-                }
-
-        mat4 obj_mtr, cam_mtr;
-
-        foreach( node; obj_branch )
-            obj_mtr = node.matrix * obj_mtr;
-
-        foreach( node; cam_branch )
-            cam_mtr = cam_mtr * node.matrix.speedTransformInv;
-
-        return cam_mtr * obj_mtr;
+        ONE = 1,
+        TWO = 2,
+        FOUR = 4
     }
+}
+
+unittest
+{
+    assert( !oneOf!TestEnum(0) );
+    assert(  oneOf!TestEnum(1) );
+    assert(  oneOf!TestEnum(2) );
+    assert( !oneOf!TestEnum(3) );
+    assert(  oneOf!TestEnum(4) );
+    assert( !oneOf!TestEnum(5) );
+}
+
+bool oneOf(E,T)( E[] arr, T val )
+    if( is( typeof( arr[0] == val ) ) )
+{
+    foreach( pv; arr ) if( pv == val ) return true;
+    return false;
+}
+
+unittest
+{
+    assert( !oneOf( [TestEnum.ONE, TestEnum.TWO], 0) );
+    assert(  oneOf( [TestEnum.ONE, TestEnum.TWO], 2) );
 }

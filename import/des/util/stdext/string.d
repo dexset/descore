@@ -22,7 +22,7 @@ The MIT License (MIT)
     THE SOFTWARE.
 +/
 
-module des.util.string;
+module des.util.stdext.string;
 
 import std.string;
 import std.array;

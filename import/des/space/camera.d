@@ -22,10 +22,10 @@ The MIT License (MIT)
     THE SOFTWARE.
 +/
 
-module des.view.camera;
+module des.space.camera;
 
-public import des.view.node;
-public import des.view.resolver;
+public import des.space.node;
+public import des.space.resolver;
 
 import std.math;
 

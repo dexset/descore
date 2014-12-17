@@ -32,7 +32,7 @@ import std.array;
 import std.datetime;
 import core.thread;
 
-import des.util.emm;
+import des.util.object.emm;
 import des.util.logsys;
 
 import des.flow.base;

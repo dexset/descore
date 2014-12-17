@@ -5,7 +5,7 @@ import std.socketstream;
 
 import des.util.pdata;
 import des.util.helpers;
-import des.util.emm;
+import des.util.object.emm;
 import des.util.logsys;
 
 class SocketException: Exception

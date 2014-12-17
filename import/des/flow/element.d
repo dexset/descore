@@ -24,7 +24,7 @@ The MIT License (MIT)
 
 module des.flow.element;
 
-import des.util.emm;
+import des.util.object.emm;
 import des.util.logsys;
 
 import des.flow.event;

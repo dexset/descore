@@ -22,48 +22,63 @@ The MIT License (MIT)
     THE SOFTWARE.
 +/
 
-module des.util.emm;
+module des.util.object.emm;
 
-import des.util.tree;
+import des.util.object.tree;
 
 interface ExternalMemoryManager : TNode!(ExternalMemoryManager,"","EMM")
 {
+    mixin template EMM()
+    {
+        static if( !is(typeof(__EMM_BASE_IMPLEMENT)) )
+        {
+            protected enum __EMM_BASE_IMPLEMENT = true;
+
+            mixin TNodeHelperEMM!(true,true,true);
+
+            private bool is_destroyed = false;
+            public final bool isDestroyed() const { return is_destroyed; }
+            protected final void isDestroyed( bool d )
+            {
+                bool change = is_destroyed != d;
+                is_destroyed = d;
+                if( change && !is_destroyed )
+                    selfConstruct();
+            }
+        }
+    }
+
+    /+ backward compatibility +/
     mixin template DirectEMM(bool self_construct=true, bool pre_childs_destroy=true)
     {
-        mixin TNodeHelperEMM!(true,true,true);
+        mixin EmptyImplementEMM!(false,self_construct,pre_childs_destroy);
+    }
 
-        private bool is_destroyed = false;
-        public final bool isDestroyed() const { return is_destroyed; }
-        protected final void isDestroyed( bool d )
-        {
-            bool change = is_destroyed != d;
-            is_destroyed = d;
-            if( change && !is_destroyed )
-                selfConstruct();
-        }
+    mixin template ParentEMM() { mixin EmptyImplementEMM; }
+
+    mixin template EmptyImplementEMM(bool self_destroy=true,
+                                     bool pre_childs_destroy=true,
+                                     bool self_construct=true)
+    {
+        mixin EMM;
 
         static if( self_construct )
             protected void selfConstruct() {}
 
         static if( pre_childs_destroy )
             protected void preChildsDestroy() {}
-    }
 
-    mixin template ParentEMM()
-    {
-        mixin DirectEMM!false;
-
-        protected void selfDestroy() {}
-        protected void selfConstruct() {}
+        static if( self_destroy )
+            protected void selfDestroy() {}
     }
 
     protected
     {
+        @property void isDestroyed( bool d );
+
+        void selfConstruct();
         void selfDestroy();
         void preChildsDestroy();
-        void selfConstruct();
-
-        @property void isDestroyed( bool d );
     }
 
     @property bool isDestroyed() const;

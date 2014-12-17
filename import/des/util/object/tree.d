@@ -22,7 +22,7 @@ The MIT License (MIT)
     THE SOFTWARE.
 +/
 
-module des.util.tree;
+module des.util.object.tree;
 
 import std.traits;
 import std.string;
@@ -195,7 +195,7 @@ interface TNode
             in { assert( att.length > 0 ); } body
             {
                 import std.exception;
-                import des.util.tree;
+                import des.util.object.tree;
                 debug enum DEBUG = true; else enum DEBUG = false;
 
                 static if( __%release_nullchild_check || DEBUG )

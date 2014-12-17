@@ -22,54 +22,43 @@ The MIT License (MIT)
     THE SOFTWARE.
 +/
 
-module des.view.node;
+module des.space.resolver;
 
 public import des.math.linear.vector;
 public import des.math.linear.matrix;
-public import des.view.transform;
+public import des.space.node;
 
-import des.util.tree;
-
-interface SpaceNode : Transform, TNode!(SpaceNode,"space")
+class Resolver
 {
-    mixin template SpaceNodeHelper(bool with_matrix_property=true)
+    mat4 opCall( const(SpaceNode) obj, const(SpaceNode) cam ) const
     {
-        mixin spaceTNodeHelper!(true,true,true);
+        const(SpaceNode)[] obj_branch, cam_branch;
+        obj_branch ~= obj;
+        cam_branch ~= cam;
 
-        protected mat4 self_mtr;
+        while( obj_branch[$-1] )
+            obj_branch ~= obj_branch[$-1].spaceParent;
+        while( cam_branch[$-1] )
+            cam_branch ~= cam_branch[$-1].spaceParent;
 
-        static if( with_matrix_property )
-            mat4 matrix() @property const { return self_mtr; }
+        top:
+        foreach( cbi, cam_parent; cam_branch )
+            foreach( obi, obj_parent; obj_branch )
+                if( cam_parent == obj_parent )
+                {
+                    cam_branch = cam_branch[0 .. cbi];
+                    obj_branch = obj_branch[0 .. obi];
+                    break top;
+                }
+
+        mat4 obj_mtr, cam_mtr;
+
+        foreach( node; obj_branch )
+            obj_mtr = node.matrix * obj_mtr;
+
+        foreach( node; cam_branch )
+            cam_mtr = cam_mtr * node.matrix.speedTransformInv;
+
+        return cam_mtr * obj_mtr;
     }
-
-    const @property
-    {
-        /+ local to parent transform +/
-        mat4 matrix();
-
-        final
-        {
-            vec3 baseX() { return vec3( matrix.col(0).data[0 .. 3] ); }
-            vec3 baseY() { return vec3( matrix.col(1).data[0 .. 3] ); }
-            vec3 baseZ() { return vec3( matrix.col(2).data[0 .. 3] ); }
-
-            /+ in parent system +/
-            vec3 offset() { return vec3( matrix.col(3).data[0 .. 3] ); }
-        }
-    }
-}
-
-final class DimmyNode : SpaceNode
-{
-    mixin SpaceNodeHelper!false;
-
-    this( SpaceNode par = null ) { spaceParent = par; }
-
-    @property
-    {
-        mat4 matrix() const { return self_mtr; }
-        ref mat4 matrix() { return self_mtr; }
-    }
-
-    void setOffset( in vec3 pnt ) { self_mtr.setCol(3,vec4(pnt,1)); }
 }
