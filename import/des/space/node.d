@@ -28,7 +28,7 @@ public import des.math.linear.vector;
 public import des.math.linear.matrix;
 public import des.space.transform;
 
-import des.util.object.tree;
+import des.util.arch.tree;
 
 interface SpaceNode : Transform, TNode!(SpaceNode,"space")
 {

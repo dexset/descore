@@ -22,13 +22,13 @@ The MIT License (MIT)
     THE SOFTWARE.
 +/
 
-module des.util.object.emm;
+module des.util.arch.emm;
 
-import des.util.object.tree;
+import des.util.arch.tree;
 
 interface ExternalMemoryManager : TNode!(ExternalMemoryManager,"","EMM")
 {
-    mixin template EMM()
+    mixin template EMM(string file=__FILE__,size_t line=__LINE__)
     {
         static if( !is(typeof(__EMM_BASE_IMPLEMENT)) )
         {
@@ -45,31 +45,21 @@ interface ExternalMemoryManager : TNode!(ExternalMemoryManager,"","EMM")
                 if( change && !is_destroyed )
                     selfConstruct();
             }
+
+            import std.traits;
+
+            protected override
+            {
+                static if( isAbstractFunction!selfConstruct ) void selfConstruct() {}
+                static if( isAbstractFunction!selfDestroy ) void selfDestroy() {}
+                static if( isAbstractFunction!preChildsDestroy ) void preChildsDestroy() {}
+            }
         }
-    }
-
-    /+ backward compatibility +/
-    mixin template DirectEMM(bool self_construct=true, bool pre_childs_destroy=true)
-    {
-        mixin EmptyImplementEMM!(false,self_construct,pre_childs_destroy);
-    }
-
-    mixin template ParentEMM() { mixin EmptyImplementEMM; }
-
-    mixin template EmptyImplementEMM(bool self_destroy=true,
-                                     bool pre_childs_destroy=true,
-                                     bool self_construct=true)
-    {
-        mixin EMM;
-
-        static if( self_construct )
-            protected void selfConstruct() {}
-
-        static if( pre_childs_destroy )
-            protected void preChildsDestroy() {}
-
-        static if( self_destroy )
-            protected void selfDestroy() {}
+        else
+        {
+            version(emmcheck)
+                pragma(msg, format( "WARNING: duplicate mixin EMM at %s:%d", file, line ) );
+        }
     }
 
     protected

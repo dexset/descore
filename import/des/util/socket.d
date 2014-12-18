@@ -5,7 +5,7 @@ import std.socketstream;
 
 import des.util.pdata;
 import des.util.helpers;
-import des.util.object.emm;
+import des.util.arch.emm;
 import des.util.logsys;
 
 class SocketException: Exception
@@ -72,7 +72,7 @@ protected:
 
 class SListener : DSocket, ExternalMemoryManager
 {
-    mixin DirectEMM;
+    mixin EMM;
 
 protected override void selfDestroy()
 {
@@ -150,13 +150,7 @@ public:
 
 class SSender : DSocket, ExternalMemoryManager
 {
-    mixin DirectEMM;
-
-protected override void selfDestroy()
-{ 
-    sender.shutdown( SocketShutdown.BOTH );
-    sender.close(); 
-}
+    mixin EMM;
 
 private:
     Socket sender;
@@ -193,6 +187,14 @@ public:
     void send( in void[] data )
     {
         formSend( (const (void)[] dd, size_t block_size ){ return cast(ptrdiff_t)(ss.writeBlock( cast(void*)dd.ptr, block_size )); }, data, bs );
+    }
+
+protected:
+
+    override void selfDestroy()
+    {
+        sender.shutdown( SocketShutdown.BOTH );
+        sender.close(); 
     }
 }
 

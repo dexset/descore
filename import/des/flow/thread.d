@@ -32,7 +32,7 @@ import std.array;
 import std.datetime;
 import core.thread;
 
-import des.util.object.emm;
+import des.util.arch.emm;
 import des.util.logsys;
 
 import des.flow.base;
@@ -198,7 +198,7 @@ private
 
     final class WorkProcessor(Args...) : ExternalMemoryManager, SignalProcessor, EventProcessor
     {
-        mixin ParentEMM;
+        mixin EMM;
 
         Args args;
         WorkElement function(Args) func;

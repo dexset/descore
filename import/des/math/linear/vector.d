@@ -345,6 +345,10 @@ alias Vector!(2,double,"x y") dvec2;
 alias Vector!(3,double,"x y z") dvec3;
 alias Vector!(4,double,"x y z w") dvec4;
 
+alias Vector!(2,real,"x y") rvec2;
+alias Vector!(3,real,"x y z") rvec3;
+alias Vector!(4,real,"x y z w") rvec4;
+
 alias Vector!(2,int,"x y") ivec2;
 alias Vector!(3,int,"x y z") ivec3;
 alias Vector!(4,int,"x y z w") ivec4;

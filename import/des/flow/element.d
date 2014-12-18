@@ -24,7 +24,7 @@ The MIT License (MIT)
 
 module des.flow.element;
 
-import des.util.object.emm;
+import des.util.arch.emm;
 import des.util.logsys;
 
 import des.flow.event;
@@ -41,7 +41,7 @@ action must be in:
 
 abstract class WorkElement : EventBus, SignalBus, ExternalMemoryManager
 {
-    mixin DirectEMM;
+    mixin EMM;
     mixin ClassLogger;
 
 private:
@@ -90,7 +90,6 @@ unittest
     class TestElement: WorkElement
     {
         override void process(){}
-        protected void selfDestroy(){}
     }
 
     class TestSignalProcessor : SignalProcessor 

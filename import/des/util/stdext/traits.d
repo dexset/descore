@@ -119,76 +119,13 @@ template staticFilter(alias F, T...)
     }
 }
 
-template filterMembers(alias F,T,List...)
-if( ( is( T == class ) || is( T == struct ) ) && ( List.length == 0 || ( allSatisfy!(isString,List) ) ) )
-{
-    static if( List.length > 0 ) alias list = List;
-    else alias list = TypeTuple!(__traits(allMembers,T));
-
-    template trueMember(string n)
-    {
-        static if( __traits(compiles,__traits(getMember,T,n)) &&
-                    F!(__traits(getMember,T,n)) )
-            enum trueMember = true;
-        else enum trueMember = false;
-    }
-
-    alias filterMembers = staticFilter!( trueMember, list );
-}
-
 template hasVoidReturnType(alias f)
 { enum hasVoidReturnType = is( ReturnType!f == void ); }
-
-unittest
-{
-    enum mark;
-
-    template isMarkedFunc(alias f)
-    {
-        enum isMarkedFunc = isCallable!f &&
-             hasAttrib!(mark,f);
-    }
-
-    static class OC { }
-    static struct OS { }
-
-    static assert( [filterMembers!(isMarkedFunc,OC)] == [] );
-    static assert( [filterMembers!(isMarkedFunc,OS)] == [] );
-
-    static class A
-    {
-        void s1() @mark {}
-        void f2() {}
-        @mark
-        {
-            float s3() { return 3.14; }
-            void s4( float x ) {}
-        }
-        void f5() {}
-        @mark void s6() {}
-    }
-
-    enum A_exp = ["s1","s3","s4","s6"];
-
-    static assert( [filterMembers!(isMarkedFunc,A)] == A_exp );
-
-    static class B : A { void s7( string x ) @mark {} }
-
-    enum B_rr = filterMembers!(isMarkedFunc,B);
-
-    static assert( [B_rr] == ["s7"] ~ A_exp );
-
-    enum B_void_rr = filterMembers!(hasVoidReturnType,B,B_rr);
-    enum B_non_void_rr = filterMembers!(templateNot!hasVoidReturnType,B,B_rr);
-
-    static assert( [B_void_rr] == ["s7", "s1", "s4", "s6"] );
-    static assert( [B_non_void_rr] == ["s3"] );
-}
 
 struct TemplateVarDef( alias string N, Args... )
 {
     alias name = N;
-    alias Types = Args;
+    alias types = Args;
 }
 
 template isTemplateVarDef(T)
@@ -204,12 +141,12 @@ unittest
 }
 
 mixin template DefineTemplateVars( alias Trg, List... )
+    if( allSatisfy!( isTemplateVarDef, List ) )
 {
     static if( List.length == 0 ) {}
     else static if( List.length == 1 )
     {
-        static assert( isTemplateVarDef!(List[0]) );
-        mixin( "Trg!(List[0].Types) " ~ List[0].name ~ ";" );
+        mixin( "Trg!(List[0].types) " ~ List[0].name ~ ";" );
     }
     else
     {
@@ -267,9 +204,23 @@ unittest
         }
     }
     
-    template isVoidMarkedFunc(alias f)
+    template isVoidMarked(T)
     {
-        enum isVoidMarkedFunc = isCallable!f && is( ReturnType!f == void ) && hasAttrib!(mark,f);
+        alias isVoidMarked = isVoidMarkedFunc;
+
+        template isVoidMarkedFunc(string n)
+        {
+            static if( __traits(compiles,impl!(__traits(getMember,T,n))) )
+                enum isVoidMarkedFunc = impl!(__traits(getMember,T,n));
+            else enum isVoidMarkedFunc = false;
+
+            template impl(alias f)
+            {
+                enum impl = isCallable!f &&
+                            is( ReturnType!f == void ) &&
+                            hasAttrib!(mark,f);
+            }
+        }
     }
 
     template TemplateVarDefFromMethod(T)
@@ -280,7 +231,7 @@ unittest
         }
     }
 
-    alias tvd = staticMap!( TemplateVarDefFromMethod!A, filterMembers!(isVoidMarkedFunc,A) );
+    alias tvd = staticMap!( TemplateVarDefFromMethod!A, staticFilter!(isVoidMarked!A,__traits(allMembers,A)) );
     static assert( tvd.length == 3 );
     alias exp = TypeTuple!( TemplateVarDef!("s1"), TemplateVarDef!("s3",int,string), TemplateVarDef!("s4",float) );
     static assert( is(tvd[0] == exp[0]) );

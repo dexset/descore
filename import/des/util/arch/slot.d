@@ -1,13 +1,13 @@
-module des.util.signal.slot;
+module des.util.arch.slot;
 
-import des.util.object.emm;
+import des.util.arch.emm;
 
 package interface SignalLeverage
 { void disconnect( SlotController ); }
 
 class SlotController : ExternalMemoryManager
 {
-    mixin DirectEMM;
+    mixin EMM;
 
 protected:
 
@@ -73,7 +73,7 @@ public:
 template isSlot(T)
 {
     enum isSlot = is( typeof( impl(T.init) ) );
-    void impl(Args...)( Slot!(Args) ) {}
+    void impl(Args...)( Slot!Args ) {}
 }
 
 unittest
