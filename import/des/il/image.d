@@ -36,7 +36,7 @@ import std.conv;
 import des.math.linear.vector;
 import des.il.region;
 import des.util.testsuite;
-import des.util.data.type;
+public import des.util.data.type;
 
 class ImageException : Exception
 { 
