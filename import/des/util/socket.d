@@ -3,7 +3,7 @@ module des.util.socket;
 public import std.socket;
 import std.socketstream;
 
-import des.util.pdata;
+import des.util.data.pdata;
 import des.util.helpers;
 import des.util.arch.emm;
 import des.util.logsys;

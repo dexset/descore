@@ -22,7 +22,7 @@ The MIT License (MIT)
     THE SOFTWARE.
 +/
 
-module des.util.pdata;
+module des.util.data.pdata;
 
 import std.traits;
 import std.string;
