@@ -28,9 +28,22 @@ import std.string;
 import std.algorithm;
 import std.stdio;
 
+/// compatible for creating access dispatches
+pure bool isCompatibleArrayAccessStrings( size_t N, string str, string sep1="", string sep2="|" )
+in { assert( sep1 != sep2 ); } body
+{
+    foreach( s; str.split(sep2) )
+        if( !isCompatibleArrayAccessString(N,s,sep1) )
+            return false;
+    return true;
+}
+
+
+/// compatible for creating access dispatches
 pure bool isCompatibleArrayAccessString( size_t N, string str, string sep="" )
 { return N == getAccessFieldsCount(str,sep) && isArrayAccessString(str,sep); }
 
+///
 pure bool isArrayAccessString( in string as, in string sep="", bool allowDot=false )
 {
     if( as.length == 0 ) return false;
@@ -41,57 +54,89 @@ pure bool isArrayAccessString( in string as, in string sep="", bool allowDot=fal
     return true;
 }
 
+///
 pure size_t getAccessFieldsCount( string str, string sep )
 { return str.split(sep).length; }
 
-pure ptrdiff_t getIndex( string str, string arg, string sep="" )
+///
+pure ptrdiff_t getIndex( string as, string arg, string sep1="", string sep2="|" )
+in { assert( sep1 != sep2 ); } body
 {
-    foreach( i, v; str.split(sep) )
-        if( arg == v ) return i;
+    foreach( str; as.split(sep2) )
+        foreach( i, v; str.split(sep1) )
+            if( arg == v ) return i;
     return -1;
 }
 
+///
 pure bool oneOfAccess( string str, string arg, string sep="" )
 {
     auto splt = str.split(sep);
     return canFind(splt,arg);
 }
 
+///
 pure bool oneOfAccessAll( string str, string arg, string sep="" )
 {
     auto splt = arg.split("");
     return all!(a=>oneOfAccess(str,a,sep))(splt);
 }
 
+///
+pure bool oneOfAccessAny( string str, string arg, string sep1="", string sep2="|" )
+in { assert( sep1 != sep2 ); } body
+{
+    foreach( s; str.split(sep2) )
+        if( oneOfAccessAll(s,arg,sep1) ) return true;
+    return false;
+}
+
+/// check symbol count for access to field
+pure bool isOneSymbolPerFieldAccessStrings( string str, string sep1="", string sep2="|" )
+in { assert( sep1 != sep2 ); } body
+{
+    foreach( s; str.split(sep2) )
+        if( !isOneSymbolPerFieldAccessString(s,sep1) ) return false;
+    return true;
+}
+
+/// check symbol count for access to field
 pure bool isOneSymbolPerFieldAccessString( string str, string sep="" )
 {
-    auto splt = str.split(sep);
-    foreach( s; splt )
+    foreach( s; str.split(sep) )
         if( s.length > 1 ) return false;
     return true;
 }
 
+/++
+Using all functions
++/
 unittest
 {
-    assert( isValueAccessString( "hello" ) );
-    assert( isValueAccessString( "x" ) );
-    assert( isValueAccessString( "_ok" ) );
-    assert( isValueAccessString( "__ok" ) );
-    assert( isValueAccessString( "__o1k" ) );
-    assert( isValueAccessString( "_2o1k3" ) );
+    assert(  isValueAccessString( "hello" ) );
+    assert(  isValueAccessString( "x" ) );
+    assert(  isValueAccessString( "_ok" ) );
+    assert(  isValueAccessString( "__ok" ) );
+    assert(  isValueAccessString( "__o1k" ) );
+    assert(  isValueAccessString( "_2o1k3" ) );
     assert( !isValueAccessString( "0__ok" ) );
     assert( !isValueAccessString( "__o-k" ) );
-    assert( isArrayAccessString( "xyz" ) );
-    assert( isArrayAccessString( "x|dx|y|dy", "|" ) );
-    assert( isCompatibleArrayAccessString( 4, "x|dx|y|dy", "|" ) );
-    assert( isCompatibleArrayAccessString( 3, "xyz" ) );
+    assert(  isArrayAccessString( "xyz" ) );
+    assert(  isArrayAccessString( "x|dx|y|dy", "|" ) );
+    assert(  isCompatibleArrayAccessString( 4, "x|dx|y|dy", "|" ) );
+    assert(  isCompatibleArrayAccessString( 3, "xyz" ) );
     assert( !isCompatibleArrayAccessString( 4, "xxxy" ) );
     assert( !isCompatibleArrayAccessString( 3, "xxx" ) );
+    assert(  isCompatibleArrayAccessStrings( 3, "xyz" ) );
+    assert(  isCompatibleArrayAccessStrings( 3, "x y z", " " ) );
+    assert(  isCompatibleArrayAccessStrings( 2, "xy|uv" ) );
+    assert( !isCompatibleArrayAccessStrings( 3, "xxy|uv" ) );
+    assert(  isCompatibleArrayAccessStrings( 3, "x,y,z;u,v,t", ",", ";" ) );
     static assert( getIndex( "x y z", "x", " " ) == 0 );
     static assert( getIndex( "x y z", "y", " " ) == 1 );
     static assert( getIndex( "x y z", "z", " " ) == 2 );
-    assert( getIndex( "x|dx|y|dy", "dx", "|" ) == 1 );
-    assert( getIndex( "x|dx|y|dy", "1dx", "|" ) == -1 );
+    assert( getIndex( "x|dx|y|dy", "dx", "|", ";" ) == 1 );
+    assert( getIndex( "x|dx|y|dy", "1dx", "|", ";" ) == -1 );
 
     assert( oneOfAccessAll("xyz","xy") );
     assert( oneOfAccessAll("xyz","yx") );
