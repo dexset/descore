@@ -351,37 +351,37 @@ pure:
             T opDispatch(string v)() const
                 if( getIndex(AS,v,SEP1,SEP2) != -1 )
             { mixin( format( "return data[%d];", getIndex(AS,v,SEP1,SEP2) ) ); }
-        }
 
-        static if( isOneSymbolPerFieldAccessStrings(AS,SEP1,SEP2) )
-        {
-            /++
-                get vector from elements in string v
-
-                available if( isOneSymbolPerFieldAccessStrings(AS,SEP1,SEP2) )
-            +/
-            @property auto opDispatch(string v)() const
-                if( v.length > 1 && oneOfAccessAny(AS,v,SEP1,SEP2) )
+            static if( isOneSymbolPerFieldForAnyAccessString(AS,SEP1,SEP2) )
             {
-                mixin( format( `return Vector!(v.length,T,"%s")(%s);`,
-                            isCompatibleArrayAccessString(v.length,v)?v.split("").join(SEP1):"",
-                            array( map!(a=>format( `data[%d]`,getIndex(AS,a,SEP1,SEP2)))(v.split("")) ).join(",")
-                            ));
-            }
+                /++
+                    get vector from elements in string v
 
-            /++
-                set vector from elements in string v
+                    available if( AS.length > 0 && isOneSymbolPerFieldForAnyAccessString(AS,SEP1,SEP2) )
+                +/
+                auto opDispatch(string v)() const
+                    if( v.length > 1 && oneOfAnyAccessAll(AS,v,SEP1,SEP2) )
+                {
+                    mixin( format( `return Vector!(v.length,T,"%s")(%s);`,
+                                isCompatibleArrayAccessString(v.length,v)?v.split("").join(SEP1):"",
+                                array( map!(a=>format( `data[%d]`,getIndex(AS,a,SEP1,SEP2)))(v.split("")) ).join(",")
+                                ));
+                }
 
-                available if( isOneSymbolPerFieldAccessStrings(AS,SEP1,SEP2) )
-            +/
-            @property auto opDispatch( string v, U )( in U b )
-                if( v.length > 1 && oneOfAccessAny(AS,v,SEP1,SEP2) && isCompatibleArrayAccessString(v.length,v) &&
-                        ( isCompatibleVector!(v.length,T,U) || ( isDynamicVector!U && is(typeof(T(U.datatype.init))) ) ) )
-            {
-                static if( b.isDynamic ) enforce( v.length == b.length );
-                foreach( i; 0 .. v.length )
-                    data[getIndex(AS,""~v[i],SEP1,SEP2)] = T( b[i] );
-                return opDispatch!v;
+                /++
+                    set vector from elements in string v
+
+                    available if( AS.length > 0 && isOneSymbolPerFieldForAnyAccessString(AS,SEP1,SEP2) )
+                +/
+                auto opDispatch( string v, U )( in U b )
+                    if( v.length > 1 && oneOfAnyAccessAll(AS,v,SEP1,SEP2) && isCompatibleArrayAccessString(v.length,v) &&
+                            ( isCompatibleVector!(v.length,T,U) || ( isDynamicVector!U && is(typeof(T(U.datatype.init))) ) ) )
+                {
+                    static if( b.isDynamic ) enforce( v.length == b.length );
+                    foreach( i; 0 .. v.length )
+                        data[getIndex(AS,""~v[i],SEP1,SEP2)] = T( b[i] );
+                    return opDispatch!v;
+                }
             }
         }
     }
@@ -421,31 +421,42 @@ private enum AS2D = "x y|u v";
 private enum AS3D = "x y z|u v t|r g b";
 private enum AS4D = "x y z w";
 
-alias Vector!(2,float,AS2D) vec2; ///
-alias Vector!(3,float,AS3D) vec3; ///
-alias Vector!(4,float,AS4D) vec4; ///
+alias Vector2(T) = Vector!(2,T,AS2D); ///
+alias Vector3(T) = Vector!(3,T,AS3D); ///
+alias Vector4(T) = Vector!(4,T,AS4D); ///
 
-alias Vector!(2,double,AS2D) dvec2; ///
-alias Vector!(3,double,AS3D) dvec3; ///
-alias Vector!(4,double,AS4D) dvec4; ///
+alias Vector2!float vec2; ///
+alias Vector3!float vec3; ///
+alias Vector4!float vec4; ///
 
-alias Vector!(2,real,AS2D) rvec2; ///
-alias Vector!(3,real,AS3D) rvec3; ///
-alias Vector!(4,real,AS4D) rvec4; ///
+alias Vector2!double dvec2; ///
+alias Vector3!double dvec3; ///
+alias Vector4!double dvec4; ///
 
-alias Vector!(2,int,AS2D) ivec2; ///
-alias Vector!(3,int,AS3D) ivec3; ///
-alias Vector!(4,int,AS4D) ivec4; ///
+alias Vector2!real rvec2; ///
+alias Vector3!real rvec3; ///
+alias Vector4!real rvec4; ///
 
-alias Vector!(2,uint,AS2D) uivec2; ///
-alias Vector!(3,uint,AS3D) uivec3; ///
-alias Vector!(4,uint,AS4D) uivec4; ///
+alias Vector2!int ivec2; ///
+alias Vector3!int ivec3; ///
+alias Vector4!int ivec4; ///
+
+alias Vector2!uint uivec2; ///
+alias Vector3!uint uivec3; ///
+alias Vector4!uint uivec4; ///
 
 alias Vector!(3,float,"r g b") col3; ///
 alias Vector!(4,float,"r g b a") col4; ///
 
 alias Vector!(3,ubyte,"r g b") ubcol3; ///
 alias Vector!(4,ubyte,"r g b a") ubcol4; ///
+
+unittest
+{
+    static assert( is( Vector2!float == vec2 ) );
+    static assert( is( Vector3!real == rvec3 ) );
+    static assert( is( Vector4!float == vec4 ) );
+}
 
 alias Vector!(0,byte)   bvecD; ///
 alias Vector!(0,ubyte) ubvecD; ///
@@ -461,22 +472,38 @@ alias Vector!(0,real)   rvecD; ///
 
 unittest
 {
-    static assert( isVector!vec2 );
-    static assert( isVector!vec3 );
-    static assert( isVector!vec4 );
-    static assert( isVector!dvec2 );
-    static assert( isVector!dvec3 );
-    static assert( isVector!dvec4 );
-    static assert( isVector!ivec2 );
-    static assert( isVector!ivec3 );
-    static assert( isVector!ivec4 );
-    static assert( isVector!col3 );
-    static assert( isVector!col4 );
-    static assert( isVector!ubcol3 );
-    static assert( isVector!ubcol4 );
-    static assert( isVector!vecD );
-    static assert( isVector!ivecD );
-    static assert( isVector!dvecD );
+    static assert(  isVector!vec2 );
+    static assert(  isVector!vec3 );
+    static assert(  isVector!vec4 );
+    static assert(  isVector!dvec2 );
+    static assert(  isVector!dvec3 );
+    static assert(  isVector!dvec4 );
+    static assert(  isVector!ivec2 );
+    static assert(  isVector!ivec3 );
+    static assert(  isVector!ivec4 );
+    static assert(  isVector!col3 );
+    static assert(  isVector!col4 );
+    static assert(  isVector!ubcol3 );
+    static assert(  isVector!ubcol4 );
+    static assert(  isVector!vecD );
+    static assert(  isVector!ivecD );
+    static assert(  isVector!dvecD );
+
+    static assert(  isCompatibleVector!(2,float,vec2) );
+    static assert(  isCompatibleVector!(3,float,vec3) );
+    static assert(  isCompatibleVector!(4,float,vec4) );
+    static assert(  isCompatibleVector!(2,double,dvec2) );
+    static assert(  isCompatibleVector!(3,double,dvec3) );
+    static assert(  isCompatibleVector!(4,double,dvec4) );
+    static assert(  isCompatibleVector!(2,int,ivec2) );
+    static assert(  isCompatibleVector!(3,int,ivec3) );
+    static assert(  isCompatibleVector!(4,int,ivec4) );
+    static assert(  isCompatibleVector!(3,float,col3) );
+    static assert(  isCompatibleVector!(4,float,col4) );
+    static assert(  isCompatibleVector!(3,ubyte,ubcol3) );
+    static assert(  isCompatibleVector!(4,ubyte,ubcol4) );
+    static assert( !isCompatibleVector!(2,ubyte,ubcol3) );
+    static assert( !isCompatibleVector!(3,ubyte,ubcol4) );
 }
 
 ///
@@ -586,6 +613,10 @@ unittest
     auto b = Vector!(2,int,"near far|n f")(1,100);
     assert( b.near == b.n );
     assert( b.far  == b.f );
+
+    b.nf = ivec2( 10,20 );
+    assert( b.near == 10 );
+    assert( b.far == 20 );
 }
 
 ///

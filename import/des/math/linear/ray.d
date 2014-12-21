@@ -33,12 +33,20 @@ import des.math.basic;
 
 struct Ray(T) if( isFloatingPoint!T )
 {
-    alias Vector!(3,T,"x y z") vectype;
+    alias Vector3!T vectype;
     vectype pos, dir;
     mixin( BasicMathOp!"pos dir" );
 
-    static auto fromPoints( in vectype start, in vectype end )
+    static auto fromPoints(A,B)( in A start, in B end )
+        if( isCompatibleVector!(3,T,A) && isCompatibleVector!(3,T,B) )
     { return Ray!T( start, end - start ); }
+
+    this(A,B)( in A a, in B b )
+        if( isCompatibleVector!(3,T,A) && isCompatibleVector!(3,T,B) )
+    {
+        pos = a;
+        dir = b;
+    }
 
     @property
     {
@@ -61,8 +69,8 @@ struct Ray(T) if( isFloatingPoint!T )
     /+ аффинное преобразование +/
     auto tr(X)( in Matrix!(4,4,X) mtr ) const
     {
-        return Ray!T( (mtr * Vector!(4,T,"x y z w")( pos, 1 )).xyz,
-                          (mtr * Vector!(4,T,"x y z w")( dir, 0 )).xyz );
+        return Ray!T( (mtr * Vector4!T( pos, 1 )).xyz,
+                          (mtr * Vector4!T( dir, 0 )).xyz );
     }
 
     /+ высота проведённая из точки это отрезок, 

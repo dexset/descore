@@ -32,7 +32,7 @@ import des.math.basic;
 
 struct Triangle(T) if( isFloatingPoint!T )
 {
-    alias Vector!(3,T,"x y z") vectype;
+    alias Vector3!T vectype;
     vectype[3] pnt;
 
     pure this( in vectype P0, in vectype P1, in vectype P2 )

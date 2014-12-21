@@ -32,9 +32,21 @@ import std.stdio;
 pure bool isCompatibleArrayAccessStrings( size_t N, string str, string sep1="", string sep2="|" )
 in { assert( sep1 != sep2 ); } body
 {
-    foreach( s; str.split(sep2) )
+    auto strs = str.split(sep2);
+    foreach( s; strs )
         if( !isCompatibleArrayAccessString(N,s,sep1) )
             return false;
+
+    string[] fa;
+    foreach( s; strs )
+        fa ~= s.split(sep1);
+
+    foreach( ref v; fa ) v = strip(v);
+
+    foreach( i, a; fa )
+        foreach( j, b; fa )
+            if( i != j && a == b ) return false;
+
     return true;
 }
 
@@ -83,7 +95,7 @@ pure bool oneOfAccessAll( string str, string arg, string sep="" )
 }
 
 ///
-pure bool oneOfAccessAny( string str, string arg, string sep1="", string sep2="|" )
+pure bool oneOfAnyAccessAll( string str, string arg, string sep1="", string sep2="|" )
 in { assert( sep1 != sep2 ); } body
 {
     foreach( s; str.split(sep2) )
@@ -92,12 +104,12 @@ in { assert( sep1 != sep2 ); } body
 }
 
 /// check symbol count for access to field
-pure bool isOneSymbolPerFieldAccessStrings( string str, string sep1="", string sep2="|" )
+pure bool isOneSymbolPerFieldForAnyAccessString( string str, string sep1="", string sep2="|" )
 in { assert( sep1 != sep2 ); } body
 {
     foreach( s; str.split(sep2) )
-        if( !isOneSymbolPerFieldAccessString(s,sep1) ) return false;
-    return true;
+        if( isOneSymbolPerFieldAccessString(s,sep1) ) return true;
+    return false;
 }
 
 /// check symbol count for access to field
@@ -113,48 +125,52 @@ Using all functions
 +/
 unittest
 {
-    assert(  isValueAccessString( "hello" ) );
-    assert(  isValueAccessString( "x" ) );
-    assert(  isValueAccessString( "_ok" ) );
-    assert(  isValueAccessString( "__ok" ) );
-    assert(  isValueAccessString( "__o1k" ) );
-    assert(  isValueAccessString( "_2o1k3" ) );
-    assert( !isValueAccessString( "0__ok" ) );
-    assert( !isValueAccessString( "__o-k" ) );
-    assert(  isArrayAccessString( "xyz" ) );
-    assert(  isArrayAccessString( "x|dx|y|dy", "|" ) );
-    assert(  isCompatibleArrayAccessString( 4, "x|dx|y|dy", "|" ) );
-    assert(  isCompatibleArrayAccessString( 3, "xyz" ) );
-    assert( !isCompatibleArrayAccessString( 4, "xxxy" ) );
-    assert( !isCompatibleArrayAccessString( 3, "xxx" ) );
-    assert(  isCompatibleArrayAccessStrings( 3, "xyz" ) );
-    assert(  isCompatibleArrayAccessStrings( 3, "x y z", " " ) );
-    assert(  isCompatibleArrayAccessStrings( 2, "xy|uv" ) );
-    assert( !isCompatibleArrayAccessStrings( 3, "xxy|uv" ) );
-    assert(  isCompatibleArrayAccessStrings( 3, "x,y,z;u,v,t", ",", ";" ) );
+    static assert(  isValueAccessString( "hello" ) );
+    static assert(  isValueAccessString( "x" ) );
+    static assert(  isValueAccessString( "_ok" ) );
+    static assert(  isValueAccessString( "__ok" ) );
+    static assert(  isValueAccessString( "__o1k" ) );
+    static assert(  isValueAccessString( "_2o1k3" ) );
+    static assert( !isValueAccessString( "0__ok" ) );
+    static assert( !isValueAccessString( "__o-k" ) );
+    static assert(  isArrayAccessString( "xyz" ) );
+    static assert(  isArrayAccessString( "x|dx|y|dy", "|" ) );
+    static assert(  isCompatibleArrayAccessString( 4, "x|dx|y|dy", "|" ) );
+    static assert(  isCompatibleArrayAccessString( 3, "xyz" ) );
+    static assert( !isCompatibleArrayAccessString( 4, "xxxy" ) );
+    static assert( !isCompatibleArrayAccessString( 3, "xxx" ) );
+    static assert(  isCompatibleArrayAccessStrings( 3, "xyz" ) );
+    static assert(  isCompatibleArrayAccessStrings( 3, "x y z", " " ) );
+    static assert(  isCompatibleArrayAccessStrings( 2, "xy|uv" ) );
+    static assert(  isCompatibleArrayAccessStrings( 3, "abc|efg" ) );
+    static assert( !isCompatibleArrayAccessStrings( 3, "abc|afg" ) );
+    static assert( !isCompatibleArrayAccessStrings( 3, "xxy|uv" ) );
+    static assert(  isCompatibleArrayAccessStrings( 3, "x,y,z;u,v,t", ",", ";" ) );
     static assert( getIndex( "x y z", "x", " " ) == 0 );
     static assert( getIndex( "x y z", "y", " " ) == 1 );
     static assert( getIndex( "x y z", "z", " " ) == 2 );
-    assert( getIndex( "x|dx|y|dy", "dx", "|", ";" ) == 1 );
-    assert( getIndex( "x|dx|y|dy", "1dx", "|", ";" ) == -1 );
+    static assert( getIndex( "x|dx|y|dy", "dx", "|", ";" ) == 1 );
+    static assert( getIndex( "x|dx|y|dy", "1dx", "|", ";" ) == -1 );
 
-    assert( oneOfAccessAll("xyz","xy") );
-    assert( oneOfAccessAll("xyz","yx") );
-    assert( oneOfAccessAll("xyz","xxxxyxyyyz") );
-    assert( oneOfAccessAll("x,y,z","xxxxyxyyyz",",") );
-    assert( isOneSymbolPerFieldAccessString("xyz") );
-    assert( isOneSymbolPerFieldAccessString("x,y,z",",") );
+    static assert( oneOfAccessAll("xyz","xy") );
+    static assert( oneOfAccessAll("xyz","yx") );
+    static assert( oneOfAccessAll("xyz","xxxxyxyyyz") );
+    static assert( oneOfAccessAll("x,y,z","xxxxyxyyyz",",") );
+    static assert( isOneSymbolPerFieldAccessString("xyz") );
+    static assert( isOneSymbolPerFieldAccessString("x,y,z",",") );
+    static assert( isOneSymbolPerFieldForAnyAccessString( "xy|uv", "", "|" ) );
+    static assert( isOneSymbolPerFieldForAnyAccessString( "near far|n f", " ", "|" ) );
 
-    assert( !isArrayAccessString("x.y.z","",false) );
-    assert( !isArrayAccessString("x.y.z","",true) );
-    assert( !isArrayAccessString("x.y.z"," ",false) );
-    assert(  isArrayAccessString("x.y.z"," ",true) );
-    assert(  isArrayAccessString("pos.x pos.y pos.z vel.x vel.y vel.z"," ",true) );
+    static assert( !isArrayAccessString("x.y.z","",false) );
+    static assert( !isArrayAccessString("x.y.z","",true) );
+    static assert( !isArrayAccessString("x.y.z"," ",false) );
+    static assert(  isArrayAccessString("x.y.z"," ",true) );
+    static assert(  isArrayAccessString("pos.x pos.y pos.z vel.x vel.y vel.z"," ",true) );
 
-    assert(  isArrayAccessString( "pos vel", " ", true ) );
-    assert(  isArrayAccessString( "abcd", " ", true ) );
-    assert(  isArrayAccessString( "a1 a2", " ", true ) );
-    assert(  isArrayAccessString( "ok.no", " ", true ) );
+    static assert(  isArrayAccessString( "pos vel", " ", true ) );
+    static assert(  isArrayAccessString( "abcd", " ", true ) );
+    static assert(  isArrayAccessString( "a1 a2", " ", true ) );
+    static assert(  isArrayAccessString( "ok.no", " ", true ) );
     auto fstr = "pos.x pos.y vel.x vel.y";
     assert(  isArrayAccessString( fstr, " ", true ) );
     assert( !isArrayAccessString( fstr[0 .. $-1], " ", true ) );
