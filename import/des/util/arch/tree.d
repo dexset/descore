@@ -110,7 +110,7 @@ template TNode(T,string prefix="",string suffix="")
 {
 interface TNode
 {
-    mixin( replaceWords!(wordWrapFunc!(prefix,suffix))(`
+    mixin( replaceWords!(wordWrapFunc!(prefix,suffix))(q{
     public
     {
         alias T %NodeType;
@@ -239,7 +239,7 @@ interface TNode
             }
         }
     }
-`));
+}));
 }
 }
 

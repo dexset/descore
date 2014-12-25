@@ -156,8 +156,6 @@ pure:
     {
         // not in limitation of signature because
         // not work with dynamic vectors
-        static if( E.length == 0 )
-            static assert( 0, "args length == 0" );
         static if( !is(typeof(flatData!T(vals))) )
             static assert( 0, "args not compatible" );
 

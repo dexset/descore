@@ -9,18 +9,18 @@ enum DataType
 
     SHORT,        ///
     USHORT,       ///
-    NORM_HALF,    /// half [-1,1]
-    UNORM_HALF,   /// half [0,1]
+    NORM_HALF,    /// fixed point half [-1,1]
+    UNORM_HALF,   /// fixed point half [0,1]
 
     INT,          ///
     UINT,         ///
-    NORM_FIXED,   /// float [-1,1]
-    UNORM_FIXED,  /// float [0,1]
+    NORM_FIXED,   /// fixed point [-1,1]
+    UNORM_FIXED,  /// fixed point [0,1]
 
     LONG,         ///
     ULONG,        ///
-    NORM_DOUBLE,  /// double [-1,1]
-    UNORM_DOUBLE, /// double [0,1]
+    NORM_DOUBLE,  /// fixed point double [-1,1]
+    UNORM_DOUBLE, /// fixed point double [0,1]
 
     FLOAT,        ///
     DOUBLE        ///
@@ -239,10 +239,16 @@ struct ElemInfo
     }
 }
 
-///
+/++
+    enum comp = DT;
+
+    enum channels = CH;
+
+    enum info = ElemInfo(DT,CH);
+ +/
 struct ElemType(DataType DT, size_t CH)
 {
-    enum comp = DT; ///
-    enum channels = CH; ///
-    enum info = ElemInfo(DT,CH); ///
+    enum comp = DT;
+    enum channels = CH;
+    enum info = ElemInfo(DT,CH);
 }
