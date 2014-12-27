@@ -31,18 +31,21 @@ import std.exception;
 
 import des.util.testsuite;
 
+///
 class TNodeException : Exception
 {
     this( string msg, string file=__FILE__, size_t line=__LINE__ )
     { super( msg, file, line ); }
 }
 
+///
 class TNodeCycleException : TNodeException
 {
     this( string file=__FILE__, size_t lien=__LINE__ )
     { super( "cycle detect", file, line ); }
 }
 
+///
 class TNodeNullChildException : TNodeException
 {
     this( string file=__FILE__, size_t lien=__LINE__ )
@@ -106,6 +109,7 @@ private
     }
 }
 
+///
 template TNode(T,string prefix="",string suffix="")
 {
 interface TNode
@@ -243,6 +247,7 @@ interface TNode
 }
 }
 
+///
 unittest
 {
     static class Test : TNode!(Test,"pre_","Suff")
@@ -279,6 +284,7 @@ unittest
     assert( e3.pre_parentSuff == e1 );
 }
 
+///
 unittest
 {
     static class Test : TNode!(Test,"a_"), TNode!(Test,"b_")
@@ -311,6 +317,7 @@ unittest
     assert( e2.name == "e2" );
 }
 
+///
 unittest
 {
     static interface Node : TNode!Node
@@ -345,6 +352,7 @@ unittest
     assert( a1.i == 16 );
 }
 
+///
 unittest
 {
     static class Test : TNode!Test { mixin TNodeHelper!(true, true, true); }

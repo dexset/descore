@@ -26,8 +26,10 @@ module des.util.arch.emm;
 
 import des.util.arch.tree;
 
+///
 interface ExternalMemoryManager : TNode!(ExternalMemoryManager,"","EMM")
 {
+    ///
     mixin template EMM(string file=__FILE__,size_t line=__LINE__)
     {
         static if( !is(typeof(__EMM_BASE_IMPLEMENT)) )
@@ -64,17 +66,18 @@ interface ExternalMemoryManager : TNode!(ExternalMemoryManager,"","EMM")
 
     protected
     {
-        @property void isDestroyed( bool d );
+        @property void isDestroyed( bool d ); ///
 
-        void selfConstruct();
-        void selfDestroy();
-        void preChildsDestroy();
+        void selfConstruct(); ///
+        void selfDestroy(); ///
+        void preChildsDestroy(); ///
     }
 
-    @property bool isDestroyed() const;
+    @property bool isDestroyed() const; ///
 
     final
     {
+        ///
         T registerChildsEMM(T)( T obj )
             if( is( T == class ) || is( T == interface ) )
         {
@@ -83,6 +86,7 @@ interface ExternalMemoryManager : TNode!(ExternalMemoryManager,"","EMM")
             return obj;
         }
 
+        ///
         T[] registerChildsEMM(T)( T[] objs )
             if( is( T == class ) || is( T == interface ) )
         {
@@ -91,9 +95,11 @@ interface ExternalMemoryManager : TNode!(ExternalMemoryManager,"","EMM")
             return objs;
         }
 
+        ///
         T newEMM(T,Args...)( Args args )
         { return registerChildsEMM( new T(args) ); }
 
+        ///
         void destroy()
         {
             if( isDestroyed ) return;
@@ -105,3 +111,5 @@ interface ExternalMemoryManager : TNode!(ExternalMemoryManager,"","EMM")
         }
     }
 }
+
+version(todos) pragma(msg,__FILE__, "TODO: add unittests");

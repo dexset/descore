@@ -3,21 +3,24 @@ module des.util.arch.sig;
 import des.util.arch.emm;
 import des.util.arch.slot;
 
+///
 class SignalException : Exception
 { this( string m ) @safe pure nothrow { super(m); } }
 
+///
 class Signal(Args...) : SignalLeverage, ExternalMemoryManager
 {
     mixin EMM;
 
 protected:
 
-    alias Slot!Args TSlot;
+    alias Slot!Args TSlot; ///
 
-    TSlot[] slots;
+    TSlot[] slots; ///
 
 public:
 
+    ///
     TSlot connect( TSlot slot )
     in { assert( slot !is null ); }
     body
@@ -30,6 +33,7 @@ public:
         return slot;
     }
 
+    ///
     void disconnect( TSlot slot )
     in { assert( slot !is null ); }
     body
@@ -40,6 +44,7 @@ public:
         slot.control.disconnect( this );
     }
 
+    ///
     override void disconnect( SlotController sc )
     in { assert( sc !is null ); }
     body
@@ -53,9 +58,11 @@ public:
         foreach( s; dis ) s.disconnect(this);
     }
 
+    ///
     void disconnect( SlotHandler handler )
     { disconnect( handler.slotController ); }
 
+    ///
     void opCall( Args args ) { foreach( slot; slots ) slot(args); }
 
 protected:
@@ -78,12 +85,15 @@ protected:
     }
 }
 
+///
 class SignalReverse( Args... ) : Signal!Args
 {
+    ///
     override void opCall( Args args )
     { foreach_reverse( slot; slots ) slot( args ); }
 }
 
+///
 class SignalBox( Args... ) : Signal!Args
 {
     this()
@@ -92,9 +102,10 @@ class SignalBox( Args... ) : Signal!Args
         end = newEMM!(SignalReverse!Args);
     }
 
-    Signal!Args begin;
-    SignalReverse!Args end;
+    Signal!Args begin; ///
+    SignalReverse!Args end; ///
 
+    /// calls: 1. begin; 2. this; 3. end
     override void opCall( Args args )
     {
         begin( args );
@@ -103,6 +114,7 @@ class SignalBox( Args... ) : Signal!Args
     }
 }
 
+///
 template isSignal(T)
 {
     enum isSignal = is( typeof( impl(T.init) ) );
@@ -120,6 +132,7 @@ unittest
     static assert( !isSignal!( Slot!int ) );
 }
 
+///
 unittest
 {
     string[] messages;
@@ -130,7 +143,6 @@ unittest
     class Postal : ExternalMemoryManager
     {
         mixin EMM;
-        //mixin EmptyImplementEMM;
         Signal!string onMessage;
         this() { onMessage = newEMM!(Signal!string); }
         void message( string msg )
@@ -142,7 +154,6 @@ unittest
 
     class Client : SlotHandler, ExternalMemoryManager
     {
-        //mixin EmptyImplementEMM;
         mixin EMM;
 
         SlotController sc;

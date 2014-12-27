@@ -34,8 +34,10 @@ version(unittest) import des.math.linear.vector;
 import des.math.combin;
 public import des.math.basic.traits;
 
+///
 struct InterpolateTableData(T) if( hasBasicMathOp!T ) { float key; T val; }
 
+///
 auto lineInterpolate(T)( in InterpolateTableData!T[] tbl, float k, bool line_end=false )
     if( hasBasicMathOp!T )
 {
@@ -57,6 +59,7 @@ auto lineInterpolate(T)( in InterpolateTableData!T[] tbl, float k, bool line_end
     return cast(T)( a.val + ( b.val - a.val ) * ( ( k - a.key ) / ( b.key - a.key ) ) );
 }
 
+///
 unittest
 {
     alias InterpolateTableData!float TT;

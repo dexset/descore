@@ -154,10 +154,8 @@ pure:
     ///
     this(E...)( in E vals )
     {
-        // not in limitation of signature because
         // not work with dynamic vectors
-        static if( !is(typeof(flatData!T(vals))) )
-            static assert( 0, "args not compatible" );
+        static assert( is(typeof(flatData!T(vals))), "args not compatible" );
 
         static if( isStatic )
         {

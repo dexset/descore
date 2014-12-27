@@ -29,6 +29,7 @@ public import std.algorithm;
 public import std.range;
 public import std.traits;
 
+///
 template amap(fun...) if ( fun.length >= 1 )
 {
     auto amap(Range)(Range r) 
@@ -36,6 +37,7 @@ template amap(fun...) if ( fun.length >= 1 )
     { return array( map!(fun)(r) ); }
 }
 
+///
 unittest
 {
     int[] res = [ 1, 2, 3 ];
@@ -44,6 +46,7 @@ unittest
     assert( res == [ 1, 2, 3, 1, 4, 9 ] );
 }
 
+///
 bool oneOf(E,T)( T val )
     if( is( E == enum ) )
 {
@@ -72,6 +75,7 @@ unittest
     assert( !oneOf!TestEnum(5) );
 }
 
+///
 bool oneOf(E,T)( E[] arr, T val )
     if( is( typeof( arr[0] == val ) ) )
 {

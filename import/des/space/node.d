@@ -30,8 +30,10 @@ public import des.space.transform;
 
 import des.util.arch.tree;
 
+///
 interface SpaceNode : Transform, TNode!(SpaceNode,"space")
 {
+    ///
     mixin template SpaceNodeHelper(bool with_matrix_property=true)
     {
         mixin spaceTNodeHelper!(true,true,true);
@@ -44,16 +46,19 @@ interface SpaceNode : Transform, TNode!(SpaceNode,"space")
 
     const @property
     {
-        /+ local to parent transform +/
+        /// local to parent transform
         mat4 matrix();
 
         final
         {
+            ///
             vec3 baseX() { return vec3( matrix.col(0).data[0 .. 3] ); }
+            ///
             vec3 baseY() { return vec3( matrix.col(1).data[0 .. 3] ); }
+            ///
             vec3 baseZ() { return vec3( matrix.col(2).data[0 .. 3] ); }
 
-            /+ in parent system +/
+            /// in parent system
             vec3 offset() { return vec3( matrix.col(3).data[0 .. 3] ); }
         }
     }

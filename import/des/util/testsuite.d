@@ -4,14 +4,16 @@ import std.traits;
 import std.typetuple;
 import std.math;
 
-bool isElemHandler(A)()
+///
+template isElemHandler(A)
 {
-    return !is( Unqual!A == void[] ) &&
-            is( typeof(A.init[0]) ) &&
-           !is( Unqual!(typeof(A.init[0])) == void ) &&
-            is( typeof( A.init.length ) == size_t );
+    enum isElemHandler = !is( Unqual!A == void[] ) &&
+                          is( typeof(A.init[0]) ) &&
+                         !is( Unqual!(typeof(A.init[0])) == void ) &&
+                          is( typeof( A.init.length ) == size_t );
 }
 
+///
 unittest
 {
     static assert(  isElemHandler!(int[]) );
@@ -22,6 +24,7 @@ unittest
     static assert( !isElemHandler!(immutable(void)[]) );
 }
 
+///
 bool eq(A,B)( in A a, in B b )
 {
     static if( allSatisfy!(isElemHandler,A,B) )
@@ -44,6 +47,7 @@ bool eq(A,B)( in A a, in B b )
     else return a == b;
 }
 
+///
 unittest
 {
     assert(  eq( 1, 1.0 ) );
@@ -65,6 +69,7 @@ unittest
     static assert( !__traits(compiles, eq(["hello"],[1,2,3])) );
 }
 
+///
 bool eq_approx(A,B,E)( in A a, in B b, in E eps )
     if( allSatisfy!(isNumeric,A,B,E) || allSatisfy!(isElemHandler,A,B) )
 {
@@ -78,6 +83,7 @@ bool eq_approx(A,B,E)( in A a, in B b, in E eps )
     else return abs(a-b) < eps;
 }
 
+///
 unittest
 {
     assert(  eq_approx( [1.1f,2,3], [1,2,3], 0.2 ) );
@@ -85,6 +91,7 @@ unittest
     assert( !eq_approx( [1.0f,2], [1,2,3], 1 ) );
 }
 
+///
 bool mustExcept(E=Exception)( void delegate() fnc, bool throwUnexpected=false )
 if( is( E : Throwable ) )
 in { assert( fnc ); } body
@@ -96,6 +103,7 @@ in { assert( fnc ); } body
     return false;
 }
 
+///
 unittest
 {
     assert( mustExcept!Exception( { throw new Exception("test"); } ) );

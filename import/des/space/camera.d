@@ -29,13 +29,18 @@ public import des.space.resolver;
 
 import std.math;
 
+///
 class Camera: SpaceNode
 {
     mixin SpaceNodeHelper!false;
 
+    ///
     Resolver resolver;
+
+    ///
     Transform projection, transform;
 
+    ///
     this( SpaceNode par=null )
     {
         spaceParent = par;
@@ -44,11 +49,14 @@ class Camera: SpaceNode
 
     const
     {
+        ///
         mat4 resolve( const(SpaceNode) obj ) { return resolver(obj, this); }
+        ///
         mat4 matrix() @property { return getMatrix( transform ); }
     }
 }
 
+///
 class LookAtTransform : Transform
 {
     vec3 pos=vec3(0), target=vec3(0), up=vec3(0,0,1);
@@ -56,6 +64,7 @@ class LookAtTransform : Transform
     { return calcLookAt( pos, target, up ); }
 }
 
+///
 class PerspectiveTransform : Transform
 {
 protected:
@@ -72,27 +81,36 @@ public:
 
     @property
     {
+        ///
         float fov() const { return _fov; }
+        ///
         float fov( float v ) in { assert(v>0); }
         body { _fov = v; recalc(); return _fov; }
 
+        ///
         float ratio() const { return _ratio; }
+        ///
         float ratio( float v ) in { assert(v>0); }
         body { _ratio = v; recalc(); return _ratio; }
 
+        ///
         float near() const { return _near; }
+        ///
         float near( float v ) in { assert(v>0); }
         body { _near = v; recalc(); return _near; }
 
+        ///
         float far() const { return _far; }
+        ///
         float far( float v ) in { assert(v>0); }
         body { _far = v; recalc(); return _far; }
 
+        ///
         mat4 matrix() const { return self_mtr; }
     }
 }
 
-/+ simple lookAt perspective camera +/
+/++ simple lookAt perspective camera +/
 class SimpleCamera : Camera
 {
 protected:
@@ -101,6 +119,7 @@ protected:
 
 public:
 
+    ///
     this( SpaceNode p=null )
     {
         super(p);
@@ -113,25 +132,39 @@ public:
 
     @property
     {
+        ///
         void fov( float val ) { perspective.fov = val; }
+        ///
         float fov() const { return perspective.fov; }
 
+        ///
         void ratio( float val ) { perspective.ratio = val; }
+        ///
         float ratio() const { return perspective.ratio; }
 
+        ///
         void near( float val ) { perspective.near = val; }
+        ///
         float near() const { return perspective.near; }
 
+        ///
         void far( float val ) { perspective.far = val; }
+        ///
         float far() const { return perspective.far; }
 
+        ///
         void pos( in vec3 val ) { look_tr.pos = val; }
+        ///
         vec3 pos() const { return look_tr.pos; }
 
+        ///
         void up( in vec3 val ) { look_tr.up = val; }
+        ///
         vec3 up() const { return look_tr.up; }
 
+        ///
         void target( in vec3 val ) { look_tr.target = val; }
+        ///
         vec3 target() const { return look_tr.target; }
     }
 }

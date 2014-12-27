@@ -5,20 +5,23 @@ import des.util.arch.emm;
 package interface SignalLeverage
 { void disconnect( SlotController ); }
 
+///
 class SlotController : ExternalMemoryManager
 {
     mixin EMM;
 
 protected:
 
-    size_t[SignalLeverage] signals;
+    size_t[SignalLeverage] signals; ///
 
 package:
 
+    ///
     void connect( SignalLeverage sl )
     in { assert( sl !is null ); }
     body { signals[sl]++; }
 
+    ///
     void disconnect( SignalLeverage sl )
     in { assert( sl !is null ); }
     body
@@ -39,19 +42,24 @@ protected:
     }
 }
 
+///
 class Slot(Args...)
 {
 package:
-    Func func;
+    Func func; ///
+
+    ///
     SlotController control() @property { return ctrl; }
 
 protected:
 
+    ///
     SlotController ctrl;
 
 public:
-    alias void delegate(Args) Func;
+    alias void delegate(Args) Func; ///
 
+    ///
     this( SlotController ctrl, Func func )
     in
     {
@@ -64,12 +72,15 @@ public:
         this.func = func;
     }
 
+    ///
     this( SlotHandler handler, Func func )
     { this( handler.slotController, func ); }
 
+    ///
     void opCall( Args args ) { func( args ); }
 }
 
+///
 template isSlot(T)
 {
     enum isSlot = is( typeof( impl(T.init) ) );
@@ -83,6 +94,7 @@ unittest
     static assert( !isSlot!( string ) );
 }
 
+///
 interface SlotHandler
 {
     SlotController slotController() @property;

@@ -30,12 +30,16 @@ import des.math.linear.matrix;
 import des.math.linear.ray;
 import des.math.basic;
 
+///
 struct Triangle(T) if( isFloatingPoint!T )
 {
-    alias Vector3!T vectype;
-    vectype[3] pnt;
+    alias Vector3!T vectype; ///
+    vectype[3] pnt; ///
 
-    pure this( in vectype P0, in vectype P1, in vectype P2 )
+pure:
+
+    ///
+    this( in vectype P0, in vectype P1, in vectype P2 )
     {
         pnt[0] = P0;
         pnt[1] = P1;
@@ -44,12 +48,17 @@ struct Triangle(T) if( isFloatingPoint!T )
 
     @property
     {
+        ///
         vectype perp() const { return cross( pnt[1]-pnt[0], pnt[2]-pnt[0] ); }
+        ///
         vectype norm() const { return perp.e; }
+        ///
         T area() const { return perp.len / 2.0; }
+        ///
         vectype center() const { return (pnt[0] + pnt[1] + pnt[2]) / 3.0f; }
     }
 
+    /// affine transform
     auto tr(X)( in Matrix!(4,4,X) mtr ) const
     {
         return Triangle!T( (mtr * vec!(4,T,"x y z w")( pnt[0], 1 )).xyz,
@@ -57,6 +66,7 @@ struct Triangle(T) if( isFloatingPoint!T )
                            (mtr * vec!(4,T,"x y z w")( pnt[2], 1 )).xyz );
     }
 
+    ///
     Ray!(T)[3] toRays() const
     {
         alias Ray!T st;
@@ -68,6 +78,7 @@ struct Triangle(T) if( isFloatingPoint!T )
     /+ высота проведённая из точки это отрезок, 
        соединяющий проекцию точки на плоскость и 
        саму точку (Ray) +/
+    ///
     auto altitude( in vectype pp ) const
     {
         auto n = norm;
@@ -75,6 +86,7 @@ struct Triangle(T) if( isFloatingPoint!T )
         return Ray!T( pp - dst, dst );
     }
 
+    ///
     auto project(F)( in Ray!F seg ) const
     {
         auto n = norm;
@@ -85,14 +97,16 @@ struct Triangle(T) if( isFloatingPoint!T )
                           seg.dir + n * diff );
     }
 
+    ///
     auto intersect(F)( in Ray!F seg ) const
     { return seg.intersect( project(seg) ); }
 }
 
-alias Triangle!float  fTriangle;
-alias Triangle!double dTriangle;
-alias Triangle!real   rTriangle;
+alias Triangle!float  fTriangle; ///
+alias Triangle!double dTriangle; ///
+alias Triangle!real   rTriangle; ///
 
+///
 unittest
 {
     auto poly = fTriangle( vec3(0,0,0), vec3(1,0,0), vec3(0,1,0) );

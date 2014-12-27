@@ -28,8 +28,12 @@ public import des.math.linear.vector;
 public import des.math.linear.matrix;
 public import des.space.node;
 
+/++
+   resolve transform matrix from obj space node to cam space node
+   +/
 class Resolver
 {
+    ///
     mat4 opCall( const(SpaceNode) obj, const(SpaceNode) cam ) const
     {
         const(SpaceNode)[] obj_branch, cam_branch;

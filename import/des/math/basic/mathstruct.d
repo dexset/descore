@@ -9,21 +9,22 @@ import des.math.basic.traits;
 
 private enum SEP = " ";
 
+///
 @property string BasicMathOp( string fields_str )()
     if( isArrayAccessString( fields_str, SEP, true ) )
 {
     auto fields = fields_str.split(SEP);
     string bmctorname = "__basic_math_ctor";
-    return format(`
+    return format(q{
     import std.traits;
     alias Unqual!(typeof(this)) self;
 
     %1$s
     %2$s
-    `,
+    },
         basicMathCtor( fields, bmctorname ),
         staticAsserts( fields )
-    ) ~ format(`
+    ) ~ format(q{
 
     auto opAdd( in self b ) const { return %1$s( %2$s ); }
     auto opSub( in self b ) const { return %1$s( %3$s ); }
@@ -35,7 +36,7 @@ private enum SEP = " ";
 
     auto opOpAssign(string op)( double b )
     { mixin( "return this = this " ~ op ~ " b;" ); }
-    `,
+    },
         bmctorname,
         opSelf( fields, "+" ),
         opSelf( fields, "-" ),
@@ -74,19 +75,6 @@ private
         assert( opEach( "a b c".split, "*", "x" ), "a * x, b * x, c * x" );
     }
 
-    string argName( string f )
-    {
-        return format( "arg_%s", f.split(".").join("_") );
-    }
-
-    unittest
-    {
-        assert( argName( "pos" ) == "arg_pos" );
-        assert( argName( "Pos" ) == "arg_Pos" );
-        assert( argName( "Pos.x" ) == "arg_Pos_x" );
-        assert( argName( "P.s.x" ) == "arg_P_s_x" );
-    }
-
     string basicMathCtor( string[] fields, string name )
     {
         string args[];
@@ -107,6 +95,16 @@ private
         "self b( in typeof(p) arg_p, in typeof(v) arg_v ) const { auto ret = cast(self)(this); ret.p = arg_p; ret.v = arg_v; return ret; }" );
     }
 
+    string argName( string f ) pure { return format( "arg_%s", f.split(".").join("_") ); }
+
+    unittest
+    {
+        assert( argName( "pos" ) == "arg_pos" );
+        assert( argName( "Pos" ) == "arg_Pos" );
+        assert( argName( "Pos.x" ) == "arg_Pos_x" );
+        assert( argName( "P.s.x" ) == "arg_P_s_x" );
+    }
+
     string staticAsserts( string[] fields )
     {
         string ret;
@@ -116,6 +114,7 @@ private
     }
 }
 
+///
 unittest
 {
     static struct Val
@@ -157,6 +156,7 @@ unittest
     assert( c1 + c2 == Comp("ololo", 15, 1.3) );
 }
 
+///
 unittest
 {
     static struct Val
@@ -174,6 +174,7 @@ unittest
     assert( p1 == p3 );
 }
 
+///
 unittest
 {
     static struct Vec
@@ -213,6 +214,7 @@ unittest
     static assert( hasBasicMathOp!Point );
 }
 
+///
 unittest
 {
     static struct Vec { double x=0, y=0; }

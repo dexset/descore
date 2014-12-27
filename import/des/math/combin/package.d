@@ -1,6 +1,10 @@
 module des.math.combin;
 
-pure nothrow long fact( long a )
+/++ factorial +/
+long fact( long a ) pure nothrow
+in { assert( a >= 0 ); }
+out(res) { assert( res >= 0 ); }
+body
 {
     if( a <= 2 ) return a;
     return a * fact(a-1);
@@ -16,9 +20,15 @@ unittest
     assert( fact(5) == 120 );
 }
 
-/+ equals to fact(n) / ( fact(k) * fact( n-k ) ) +/
-pure nothrow long combination( long n, long k )
-in { assert( k > 0 ); } body
+/++ equals to fact(n) / ( fact(k) * fact( n-k ) ) +/
+long combination( long n, long k ) pure nothrow
+in
+{
+    assert( k > 0 );
+    assert( n >= 0 );
+}
+out(res) { assert( res >= 0 ); }
+body
 {
     if( k == 1 || k == n-1 ) return n;
     long a = n * (n-1);
@@ -42,8 +52,15 @@ unittest
         assert( combination(10,k) == comb2(10,k) );
 }
 
+/++ equals to fact(n) / fact(n-k) +/
 pure nothrow long partial_permutation( long n, long k )
-in { assert( k > 0 ); } body
+in
+{
+    assert( k > 0 );
+    assert( n >= k );
+}
+out(res) { assert( res >= 0 ); }
+body
 {
     if( k == 1 ) return n;
 

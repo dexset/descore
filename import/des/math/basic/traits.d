@@ -33,20 +33,22 @@ import std.traits;
     static assert( is( typeof( cast(T)(T.init / 0.5) ) ) );
  */
 
-bool isComplex(T)()
+///
+template isComplex(T)
 {
     alias Unqual!T UT;
-    return is( UT == cfloat ) ||
-           is( UT == cdouble ) ||
-           is( UT == creal );
+    enum isComplex = is( UT == cfloat ) ||
+                     is( UT == cdouble ) ||
+                     is( UT == creal );
 }
 
-bool isImaginary(T)()
+///
+template isImaginary(T)
 {
     alias Unqual!T UT;
-    return is( UT == ifloat ) ||
-           is( UT == idouble ) ||
-           is( UT == ireal );
+    enum isImaginary = is( UT == ifloat ) ||
+                       is( UT == idouble ) ||
+                       is( UT == ireal );
 }
 
 unittest
@@ -55,18 +57,21 @@ unittest
     static assert( isImaginary!(typeof(3i)) );
 }
 
-@property pure bool hasBasicMathOp(T)()
+///
+template hasBasicMathOp(T)
 {
-    return isAssignable!(Unqual!T,T) &&
+    enum hasBasicMathOp =
+        isAssignable!(Unqual!T,T) &&
         is( typeof(T.init + T.init) == T ) &&
         is( typeof(T.init - T.init) == T ) &&
         is( typeof( (T.init * 0.5) ) : T ) &&
         is( typeof( (T.init / 0.5) ) : T );
 }
 
+///
 unittest
 {
-    //static assert(  hasBasicMathOp!int );
+    static assert( !hasBasicMathOp!int );
     static assert(  hasBasicMathOp!float );
     static assert(  hasBasicMathOp!double );
     static assert(  hasBasicMathOp!real );
@@ -90,8 +95,7 @@ unittest
     struct FTest
     {
         float x,y;
-        auto opBinary(string op)( in TTest v ) const if( op=="+" )
-        { return TTest(x+v.x,y+v.y); }
+        auto opAdd( in TTest v ) const { return TTest(x+v.x,y+v.y); }
     }
 
     static assert( !hasBasicMathOp!FTest );

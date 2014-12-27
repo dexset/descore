@@ -48,8 +48,8 @@ version(unittest)
     }
 }
 
-bool isPureData(T)() pure @property
-{ return !hasUnsharedAliasing!T && !isArray!T; }
+///
+template isPureData(T) { enum isPureData = !hasUnsharedAliasing!T && !isArray!T; }
 
 unittest
 {
@@ -62,10 +62,11 @@ unittest
     static assert( !isPureData!Bad );
 }
 
-bool isPureType(T)() pure @property
+///
+template isPureType(T)
 {
-    static if( !isArray!T ) return isPureData!T;
-    else return isPureType!(ForeachType!T);
+    static if( !isArray!T ) enum isPureType = isPureData!T;
+    else enum isPureType = isPureType!(ForeachType!T);
 }
 
 unittest
@@ -98,28 +99,37 @@ immutable(void)[] pureDump(T)( in T val ) pure
     else return (cast(void[])[val]).idup;
 }
 
-bool isPData(T)() pure @property
-{ return is( typeof( (( PData a ){})( T.init ) ) ); }
+///
+template isPData(T) { enum isPData = is( typeof( (( PData a ){})( T.init ) ) ); }
 
+///
 struct PData
 {
-    immutable(void)[] data;
-    alias data this;
+    immutable(void)[] data; ///
+    alias data this; ///
 
     pure
     {
+        ///
         this( in typeof(this) pd ) { data = pd.data; }
 
+        ///
         this(T)( in T val ) if( isPureData!T ) { data = pureDump(val); }
+        ///
         this(T)( in T[] val ) if( isPureType!T ) { data = pureDump(val); }
 
+        ///
         auto opAssign(T)( in T val ) if( isPureData!T ) { data = pureDump(val); return val; }
+        ///
         auto opAssign(T)( in T[] val ) if( isPureType!T ) { data = pureDump(val); return val; }
 
         @property
         {
+            ///
             auto as(T)() const { return pureConv!T(data); }
+            ///
             auto as(T)() shared const { return pureConv!T(data); }
+            ///
             auto as(T)() immutable { return pureConv!T(data); }
         }
     }
@@ -136,30 +146,33 @@ unittest
     static assert( isPureType!PData );
 }
 
-void asTest(A,B)( in A val, in B orig )
+version(unittest)
 {
-    assert( (PData(val)).as!B              == orig || isPData!B );
-    assert( (const PData(val)).as!B        == orig || isPData!B );
-    assert( (immutable PData(val)).as!B    == orig || isPData!B );
-    assert( (shared PData(val)).as!B       == orig || isPData!B );
-    assert( (shared const PData(val)).as!B == orig || isPData!B );
-}
+    void asTest(A,B)( in A val, in B orig )
+    {
+        assert( (PData(val)).as!B              == orig || isPData!B );
+        assert( (const PData(val)).as!B        == orig || isPData!B );
+        assert( (immutable PData(val)).as!B    == orig || isPData!B );
+        assert( (shared PData(val)).as!B       == orig || isPData!B );
+        assert( (shared const PData(val)).as!B == orig || isPData!B );
+    }
 
-void creationTest(T)( in T val )
-{
-    asTest( val, val );
+    void creationTest(T)( in T val )
+    {
+        asTest( val, val );
 
-    auto a = PData( val );
-    auto ac = const PData( val );
-    auto ai = immutable PData( val );
-    auto as = shared PData( val );
-    auto asc = shared const PData( val );
+        auto a = PData( val );
+        auto ac = const PData( val );
+        auto ai = immutable PData( val );
+        auto as = shared PData( val );
+        auto asc = shared const PData( val );
 
-    asTest( a, val );
-    asTest( ac, val );
-    asTest( ai, val );
-    asTest( as, val );
-    asTest( asc, val );
+        asTest( a, val );
+        asTest( ac, val );
+        asTest( ai, val );
+        asTest( as, val );
+        asTest( asc, val );
+    }
 }
 
 unittest

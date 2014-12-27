@@ -9,6 +9,7 @@ import des.util.arch.emm;
 
 import des.util.stdext.traits;
 
+///
 template isObject(alias f) { enum isObject = __traits(compiles,typeof(f)); }
 
 template isSlotObj(alias f)
@@ -17,26 +18,29 @@ template isSlotObj(alias f)
     else enum isSlotObj = false;
 }
 
+//
 template isSignalObj(alias f)
 {
     static if( isObject!f ) enum isSignalObj = isSignal!(typeof(f));
     else enum isSignalObj = false;
 }
 
+///
 interface DesBase : ExternalMemoryManager, SlotHandler
 {
     protected
     {
-        void createSlotController();
+        void createSlotController(); ///
         void __createSignals();
 
-        final void prepareDES()
+        final void prepareDES() ///
         {
             createSlotController();
             __createSignals();
         }
     }
 
+    ///
     mixin template DES()
     {
         import des.util.stdext.traits;
@@ -96,19 +100,23 @@ interface DesBase : ExternalMemoryManager, SlotHandler
         }
     }
 
+    ///
     final auto newSlot(Args...)( void delegate(Args) fnc )
     { return newEMM!(Slot!Args)( this, fnc ); }
 
+    ///
     final void connect(Args...)( Signal!Args sig, void delegate(Args) fnc )
     { sig.connect( newSlot!Args( fnc ) ); }
 }
 
+///
 class DesObject : DesBase
 {
     mixin DES;
     this() { prepareDES(); }
 }
 
+///
 unittest
 {
     static class Sigsig : DesObject

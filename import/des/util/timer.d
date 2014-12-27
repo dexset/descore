@@ -3,13 +3,17 @@ module des.util.timer;
 import std.datetime;
 import core.thread;
 
+///
 struct TimerCallback
 {
-    double time=0;
-    double tick=0;
-    void delegate() func;
+    double time=0; ///
+    double tick=0; ///
+    void delegate() func; ///
 
+    ///
     void reset() { time = 0; }
+
+    ///
     void update( double dt )
     {  
         time += dt;
@@ -21,17 +25,20 @@ struct TimerCallback
     }
 }
 
+///
 class Timer
 {
-    StopWatch sw;
-    double time=0;
-    double all_time=0;
-    size_t cbindex=0;
+    StopWatch sw; ///
+    double time=0; ///
+    double all_time=0; ///
+    size_t cbindex=0; ///
 
-    TimerCallback[string] callback;
+    TimerCallback[string] callback; ///
 
+    ///
     this() { sw.start(); }
 
+    ///
     string every( double dt, void delegate() fnc )
     { 
         import std.string;
@@ -40,12 +47,15 @@ class Timer
         return key;
     }
 
+    ///
     void every( double dt, string key, void delegate() fnc )
     { callback[key] = TimerCallback( 0, dt, fnc ); }
 
+    ///
     void removeCallback( string key )
     { callback.remove(key); }
 
+    ///
     double reset()
     {
         auto r = time;
@@ -54,12 +64,14 @@ class Timer
         return r;
     }
 
+    ///
     void restart( double s=0 )
     {
         cycle();
         Thread.sleep( dur!"usecs"(cast(ulong)(s*1e6)) );
     }
 
+    ///
     double hardReset()
     {
         auto r = all_time;
@@ -68,6 +80,7 @@ class Timer
         return r;
     }
 
+    ///
     double cycle()
     {
         sw.stop();

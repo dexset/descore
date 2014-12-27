@@ -1,5 +1,9 @@
 module des.util.data.type;
 
+import std.traits;
+import des.math.linear.vector;
+import des.math.linear.matrix;
+
 ///
 enum DataType
 {
@@ -43,6 +47,22 @@ enum StoreDataType : DataType
 
     FLOAT  = DataType.FLOAT, ///
     DOUBLE = DataType.DOUBLE ///
+}
+
+///
+template getDataType(T)
+{
+         static if( is( T == byte ) )   enum getDataType = DataType.BYTE;
+    else static if( is( T == ubyte ) )  enum getDataType = DataType.UBYTE;
+    else static if( is( T == short ) )  enum getDataType = DataType.SHORT;
+    else static if( is( T == ushort ) ) enum getDataType = DataType.USHORT;
+    else static if( is( T == int ) )    enum getDataType = DataType.INT;
+    else static if( is( T == uint ) )   enum getDataType = DataType.UINT;
+    else static if( is( T == long ) )   enum getDataType = DataType.LONG;
+    else static if( is( T == ulong ) )  enum getDataType = DataType.ULONG;
+    else static if( is( T == float ) )  enum getDataType = DataType.FLOAT;
+    else static if( is( T == double ) ) enum getDataType = DataType.DOUBLE;
+    else enum getDataType = DataType.RAWBYTE;
 }
 
 ///
@@ -214,6 +234,21 @@ struct ElemInfo
 
     pure @safe nothrow @nogc
     {
+
+        static ElemInfo fromType(T)() @property
+            if( !hasIndirections!T )
+        {
+            static if( isNumeric!T )
+                return ElemInfo( getDataType!T, 1 );
+            else static if( isStaticArray!T )
+                return ElemInfo( getDataType!( typeof(T.init[0]) ), T.length );
+            else static if( isStaticVector!T )
+                return ElemInfo( getDataType!( T.datatype ), T.length );
+            else static if( isStaticMatrix!T )
+                return ElemInfo( getDataType!( T.datatype ), T.width * T.height );
+            else static assert(0,"unsupported type");
+        }
+
         ///
         this( DataType ict, size_t ch )
         {
@@ -230,7 +265,7 @@ struct ElemInfo
 
         const @property
         {
-            /// bits per element
+            /// bytes per element
             size_t bpe() { return compSize * channels; }
 
             /// size of component
@@ -239,16 +274,16 @@ struct ElemInfo
     }
 }
 
-/++
-    enum comp = DT;
-
-    enum channels = CH;
-
-    enum info = ElemInfo(DT,CH);
- +/
-struct ElemType(DataType DT, size_t CH)
+unittest
 {
-    enum comp = DT;
-    enum channels = CH;
-    enum info = ElemInfo(DT,CH);
+    static assert( ElemInfo.fromType!vec2 == ElemInfo( DataType.FLOAT, 2 ) );
+    static assert( ElemInfo.fromType!mat4 == ElemInfo( DataType.FLOAT, 16 ) );
+    static assert( ElemInfo.fromType!(int[2]) == ElemInfo( DataType.INT, 2 ) );
+    static assert( ElemInfo.fromType!float == ElemInfo( DataType.FLOAT, 1 ) );
+
+    static class A{}
+
+    static assert( !__traits(compiles, ElemInfo.fromType!A ) );
+    static assert( !__traits(compiles, ElemInfo.fromType!(int[]) ) );
+    static assert( !__traits(compiles, ElemInfo.fromType!dvec ) );
 }

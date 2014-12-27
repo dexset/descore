@@ -22,9 +22,9 @@ The MIT License (MIT)
     THE SOFTWARE.
 +/
 
-/+
+/++
 
-[code]
+<source>
     mixin( useTranslatorMixin( "translate/dir" ) );
 
     writeln( _!"hello" );
@@ -33,14 +33,17 @@ The MIT License (MIT)
 
     writeln( _!"hello" );
     writeln( _!"world" );
-[code]
+</source>
 
 1. run program 
+
 2. copy and rename "translate/dir/base" to "translate/dir/lang.lt",
     where <lang> is language to translate
+
 3. in each line in "translate/dir/lang.lt" write translation of line
     example:
     hello : привет
+
 4. profit
 
  +/

@@ -29,6 +29,7 @@ import std.traits;
 
 import des.util.testsuite;
 
+///
 auto df(size_t N, size_t M, T, E=T, alias string A, alias string B)
     ( Vector!(M,T,B) delegate( in Vector!(N,T,A) ) f, in Vector!(N,T,A) p, E step=E.epsilon*10 )
     if( isFloatingPoint!T && isFloatingPoint!E )
@@ -54,6 +55,7 @@ auto df(size_t N, size_t M, T, E=T, alias string A, alias string B)
 
 version(unittest) import std.math;
 
+///
 unittest
 {
     auto func( in dvec2 p ) { return dvec3( p.x^^2, sqrt(p.y) * p.x, 3 ); }
@@ -64,6 +66,7 @@ unittest
     assert( eq_approx( res.asArray, must.asArray, 1e-5 ) );
 }
 
+///
 auto df_scalar(T,K,E=T)( T delegate(T) f, K p, E step=E.epsilon*2 )
     if( isFloatingPoint!T && isFloatingPoint!E && is( K : T ) )
 {
@@ -72,6 +75,7 @@ auto df_scalar(T,K,E=T)( T delegate(T) f, K p, E step=E.epsilon*2 )
     return df( &f_vec, Vector!(1,T)(p), step )[0][0];
 }
 
+///
 unittest
 {
     auto pow2( double x ){ return x^^2; }

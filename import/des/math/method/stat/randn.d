@@ -27,6 +27,7 @@ module des.math.method.stat.randn;
 import std.math;
 public import std.random;
 
+///
 double normal( double mu=0.0, double sigma=1.0 )
 {
     static bool deviate = false;

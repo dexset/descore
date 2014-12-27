@@ -31,6 +31,7 @@ public
     import std.typetuple;
 }
 
+///
 template hasAttrib(alias S,alias f)
 {
     enum hasAttrib = impl!(__traits(getAttributes,f));
@@ -75,6 +76,7 @@ template hasAttrib(alias S,alias f)
     }
 }
 
+///
 unittest
 {
     enum clot;
@@ -98,6 +100,7 @@ unittest
     static assert( isString!"hello" );
 }
 
+///
 template staticFilter(alias F, T...)
 {
     static if (T.length == 0)
@@ -119,15 +122,14 @@ template staticFilter(alias F, T...)
     }
 }
 
-template hasVoidReturnType(alias f)
-{ enum hasVoidReturnType = is( ReturnType!f == void ); }
-
+///
 struct TemplateVarDef( alias string N, Args... )
 {
     alias name = N;
     alias types = Args;
 }
 
+///
 template isTemplateVarDef(T)
 {
     enum isTemplateVarDef = is( typeof( impl(T.init) ) );
@@ -140,6 +142,7 @@ unittest
     static assert(  isTemplateVarDef!(TemplateVarDef!("hello", string, int)) );
 }
 
+///
 mixin template DefineTemplateVars( alias Trg, List... )
     if( allSatisfy!( isTemplateVarDef, List ) )
 {
@@ -155,6 +158,7 @@ mixin template DefineTemplateVars( alias Trg, List... )
     }
 }
 
+///
 unittest
 {
     import std.string;
@@ -189,6 +193,7 @@ unittest
     zz.da.func( 3.14, 12 );
 }
 
+///
 unittest
 {
     enum mark;
@@ -298,6 +303,7 @@ bool isPseudoInterface(I,T, bool _assert=true, string FILE=__FILE__, int LINE=__
     return checkMembers!(I,T,__traits(allMembers,I))(); 
 }
 
+///
 unittest
 {
     interface IFace

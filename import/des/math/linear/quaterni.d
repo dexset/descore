@@ -11,6 +11,7 @@ import des.util.testsuite;
 
 import des.math.util;
 
+///
 struct Quaterni(T) if( isFloatingPoint!T )
 {
     alias vectype = Vector!(4,T,"i j k a");
@@ -58,10 +59,11 @@ pure:
     }
 }
 
-alias Quaterni!float quat;
-alias Quaterni!double dquat;
-alias Quaterni!real rquat;
+alias Quaterni!float quat;   ///
+alias Quaterni!double dquat; ///
+alias Quaterni!real rquat;   ///
 
+///
 unittest
 {
     auto q = quat.fromAngle( PI_2, vec3(0,0,1) );

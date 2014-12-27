@@ -31,16 +31,23 @@ import des.math.linear.vector;
 import des.math.linear.matrix;
 import des.math.basic;
 
+///
 struct Ray(T) if( isFloatingPoint!T )
 {
-    alias Vector3!T vectype;
+    alias Vector3!T vectype; //
+
+    ///
     vectype pos, dir;
+
     mixin( BasicMathOp!"pos dir" );
 
+pure:
+    ///
     static auto fromPoints(A,B)( in A start, in B end )
         if( isCompatibleVector!(3,T,A) && isCompatibleVector!(3,T,B) )
     { return Ray!T( start, end - start ); }
 
+    ///
     this(A,B)( in A a, in B b )
         if( isCompatibleVector!(3,T,A) && isCompatibleVector!(3,T,B) )
     {
@@ -50,32 +57,40 @@ struct Ray(T) if( isFloatingPoint!T )
 
     @property
     {
+        ///
         ref vectype start() { return pos; }
+        ///
         ref const(vectype) start() const { return pos; }
+        ///
         vectype end() const { return pos + dir; }
+        ///
         vectype end( in vectype p )
         {
             dir = p - pos;
             return p;
         }
 
+        ///
         auto revert() const
         { return Ray!(T).fromPoints( end, start ); }
 
+        ///
         T len2() const { return dir.len2; }
+        ///
         T len() const { return dir.len; }
     }
 
-    /+ аффинное преобразование +/
+    /// affine transform
     auto tr(X)( in Matrix!(4,4,X) mtr ) const
     {
         return Ray!T( (mtr * Vector4!T( pos, 1 )).xyz,
-                          (mtr * Vector4!T( dir, 0 )).xyz );
+                      (mtr * Vector4!T( dir, 0 )).xyz );
     }
 
     /+ высота проведённая из точки это отрезок, 
        соединяющий проекцию точки на прямую и 
        саму точку (Ray) +/
+    ///
     auto altitude( in vectype pp ) const
     {
         auto n = dir.e;
@@ -84,6 +99,7 @@ struct Ray(T) if( isFloatingPoint!T )
     }
 
     /+ общий перпендикуляр +/
+    ///
     auto altitude(F)( in Ray!F seg ) const
     {
         /+ находим нормаль для паралельных 
@@ -105,12 +121,14 @@ struct Ray(T) if( isFloatingPoint!T )
 
     /+ пересечение с другой прямой 
        если она в той же плоскости +/
+    ///
     auto intersect(F)( in Ray!F seg ) const
     {
         auto a = altitude( seg );
         return a.pos + a.dir * 0.5;
     }
 
+    ///
     auto calcIntersection(F)( in Ray!F seg ) const
     {
         auto a = pos;
@@ -141,9 +159,9 @@ struct Ray(T) if( isFloatingPoint!T )
     }
 }
 
-alias Ray!float  fRay;
-alias Ray!double dRay;
-alias Ray!real   rRay;
+alias Ray!float  fRay; ///
+alias Ray!double dRay; ///
+alias Ray!real   rRay; ///
 
 version(unittest)
 {
@@ -192,6 +210,7 @@ unittest
     assert( eq_approx( ts.end, tb, 1e-5 ) );
 }
 
+///
 unittest
 {
     auto s = fRay( vec3(2,0,0), vec3(-4,4,0) );

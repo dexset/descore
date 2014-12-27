@@ -38,19 +38,27 @@ import des.math.linear.vector;
 import des.math.linear.quaterni;
 import des.math.basic.traits;
 
-private pure void isMatrixImpl(size_t H,size_t W,T)( Matrix!(H,W,T) ){}
-pure bool isMatrix(E)() { return is( typeof( isMatrixImpl(E.init) ) ); }
-
-pure bool isStaticMatrix(E)()
+///
+template isMatrix(E)
 {
-    static if( !isMatrix!E ) return false;
-    else return E.isStatic;
+    enum isMatrix = is( typeof( impl(E.init) ) );
+    void impl(size_t H,size_t W,T)( Matrix!(H,W,T) ){}
 }
 
-pure bool isDynamicMatrix(E)()
+///
+template isStaticMatrix(E)
 {
-    static if( !isMatrix!E ) return false;
-    else return E.isDynamic;
+    static if( !isMatrix!E )
+        enum isStaticMatrix = false;
+    else enum isStaticMatrix = E.isStatic;
+}
+
+///
+template isDynamicMatrix(E)
+{
+    static if( !isMatrix!E )
+        enum isDynamicMatrix = false;
+    else enum isDynamicMatrix = E.isDynamic;
 }
 
 unittest
@@ -95,10 +103,31 @@ private @property
 
 }
 
+/++
+    enum isDynamic = H == 0 || W == 0;
+
+    enum isStatic = H != 0 && W != 0;
+
+    enum isDynamicHeight = H == 0;
+
+    enum isStaticHeight = H != 0;
+
+    enum isDynamicWidth = W == 0;
+
+    enum isStaticWidth = W != 0;
+
+    enum isStaticHeightOnly = isStaticHeight && isDynamicWidth;
+
+    enum isStaticWidthOnly = isStaticWidth && isDynamicHeight;
+
+    enum isDynamicAll = isDynamicHeight && isDynamicWidth;
+
+    enum isDynamicOne = isStaticWidthOnly || isStaticHeightOnly;
+ +/
 struct Matrix(size_t H, size_t W, E)
 {
-    alias Matrix!(H,W,E) selftype;
-    alias E datatype;
+    alias Matrix!(H,W,E) selftype; ///
+    alias E datatype; ///
 
     enum isDynamic = H == 0 || W == 0;
     enum isStatic = H != 0 && W != 0;
@@ -134,7 +163,6 @@ struct Matrix(size_t H, size_t W, E)
 
     alias data this;
 
-
 pure:
 
     private static bool allowSomeOp(size_t A, size_t B )
@@ -142,31 +170,25 @@ pure:
 
     static if( isStatic )
     {
+        ///
         this(X...)( in X vals )
         {
-            static if( X.length == 0 )
-                static assert( 0, "args length == 0" );
-            static if( !is(typeof(flatData!E(vals))) )
-                static assert( 0, "args not compatible" );
+            static assert( is(typeof(flatData!E(vals))), "args not compatible" );
 
-            static if( isStatic )
+            static if( hasNoDynamic!X )
             {
-                static if( hasNoDynamic!X )
+                static if( X.length > 1 )
                 {
-                    static if( X.length > 1 )
-                    {
-                        static assert( getElemCount!X == W*H, "wrong args count" );
-                        static assert( isConvertable!(E,X), "wrong args type" );
-                        mixin( matrixStaticFill!("E","data","vals",W,E,X) );
-                    }
-                    else static if( X.length == 1 && isStaticMatrix!(X[0]) )
-                    {
-                        static assert( X[0].width == W && X[0].height == H );
-                        foreach( y; 0 .. H )
-                            foreach( x; 0 .. W )
-                                data[y][x] = vals[0][y][x];
-                    }
-                    else enum __DF=true;
+                    static assert( getElemCount!X == W*H, "wrong args count" );
+                    static assert( isConvertable!(E,X), "wrong args type" );
+                    mixin( matrixStaticFill!("E","data","vals",W,E,X) );
+                }
+                else static if( X.length == 1 && isStaticMatrix!(X[0]) )
+                {
+                    static assert( X[0].width == W && X[0].height == H );
+                    foreach( y; 0 .. H )
+                        foreach( x; 0 .. W )
+                            data[y][x] = vals[0][y][x];
                 }
                 else enum __DF=true;
             }
@@ -178,6 +200,7 @@ pure:
     }
     else static if( isStaticWidthOnly )
     {
+        /// 
         this(X...)( in X vals )
         {
             auto buf = flatData!E(vals);
@@ -188,6 +211,7 @@ pure:
     }
     else static if( isStaticHeightOnly )
     {
+        ///
         this(X...)( in X vals )
         {
             auto buf = flatData!E(vals);
@@ -198,6 +222,7 @@ pure:
     }
     else
     {
+        ///
         this(X...)( size_t iH, size_t iW, in X vals )
         {
             auto buf = flatData!E(vals);
@@ -206,9 +231,11 @@ pure:
             _fillData( buf );
         }
 
+        ///
         this( size_t iH, size_t iW ) { resize( iH, iW ); }
     }
 
+    ///
     this(size_t oH, size_t oW, X)( in Matrix!(oH,oW,X) mtr )
         if( is( typeof( E(X.init) ) ) )
     {
@@ -221,6 +248,7 @@ pure:
 
     static if( isDynamic )
     {
+        /// available if( isDynamic )
         this(this)
         {
             data = data.dup;
@@ -228,6 +256,7 @@ pure:
                 row = row.dup;
         }
 
+        /// available if( isDynamic )
         ref typeof(this) opAssign(size_t bH, size_t bW, X)( in Matrix!(bH,bW,X) b )
             if( allowSomeOp(H,bH) && allowSomeOp(W,bW) && is(typeof(E(X.init))) )
         {
@@ -253,6 +282,7 @@ pure:
         else foreach( ref row; data ) row[] = vals[0];
     }
 
+    ///
     ref typeof(this) fill( in E[] vals... )
     {
         _fillData( vals );
@@ -260,6 +290,8 @@ pure:
     }
 
     static if( (W==H && isStatic) || isDynamicOne )
+    {
+        /// available if( (W==H && isStatic) || isDynamicOne )
         static auto diag(X...)( in X vals )
         if( X.length > 0 && is(typeof(E(0))) && is(typeof(flatData!E(vals))) )
         {
@@ -275,7 +307,9 @@ pure:
 
             return ret;
         }
+    }
 
+    ///
     ref typeof(this) fillDiag( in E[] vals... )
     {
         enforce( vals.length > 0, "no vals to fill" );
@@ -289,7 +323,9 @@ pure:
     static if( isStaticHeight ) enum height = H;
     else
     {
+        /// if isStaticHeight it's enum (not available to set)
         @property size_t height() const { return data.length; }
+        /// if isStaticHeight it's enum (not available to set)
         @property size_t height( size_t nh )
         {
             resize( nh, width );
@@ -301,7 +337,9 @@ pure:
     else
     {
         private size_t _width = W;
+        /// if isStaticWidth it's enum (not available to set)
         @property size_t width() const { return _width; }
+        /// if isStaticWidth it's enum (not available to set)
         @property size_t width( size_t nw )
         {
             resize( height, nw );
@@ -311,6 +349,7 @@ pure:
 
     static if( isDynamic )
     {
+        /// available if( isDynamic )
         ref typeof(this) resize( size_t nh, size_t nw )
         {
             static if( isStaticHeight ) enforce( nh == H, "height is static" );
@@ -327,6 +366,7 @@ pure:
         }
     }
 
+    ///
     auto expandHeight(size_t bH, size_t bW, X)( in Matrix!(bH,bW,X) mtr ) const
         if( (bW==W||W==0||bW==0) && is(typeof(E(X.init))) )
     {
@@ -342,10 +382,12 @@ pure:
         return ret;
     }
 
+    ///
     auto expandHeight(X...)( in X vals ) const
         if( is(typeof(Matrix!(1,W,E)(vals))) )
     { return expandHeight( Matrix!(1,W,E)(vals) ); }
 
+    ///
     auto expandWidth(size_t bH, size_t bW, X)( in Matrix!(bH,bW,X) mtr ) const
         if( (bH==H||H==0||bH==0) && is(typeof(E(X.init))) )
     {
@@ -360,11 +402,13 @@ pure:
         return ret;
     }
 
+    ///
     auto expandWidth(X...)( in X vals ) const
         if( is(typeof(Matrix!(H,1,E)(vals))) )
     { return expandWidth( Matrix!(H,1,E)(vals) ); }
 
-    @property auto asArray() const
+    ///
+    auto asArray() const @property
     {
         auto ret = new E[](width*height);
         foreach( i; 0 .. height )
@@ -373,6 +417,7 @@ pure:
         return ret;
     }
 
+    ///
     auto sliceHeight( size_t start, size_t count=0 ) const
     {
         enforce( start < height );
@@ -384,6 +429,7 @@ pure:
         return ret;
     }
 
+    ///
     auto sliceWidth( size_t start, size_t count=0 ) const
     {
         enforce( start < width );
@@ -396,6 +442,7 @@ pure:
         return ret;
     }
 
+    ///
     auto opUnary(string op)() const
         if( op == "-" && is( typeof( E.init * (-1) ) ) )
     {
@@ -414,6 +461,7 @@ pure:
             enforce( width == mtr.width, "wrong width" );
     }
 
+    ///
     auto opBinary(string op, size_t bH, size_t bW, X)( in Matrix!(bH,bW,X) mtr ) const
         if( (op=="+"||op=="-") && allowSomeOp(H,bH) && allowSomeOp(W,bW) )
     {
@@ -427,6 +475,7 @@ pure:
         return ret;
     }
 
+    ///
     auto opBinary(string op,X)( in X b ) const
         if( (op!="+" && op!="-") && isValidOp!(op,E,X) )
     {
@@ -437,6 +486,7 @@ pure:
         return ret;
     }
 
+    ///
     auto opBinary(string op,size_t bH, size_t bW, X)( in Matrix!(bH,bW,X) mtr ) const
         if( op=="*" && allowSomeOp(W,bH) && isValidOp!("*",E,X) )
     {
@@ -456,17 +506,20 @@ pure:
         return ret;
     }
 
+    ///
     ref typeof(this) opOpAssign(string op, E)( in E b )
         if( mixin( `is( typeof( selftype.init ` ~ op ~ ` E.init ) == selftype )` ) )
     { mixin( `return this = this ` ~ op ~ ` b;` ); }
 
+    ///
     bool opCast(E)() const if( is( E == bool ) )
     { 
         foreach( v; asArray ) if( !isFinite(v) ) return false;
         return true;
     }
 
-    @property auto T() const
+    /// transponate
+    auto T() const @property
     {
         Matrix!(W,H,E) ret;
         static if( isDynamic ) ret.resize(width,height);
@@ -476,6 +529,7 @@ pure:
         return ret;
     }
 
+    ///
     ref typeof(this) setCol(X...)( size_t no, in X vals )
         if( is(typeof(flatData!E(vals))) )
     {
@@ -487,6 +541,7 @@ pure:
         return this;
     }
 
+    ///
     ref typeof(this) setRow(X...)( size_t no, in X vals )
         if( is(typeof(flatData!E(vals))) )
     {
@@ -497,6 +552,7 @@ pure:
         return this;
     }
 
+    ///
     ref typeof(this) setRect(size_t bH, size_t bW, X)( size_t pos_row, size_t pos_col, in Matrix!(bH,bW,X) mtr )
         if( is(typeof(E(X.init))) )
     {
@@ -512,6 +568,7 @@ pure:
         return this;
     }
 
+    ///
     auto col( size_t no ) const
     {
         enforce( no < width, "bad col index" );
@@ -523,6 +580,7 @@ pure:
         return ret;
     }
 
+    ///
     auto row( size_t no ) const
     {
         enforce( no < height, "bad row index" );
@@ -533,6 +591,7 @@ pure:
         return ret;
     }
 
+    ///
     auto opBinary(string op,size_t K,X,alias string AS)( in Vector!(K,X,AS) v ) const
         if( op=="*" && allowSomeOp(W,K) && isValidOp!("*",E,X) && isValidOp!("+",E,E) )
     {
@@ -558,6 +617,7 @@ pure:
         return ret;
     }
 
+    ///
     auto opBinaryRight(string op,size_t K,X,alias string AS)( in Vector!(K,X,AS) v ) const
         if( op=="*" && isVector!(typeof(selftype.init.T * typeof(v).init)) )
     { return this.T * v; }
@@ -569,6 +629,7 @@ pure:
         return ret;
     }
 
+    ///
     auto subWithout( size_t[] without_rows=[], size_t[] without_cols=[] ) const
     {
         auto with_rows = getIndexesWithout(height,without_rows);
@@ -577,6 +638,7 @@ pure:
         return sub( with_rows,with_cols );
     }
 
+    ///
     auto sub( size_t[] with_rows, size_t[] with_cols ) const
     {
         auto wrows = array( uniq(with_rows) );
@@ -600,13 +662,15 @@ pure:
                 ( isStaticWidthOnly && W > 1 ) ||
                 ( isStatic && W == H ) ) )
     {
+        ///
         E cofactor( size_t i, size_t j ) const
         { return subWithout([i],[j]).det * coef(i,j); }
 
         private static nothrow @trusted auto coef( size_t i, size_t j )
         { return ((i+j)%2?-1:1); }
         
-        @property auto det() const
+        ///
+        auto det() const @property 
         {
             static if( isDynamic )
                 enforce( width == height, "not square matrix" );
@@ -642,7 +706,8 @@ pure:
             return ret;
         }
 
-        @property auto inv() const
+        ///
+        auto inv() const @property
         {
             static if( isDynamic )
                 enforce( width == height, "not square matrix" );
@@ -666,12 +731,12 @@ pure:
             return buf.T / d;
         }
 
-        /++ only for transform matrix +/
         static if( (isStaticHeightOnly && H==4) ||
                    (isStaticWidthOnly && W==4) ||
                    (isStatic && H==W && H==4) ||
                    isDynamicAll )
         {
+            /++ only for transform matrix +/
             @property auto speedTransformInv() const
             {
                 static if( isDynamic )
@@ -704,7 +769,8 @@ pure:
             }
         }
 
-        @property auto rowReduceInv() const
+        ///
+        auto rowReduceInv() const @property
         {
             static if( isDynamic )
                 enforce( width == height, "not square matrix" );
@@ -764,7 +830,8 @@ pure:
     }
 }
 
-auto quatToMatrix(E)( Vector!(4,E,"i j k a") iq )
+///
+auto quatToMatrix(E)( in Quaterni!E iq )
 {
     auto q = iq / iq.len2;
 
@@ -782,11 +849,13 @@ auto quatToMatrix(E)( Vector!(4,E,"i j k a") iq )
                            xz-wy,        yz+wx,        1.0-(xx+yy) );
 }
 
-auto quatAndPosToMatrix(A,B,string AS)( in Vector!(4,A,"i j k a") iq, in Vector!(3,B,AS) pos )
+///
+auto quatAndPosToMatrix(E,V)( in Quaterni!E iq, in V pos )
+    if( isCompatibleVector!(3,E,V) )
 {
     auto q = iq / iq.len2;
 
-    A wx, wy, wz, xx, yy, yz, xy, xz, zz, x2, y2, z2;
+    E wx, wy, wz, xx, yy, yz, xy, xz, zz, x2, y2, z2;
 
     x2 = q.i + q.i;
     y2 = q.j + q.j;
@@ -795,63 +864,79 @@ auto quatAndPosToMatrix(A,B,string AS)( in Vector!(4,A,"i j k a") iq, in Vector!
     yy = q.j * y2;   yz = q.j * z2;   zz = q.k * z2;
     wx = q.a * x2;   wy = q.a * y2;   wz = q.a * z2;
 
-    return Matrix!(4,4,A)( 1.0-(yy+zz),  xy-wz,        xz+wy,       pos.x,
+    return Matrix!(4,4,E)( 1.0-(yy+zz),  xy-wz,        xz+wy,       pos.x,
                            xy+wz,        1.0-(xx+zz),  yz-wx,       pos.y,
                            xz-wy,        yz+wx,        1.0-(xx+yy), pos.z,
                            0,            0,            0,           1     );
-
 }
 
-alias Matrix!(2,2,float) mat2;
-alias Matrix!(2,3,float) mat2x3;
-alias Matrix!(2,4,float) mat2x4;
-alias Matrix!(2,0,float) mat2xD;
-alias Matrix!(3,2,float) mat3x2;
-alias Matrix!(3,3,float) mat3;
-alias Matrix!(3,4,float) mat3x4;
-alias Matrix!(3,0,float) mat3xD;
-alias Matrix!(4,2,float) mat4x2;
-alias Matrix!(4,3,float) mat4x3;
-alias Matrix!(4,4,float) mat4;
-alias Matrix!(4,0,float) mat4xD;
-alias Matrix!(0,2,float) matDx2;
-alias Matrix!(0,3,float) matDx3;
-alias Matrix!(0,4,float) matDx4;
-alias Matrix!(0,0,float) matD;
+alias Matrix2(T)   = Matrix!(2,2,T); ///
+alias Matrix2x3(T) = Matrix!(2,3,T); ///
+alias Matrix2x4(T) = Matrix!(2,4,T); ///
+alias Matrix2xD(T) = Matrix!(2,0,T); ///
+alias Matrix3x2(T) = Matrix!(3,2,T); ///
+alias Matrix3(T)   = Matrix!(3,3,T); ///
+alias Matrix3x4(T) = Matrix!(3,4,T); ///
+alias Matrix3xD(T) = Matrix!(3,0,T); ///
+alias Matrix4x2(T) = Matrix!(4,2,T); ///
+alias Matrix4x3(T) = Matrix!(4,3,T); ///
+alias Matrix4(T)   = Matrix!(4,4,T); ///
+alias Matrix4xD(T) = Matrix!(4,0,T); ///
+alias MatrixDx2(T) = Matrix!(0,2,T); ///
+alias MatrixDx3(T) = Matrix!(0,3,T); ///
+alias MatrixDx4(T) = Matrix!(0,4,T); ///
+alias MatrixDxD(T) = Matrix!(0,0,T); ///
 
-alias Matrix!(2,2,double) dmat2;
-alias Matrix!(2,3,double) dmat2x3;
-alias Matrix!(2,4,double) dmat2x4;
-alias Matrix!(2,0,double) dmat2xD;
-alias Matrix!(3,2,double) dmat3x2;
-alias Matrix!(3,3,double) dmat3;
-alias Matrix!(3,4,double) dmat3x4;
-alias Matrix!(3,0,double) dmat3xD;
-alias Matrix!(4,2,double) dmat4x2;
-alias Matrix!(4,3,double) dmat4x3;
-alias Matrix!(4,4,double) dmat4;
-alias Matrix!(4,0,double) dmat4xD;
-alias Matrix!(0,2,double) dmatDx2;
-alias Matrix!(0,3,double) dmatDx3;
-alias Matrix!(0,4,double) dmatDx4;
-alias Matrix!(0,0,double) dmatD;
+alias Matrix!(2,2,float) mat2;   ///
+alias Matrix!(2,3,float) mat2x3; ///
+alias Matrix!(2,4,float) mat2x4; ///
+alias Matrix!(2,0,float) mat2xD; ///
+alias Matrix!(3,2,float) mat3x2; ///
+alias Matrix!(3,3,float) mat3;   ///
+alias Matrix!(3,4,float) mat3x4; ///
+alias Matrix!(3,0,float) mat3xD; ///
+alias Matrix!(4,2,float) mat4x2; ///
+alias Matrix!(4,3,float) mat4x3; ///
+alias Matrix!(4,4,float) mat4;   ///
+alias Matrix!(4,0,float) mat4xD; ///
+alias Matrix!(0,2,float) matDx2; ///
+alias Matrix!(0,3,float) matDx3; ///
+alias Matrix!(0,4,float) matDx4; ///
+alias Matrix!(0,0,float) matD;   ///
 
-alias Matrix!(2,2,real) rmat2;
-alias Matrix!(2,3,real) rmat2x3;
-alias Matrix!(2,4,real) rmat2x4;
-alias Matrix!(2,0,real) rmat2xD;
-alias Matrix!(3,2,real) rmat3x2;
-alias Matrix!(3,3,real) rmat3;
-alias Matrix!(3,4,real) rmat3x4;
-alias Matrix!(3,0,real) rmat3xD;
-alias Matrix!(4,2,real) rmat4x2;
-alias Matrix!(4,3,real) rmat4x3;
-alias Matrix!(4,4,real) rmat4;
-alias Matrix!(4,0,real) rmat4xD;
-alias Matrix!(0,2,real) rmatDx2;
-alias Matrix!(0,3,real) rmatDx3;
-alias Matrix!(0,4,real) rmatDx4;
-alias Matrix!(0,0,real) rmatD;
+alias Matrix!(2,2,double) dmat2;   ///
+alias Matrix!(2,3,double) dmat2x3; ///
+alias Matrix!(2,4,double) dmat2x4; ///
+alias Matrix!(2,0,double) dmat2xD; ///
+alias Matrix!(3,2,double) dmat3x2; ///
+alias Matrix!(3,3,double) dmat3;   ///
+alias Matrix!(3,4,double) dmat3x4; ///
+alias Matrix!(3,0,double) dmat3xD; ///
+alias Matrix!(4,2,double) dmat4x2; ///
+alias Matrix!(4,3,double) dmat4x3; ///
+alias Matrix!(4,4,double) dmat4;   ///
+alias Matrix!(4,0,double) dmat4xD; ///
+alias Matrix!(0,2,double) dmatDx2; ///
+alias Matrix!(0,3,double) dmatDx3; ///
+alias Matrix!(0,4,double) dmatDx4; ///
+alias Matrix!(0,0,double) dmatD;   ///
+
+alias Matrix!(2,2,real) rmat2;   ///
+alias Matrix!(2,3,real) rmat2x3; ///
+alias Matrix!(2,4,real) rmat2x4; ///
+alias Matrix!(2,0,real) rmat2xD; ///
+alias Matrix!(3,2,real) rmat3x2; ///
+alias Matrix!(3,3,real) rmat3;   ///
+alias Matrix!(3,4,real) rmat3x4; ///
+alias Matrix!(3,0,real) rmat3xD; ///
+alias Matrix!(4,2,real) rmat4x2; ///
+alias Matrix!(4,3,real) rmat4x3; ///
+alias Matrix!(4,4,real) rmat4;   ///
+alias Matrix!(4,0,real) rmat4xD; ///
+alias Matrix!(0,2,real) rmatDx2; ///
+alias Matrix!(0,3,real) rmatDx3; ///
+alias Matrix!(0,4,real) rmatDx4; ///
+alias Matrix!(0,0,real) rmatD;   ///
 
 unittest
 {
@@ -905,6 +990,7 @@ unittest
     assert( eq( a, [[3,1,1], [4,1,1], [1,1,1]] ) );
 }
 
+///
 unittest
 {
     static struct Test
@@ -922,6 +1008,7 @@ unittest
     assert( eq( tt.um, [[1,2,3],[4,5,6],[7,8,9]] ) );
 }
 
+///
 unittest
 {
     auto a = matDx3( 1,2,3,4,5,6,7,8,9 );
@@ -1009,6 +1096,7 @@ unittest
     assert( !mustExcept({ b = a; }) );
 }
 
+///
 unittest
 {
     auto a = mat3( 1,2,3,4,5,6,7,8,9 );
@@ -1068,6 +1156,7 @@ unittest
     assert( a.asArray == [1.0f,2,3,4,5,6,7,8,9] );
 }
 
+///
 unittest
 {
     auto a = matD(4,4,0).fillDiag(1);
@@ -1075,6 +1164,7 @@ unittest
     assert( eq( a.inv, a ) );
 }
 
+///
 unittest
 {
     auto a = mat4x2( 1,2,3,4,5,6,7,8 );
@@ -1093,6 +1183,7 @@ unittest
     assert( c.height == 4 && c.width == 4 );
 }
 
+///
 unittest
 {
     auto a = mat3.diag(1);
@@ -1106,6 +1197,7 @@ unittest
     assert( eq(d,[[1,0,0],[0,1,0],[0,0,1]]) );
 }
 
+///
 unittest
 {
     auto a = mat3( 1,2,3,4,5,6,7,8,9 );
@@ -1115,6 +1207,7 @@ unittest
     assert( eq(swsha,[[4],[7]]) );
 }
 
+///
 unittest
 {
     auto a = mat3.diag(1);
@@ -1130,6 +1223,7 @@ unittest
     assert( eq( b,a ) );
 }
 
+///
 unittest
 {
     auto a = rmat3( 3,2,2, 1,3,1, 5,3,4 );
@@ -1211,6 +1305,7 @@ unittest
     assert( eq( a, b ) );
 }
 
+///
 unittest
 {
     void check(E)( E mtr ) if( isMatrix!E )
@@ -1291,6 +1386,7 @@ unittest
     assert( eq( xx, mat4() ) );
 }
 
+///
 unittest
 {
     auto mtr = mat4().setRect(0,0,mat3.diag(1)).setCol(3,1,2,3,4);
@@ -1308,6 +1404,7 @@ unittest
     assert( dnm );
 }
 
+///
 unittest
 {
     auto q = rquat.fromAngle( PI_2, vec3(0,0,1) );

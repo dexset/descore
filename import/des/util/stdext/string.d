@@ -30,7 +30,8 @@ import std.algorithm;
 
 @trusted pure
 {
-    @property string toSnakeCase( in string str, bool ignore_first=true )
+    ///
+    string toSnakeCase( in string str, bool ignore_first=true ) @property
     {
         string[] buf;
         buf ~= "";
@@ -44,6 +45,7 @@ import std.algorithm;
         return buf.join("_");
     }
 
+    ///
     string toCamelCaseBySep( in string str, string sep="_", bool first_capitalize=true )
     {
         auto arr = array( filter!"a.length > 0"( str.split(sep) ) );
@@ -58,10 +60,12 @@ import std.algorithm;
         return ret.join("");
     }
 
-    @property string toCamelCase( in string str, bool first_capitalize=true )
+    ///
+    string toCamelCase( in string str, bool first_capitalize=true ) @property
     { return toCamelCaseBySep( str, "_", first_capitalize ); }
 
-    nothrow string toDString( const(char*) c_str )
+    ///
+    string toDString( const(char*) c_str ) nothrow
     {
         string buf;
         char *ch = cast(char*)c_str;
@@ -69,7 +73,8 @@ import std.algorithm;
         return buf;
     }
 
-    nothrow string toDStringFix(size_t S)( const(char[S]) c_buf )
+    ///
+    string toDStringFix(size_t S)( const(char[S]) c_buf ) nothrow
     {
         string buf;
         foreach( c; c_buf ) buf ~= c;
@@ -77,6 +82,7 @@ import std.algorithm;
     }
 }
 
+///
 unittest
 {
     assert( "someVar".toSnakeCase == "some_var" );
@@ -86,6 +92,7 @@ unittest
     assert( "ARB".toSnakeCase(false) == "_a_r_b" );
 }
 
+///
 unittest
 {
     assert( "some_class".toCamelCase == "SomeClass" );

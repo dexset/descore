@@ -24,6 +24,7 @@ The MIT License (MIT)
 
 module des.util.colorparse;
 
+///
 ulong hex2ulong( string hex )
 {
     import std.string;
@@ -42,6 +43,7 @@ ulong hex2ulong( string hex )
     return ret;
 }
 
+///
 T[4] parseColorStr(T=float)( string cstr, real norm=1 )
 {
     if( cstr[0] == '#' )
@@ -112,6 +114,7 @@ T[4] parseColorStr(T=float)( string cstr, real norm=1 )
     return [ cr, cg, cb, ca ];
 }
 
+///
 unittest
 {
     assert( [1.0f,0,1,0] == parseColorStr( "#FF00FF00" ) );
