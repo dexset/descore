@@ -9,6 +9,7 @@
 *.def
 *.lst
 *.sh
+*.html
 bin
 dub.selections.json
 
