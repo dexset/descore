@@ -1,6 +1,6 @@
 PROJECTNAME = D Extended Set Core
 REFERENCETOP = 
-REPOSRCTREE = https://github.com/dexset/descore
+REPOSRCTREE = https://github.com/dexset/descore/tree/master/import
 TITLEBARTEXT = <a href="https://github.com/dexset/descore">Github Page</a>
 RESOURCEROOT = ../bootDoc/
 ISSUETRACKER =

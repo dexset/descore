@@ -1,3 +1,5 @@
+/++
+ +/
 module des.util.logsys;
 
 public
@@ -9,6 +11,7 @@ public
 
 import des.util.logsys.rule;
 
+/// for simple adding logging to class
 mixin template ClassLogger()
 {
     static if( !is( typeof( __logger ) ) )
@@ -28,7 +31,7 @@ mixin template ClassLogger()
     }
 }
 
-Logger logger;
+Logger logger; ///
 
 static this() { logger = new Logger; }
 

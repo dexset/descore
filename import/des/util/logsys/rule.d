@@ -5,19 +5,23 @@ import std.string : split, join;
 
 import des.util.logsys.base;
 
+/// store rules for logging
 package synchronized class Rule
 {
 package:
-    shared Rule parent;
+    shared Rule parent; ///
 
-    LogLevel level = LogLevel.ERROR;
-    shared Rule[string] inner;
+    LogLevel level = LogLevel.ERROR; ///
+    shared Rule[string] inner; ///
 
-    bool use_minimal = true;
+    bool use_minimal = true; ///
 
 public:
+
+    ///
     this( shared Rule parent = null ) { this.parent = parent; }
 
+    ///
     @property bool useMinimal() const
     {
         if( parent !is null )
@@ -25,6 +29,7 @@ public:
         else return use_minimal;
     }
 
+    /// setting allowed level for emitter (create new inner Rule), if emitter is "" sets self level
     void setLevel( LogLevel lvl, string emitter="" )
     {
         auto addr = splitAddress( emitter );
@@ -34,6 +39,7 @@ public:
         inner[iname].setLevel( lvl, addr[1] );
     }
 
+    /// if emitter is "" returns self level
     LogLevel allowedLevel( string emitter="" )
     {
         auto addr = splitAddress( emitter );
@@ -56,6 +62,7 @@ public:
 
 protected:
 
+    ///
     static string[2] splitAddress( string emitter )
     {
         auto addr = emitter.split(".");
@@ -75,6 +82,7 @@ private T[] mlt(T)( T[] val, size_t cnt ) nothrow
 
 unittest { assert( "    ", mlt( " ", 4 ) ); }
 
+///
 unittest
 {
     auto r = new shared Rule;

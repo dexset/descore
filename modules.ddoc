@@ -23,6 +23,7 @@ MODULES =
     $(MODULE des.util.data.pdata)
     $(MODULE des.util.data.type)
     $(MODULE des.util.logsys.rule)
+    $(MODULE des.util.logsys.package)
     $(MODULE des.util.logsys.output)
     $(MODULE des.util.logsys.logcls)
     $(MODULE des.util.logsys.base)
