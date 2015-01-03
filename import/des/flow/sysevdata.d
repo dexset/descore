@@ -24,35 +24,39 @@ The MIT License (MIT)
 
 module des.flow.sysevdata;
 
+/++ System event data
+
+    passed to work element then before change thread state
+
+    creation propertyes like `SysEvData.pause` and checking propertyes like
+    `SysEvData.isPause` generates from mixin with `slist`
+ +/
 struct SysEvData
 {
+    /// store name of system event
     string msg;
 
-    enum slist =
-    [
-        "pause",
-        "work",
-        "stop"
-    ];
+    /// events names `[ "pause", "work", "stop" ]`
+    enum slist = [ "pause", "work", "stop" ];
 
     mixin( getStateListString(slist) );
-}
 
-import std.string;
-
-string getStateListString( in string[] list )
-{
-    string[] buf;
-
-    foreach( state; list )
+    private static string getStateListString( in string[] list ) pure
     {
-        buf ~= format( `static @property SysEvData %1$s() { return SysEvData("%1$s"); }`, state );
-        buf ~= format( `@property bool is%s() { return msg == "%s"; }`, state.capitalize, state );
-    }
+        import std.string;
+        string[] buf;
 
-    return buf.join("\n");
+        foreach( state; list )
+        {
+            buf ~= format( `static @property SysEvData %1$s() { return SysEvData("%1$s"); }`, state );
+            buf ~= format( `@property bool is%s() { return msg == "%s"; }`, state.capitalize, state );
+        }
+
+        return buf.join("\n");
+    }
 }
 
+///
 unittest
 {
     auto ep = SysEvData.pause;

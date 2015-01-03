@@ -27,40 +27,36 @@ module des.flow.base;
 import std.datetime;
 public import des.util.logsys;
 
+///
 class FlowException : Exception
 {
     @safe pure nothrow this( string msg, string file=__FILE__, size_t line=__LINE__ )
     { super( msg, file, line ); }
 }
 
-enum Command { START, PAUSE, STOP, REINIT, CLOSE };
+/// Control work element commands
+enum Command
+{
+    START, /// 
+    PAUSE, ///
+    STOP,  ///
+    REINIT,/// destroy work element and create it
+    CLOSE  /// destroy work element
+};
 
+///
 @property ulong currentTick()
 { return Clock.currAppTick().length; }
 
 package
 {
+    import des.util.testsuite;
 
     version(unittest)
     {
         import std.math;
         import std.traits;
         import std.range;
-
-        pure bool eq(A,B)( in A a, in B b )
-        {
-            static if( isFloatingPoint!A && isFloatingPoint!B )
-                return (abs(a-b) < max( A.epsilon, B.epsilon ));
-            else return a == b;
-        }
-
-        pure bool eq_arr(A,B)( in A[] a, in B[] b )
-        {
-            if( a.length != b.length ) return false;
-            foreach( i,j; zip(a,b) )
-                if( !eq(i,j) ) return false;
-            return true;
-        }
 
         bool creationTest(T)( T a )
             if( is( Unqual!T == T ) )
@@ -83,4 +79,3 @@ package
         }
     }
 }
-

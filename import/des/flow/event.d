@@ -25,6 +25,7 @@ The MIT License (MIT)
 module des.flow.event;
 
 import std.traits;
+import std.string : format;
 
 import core.time;
 
@@ -32,18 +33,28 @@ import des.util.data.pdata;
 
 import des.flow.base;
 import des.flow.sysevdata;
-/++
-    code=ulong.max-1 is reserved for system
- +/
+
+/// Pass data between threads
 struct Event
 {
-    enum ulong system_code = ulong.max-1;
+    /// `ulong.max` reserved system event code
+    enum system_code = ulong.max;
+
     alias typeof(this) Self;
 
+    ///
     ulong code;
+
+    ///
     ulong timestamp;
+
+    /// information in event
     PData data;
 
+    /++ generate system event
+        returns:
+         Event
+     +/
     static auto system( SysEvData sed )
     {
         Self ev;
@@ -53,6 +64,7 @@ struct Event
         return ev;
     }
 
+    ///
     this(T)( ulong code, in T value )
         if( is( typeof(PData(value)) ) )
     in { assert( code != system_code ); } body
@@ -63,60 +75,54 @@ struct Event
     }
 
     private enum base_ctor =
-        ` this( in Event ev )
-    {
-        code = ev.code;
-        timestamp = ev.timestamp;
-        data = ev.data;
-    }`;
+    q{
+        this( in Event ev ) %s
+        {
+            code = ev.code;
+            timestamp = ev.timestamp;
+            data = ev.data;
+        }
+    };
 
-    mixin( base_ctor );
-    mixin( "const" ~ base_ctor );
-    mixin( "immutable" ~ base_ctor );
-    mixin( "shared" ~ base_ctor );
-    mixin( "shared const" ~ base_ctor );
+    mixin( format( base_ctor, "" ) );
+    mixin( format( base_ctor, "const" ) );
+    mixin( format( base_ctor, "immutable" ) );
+    mixin( format( base_ctor, "shared" ) );
+    mixin( format( base_ctor, "shared const" ) );
 
     @property
     {
+        ///
         bool isSystem() pure const
         { return code == system_code; }
 
+        /// elapsed time before create event
         ulong elapsed() const
         { return currentTick - timestamp; }
 
+        /// get data as type T
         T as(T)() const { return data.as!T; }
+        /// get data as type T
         T as(T)() shared const { return data.as!T; }
+        /// get data as type T
         T as(T)() immutable { return data.as!T; }
 
+        /// get pdata
         immutable(void)[] pdata() const { return data.data; }
+        /// get pdata
         immutable(void)[] pdata() shared const { return data.data; }
+        /// get pdata
         immutable(void)[] pdata() immutable { return data.data; }
     }
 }
 
-interface EventProcessor { void processEvent( in Event ); }
-interface EventBus { void pushEvent( in Event ); }
+///
+interface EventProcessor { /++ +/ void processEvent( in Event ); }
 
-final class FunctionEventProcessor : EventProcessor
-{
-    private void delegate( in Event ) func;
+///
+interface EventBus { /++ +/ void pushEvent( in Event ); }
 
-    this( void delegate( in Event ) f ) { setFunction( f ); }
-
-    void setFunction( void delegate( in Event ) f )
-    in { assert( f !is null ); } body { func = f; }
-
-    void processEvent( in Event ev ) { func(ev); }
-}
-
-final class EventProcessorList : EventProcessor
-{
-    EventProcessor[] list;
-    this( EventProcessor[] list ) { this.list = list; }
-    void processEvent( in Event ev )
-    { foreach( p; list ) p.processEvent( ev ); }
-}
-
+///
 unittest
 {
     auto a = Event( 1, [ 0.1, 0.2, 0.3 ] );
@@ -218,6 +224,7 @@ unittest
     assert( tt.info == ft2.info );
 }
 
+///
 unittest
 {
     static struct TestStruct { double x, y; string info; immutable(int)[] data; }

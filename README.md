@@ -1,6 +1,3 @@
 ## Core part of D Extended Set (DES) library
 
-Build documentation:
-```
-rdmd bootDoc/generate.d import --output=html
-```
+Documentation orient to [harbored-mod|https://github.com/kiith-sa/harbored-mod]

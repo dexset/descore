@@ -42,30 +42,61 @@ import des.flow.signal;
 import des.flow.sync;
 import des.flow.sysevdata;
 
+///
 class FThreadException : FlowException
 {
-    @safe pure nothrow this( string msg, string file=__FILE__, size_t line=__LINE__ )
+    ///
+    this( string msg, string file=__FILE__, size_t line=__LINE__ ) @safe pure nothrow
     { super( msg, file, line ); }
 }
 
+/// Thread wrap
 class FThread
 {
 protected:
+
+    ///
     Communication com;
+
+    /// core.thread.Thread
     Thread thread;
+
+    ///
     string self_name;
 
 public:
-    enum State { NONE, PAUSE, WORK };
-    enum Error { NONE, FTHREAD, FLOW, EXCEPT, FATAL };
 
+    ///
+    enum State
+    {
+        NONE,  /// not inited
+        PAUSE, /// inited, not worked
+        WORK   /// inited, worked
+    };
+
+    /// addational info part
+    enum Error
+    {
+        NONE,    /// 
+        FTHREAD, ///
+        FLOW,    ///
+        EXCEPT,  ///
+        FATAL    /// unrecoverable error
+    };
+
+    ///
     static struct Info
     {
+        ///
         State state;
+        ///
         Error error;
+        ///
         string message;
+        ///
         ulong timestamp;
 
+        ///
         this( State state, Error error=Error.NONE, string msg="" )
         {
             this.state = state;
@@ -74,7 +105,7 @@ public:
             timestamp = currentTick;
         }
 
-        enum ctor_text = ` this( in Info fts )
+        private enum ctor_text = ` this( in Info fts )
         {
             state = fts.state;
             error = fts.error;
@@ -90,6 +121,12 @@ public:
         mixin( "shared const" ~ ctor_text );
     }
 
+    /++
+        params:
+        name = name of thread
+        func = work element creation function
+        args = args for function
+     +/
     this(Args...)( string name, WorkElement function(Args) func, Args args )
     in { assert( func !is null ); } body
     {
@@ -101,26 +138,40 @@ public:
         debug logger.Debug( "name: '%s'", name );
     }
 
-    @property auto info() const { return Info(com.info.back); }
-    @property auto name() const { return self_name; }
+    @property
+    {
+        /++ getting last information of thread 
+            returns:
+            `Info`
+         +/
+        auto info() const { return Info(com.info.back); }
 
+        /// getting name of fthread
+        auto name() const { return self_name; }
+    }
+
+    /// take all signals from work element
     auto takeAllSignals()
     { return com.signals.clearAndReturnAll(); }
 
+    /// push command for changing state of thread
     void pushCommand( Command cmd )
     {
         com.commands.pushBack( cmd );
         debug logger.trace( "thread: '%s', command: '%s'", name, cmd );
     }
 
+    /// push event for processing in work element
     void pushEvent( in Event ev )
     {
         com.eventbus.pushBack( ev );
         debug logger.trace( "thread: '%s', event code: %d", name, ev.code );
     }
 
+    /// core.thread.Thread.join
     void join() { thread.join(); }
 
+    /// add listener FThread, listeners gets events from work element
     void addListener( FThread[] thrs... )
     {
         foreach( t; thrs )
@@ -128,6 +179,7 @@ public:
         debug logger.Debug( "thread: '%s', listeners: %s", name, array(map!(a=>a.name)(thrs)) );
     }
 
+    /// delete listener
     void delListener( FThread th )
     {
         com.listener.del( th.com.eventbus );

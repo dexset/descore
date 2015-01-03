@@ -25,7 +25,7 @@ unittest
 }
 
 ///
-bool eq(A,B)( in A a, in B b )
+bool eq(A,B)( in A a, in B b ) pure
 {
     static if( allSatisfy!(isElemHandler,A,B) )
     {
@@ -70,7 +70,7 @@ unittest
 }
 
 ///
-bool eq_approx(A,B,E)( in A a, in B b, in E eps )
+bool eq_approx(A,B,E)( in A a, in B b, in E eps ) pure
     if( allSatisfy!(isNumeric,A,B,E) || allSatisfy!(isElemHandler,A,B) )
 {
     static if( allSatisfy!(isElemHandler,A,B) )

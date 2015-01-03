@@ -9,8 +9,8 @@
 *.def
 *.lst
 *.sh
-*.html
 bin
+doc
 dub.selections.json
 
 test/data
