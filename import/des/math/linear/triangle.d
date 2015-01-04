@@ -33,8 +33,11 @@ import des.math.basic;
 ///
 struct Triangle(T) if( isFloatingPoint!T )
 {
-    alias Vector3!T vectype; ///
-    vectype[3] pnt; ///
+    ///
+    alias Vector3!T vectype;
+
+    ///
+    vectype[3] pnt;
 
 pure:
 
@@ -102,9 +105,12 @@ pure:
     { return seg.intersect( project(seg) ); }
 }
 
-alias Triangle!float  fTriangle; ///
-alias Triangle!double dTriangle; ///
-alias Triangle!real   rTriangle; ///
+///
+alias Triangle!float  fTriangle;
+///
+alias Triangle!double dTriangle;
+///
+alias Triangle!real   rTriangle;
 
 ///
 unittest

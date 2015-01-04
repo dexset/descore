@@ -7,6 +7,7 @@ import std.traits;
 import des.math.util;
 import des.math.basic.traits;
 
+/// space
 private enum SEP = " ";
 
 ///
@@ -43,75 +44,6 @@ private enum SEP = " ";
         opEach( fields, "*" ),
         opEach( fields, "/" )
     );
-}
-
-private
-{
-    string opSelf( string[] fields, string op, string b="b" )
-    {
-        string[] rb;
-        foreach( f; fields )
-            rb ~= format( "%1$s %2$s %3$s.%1$s", f, op, b );
-        return rb.join(", ");
-    }
-
-    unittest
-    {
-        assert( opSelf( "pnt rot".split, "+", "vv" ), "pnt + vv.pnt, rot + vv.rot" );
-        assert( opSelf( "a b c".split, "*", "x" ), "a * x.a, b * x.b, c * x.c" );
-    }
-
-    string opEach( string[] fields, string op, string b="b" )
-    {
-        string[] rb;
-        foreach( f; fields )
-            rb ~= format( "%1$s %2$s %3$s", f, op, b );
-        return rb.join(",");
-    }
-
-    unittest
-    {
-        assert( opEach( "pnt rot".split, "+", "vv" ), "pnt + vv, rot + vv" );
-        assert( opEach( "a b c".split, "*", "x" ), "a * x, b * x, c * x" );
-    }
-
-    string basicMathCtor( string[] fields, string name )
-    {
-        string args[];
-        string cbody = "auto ret = cast(self)(this); ";
-        foreach( field; fields )
-        {
-            auto arg = argName( field );
-            args ~= format( "in typeof(%s) %s", field, arg );
-            cbody ~= format( "ret.%1$s = %2$s; ", field, arg );
-        }
-        cbody ~= "return ret;";
-        return format( "self %s( %s ) const { %s }", name, args.join(", "), cbody );
-    }
-
-    unittest
-    {
-        assert( basicMathCtor( ["p", "v"], "b" ) ==
-        "self b( in typeof(p) arg_p, in typeof(v) arg_v ) const { auto ret = cast(self)(this); ret.p = arg_p; ret.v = arg_v; return ret; }" );
-    }
-
-    string argName( string f ) pure { return format( "arg_%s", f.split(".").join("_") ); }
-
-    unittest
-    {
-        assert( argName( "pos" ) == "arg_pos" );
-        assert( argName( "Pos" ) == "arg_Pos" );
-        assert( argName( "Pos.x" ) == "arg_Pos_x" );
-        assert( argName( "P.s.x" ) == "arg_P_s_x" );
-    }
-
-    string staticAsserts( string[] fields )
-    {
-        string ret;
-        foreach( f; fields )
-            ret ~= format(`static assert( hasBasicMathOp!(typeof(%1$s)), "member '%1$s' hasn't basic math ops" );`, f );
-        return ret;
-    }
 }
 
 ///
@@ -230,4 +162,73 @@ unittest
     auto a = Point( Vec(1,2), Vec(2,3), "hello", 3 );
     assert( a + a == Point( Vec(2,4), Vec(4,6), "hello", 6 ) );
     assert( a * 2 == Point( Vec(2,4), Vec(4,6), "hello", 6 ) );
+}
+
+private
+{
+    string opSelf( string[] fields, string op, string b="b" )
+    {
+        string[] rb;
+        foreach( f; fields )
+            rb ~= format( "%1$s %2$s %3$s.%1$s", f, op, b );
+        return rb.join(", ");
+    }
+
+    unittest
+    {
+        assert( opSelf( "pnt rot".split, "+", "vv" ), "pnt + vv.pnt, rot + vv.rot" );
+        assert( opSelf( "a b c".split, "*", "x" ), "a * x.a, b * x.b, c * x.c" );
+    }
+
+    string opEach( string[] fields, string op, string b="b" )
+    {
+        string[] rb;
+        foreach( f; fields )
+            rb ~= format( "%1$s %2$s %3$s", f, op, b );
+        return rb.join(",");
+    }
+
+    unittest
+    {
+        assert( opEach( "pnt rot".split, "+", "vv" ), "pnt + vv, rot + vv" );
+        assert( opEach( "a b c".split, "*", "x" ), "a * x, b * x, c * x" );
+    }
+
+    string basicMathCtor( string[] fields, string name )
+    {
+        string args[];
+        string cbody = "auto ret = cast(self)(this); ";
+        foreach( field; fields )
+        {
+            auto arg = argName( field );
+            args ~= format( "in typeof(%s) %s", field, arg );
+            cbody ~= format( "ret.%1$s = %2$s; ", field, arg );
+        }
+        cbody ~= "return ret;";
+        return format( "self %s( %s ) const { %s }", name, args.join(", "), cbody );
+    }
+
+    unittest
+    {
+        assert( basicMathCtor( ["p", "v"], "b" ) ==
+        "self b( in typeof(p) arg_p, in typeof(v) arg_v ) const { auto ret = cast(self)(this); ret.p = arg_p; ret.v = arg_v; return ret; }" );
+    }
+
+    string argName( string f ) pure { return format( "arg_%s", f.split(".").join("_") ); }
+
+    unittest
+    {
+        assert( argName( "pos" ) == "arg_pos" );
+        assert( argName( "Pos" ) == "arg_Pos" );
+        assert( argName( "Pos.x" ) == "arg_Pos_x" );
+        assert( argName( "P.s.x" ) == "arg_P_s_x" );
+    }
+
+    string staticAsserts( string[] fields )
+    {
+        string ret;
+        foreach( f; fields )
+            ret ~= format(`static assert( hasBasicMathOp!(typeof(%1$s)), "member '%1$s' hasn't basic math ops" );`, f );
+        return ret;
+    }
 }

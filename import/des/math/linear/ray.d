@@ -31,10 +31,17 @@ import des.math.linear.vector;
 import des.math.linear.matrix;
 import des.math.basic;
 
+version(unittest)
+{
+    bool eq_seg(A,B,E=float)( in Ray!A a, in Ray!B b, in E eps=E.epsilon )
+    { return eq_approx( a.pos.data ~ a.dir.data, b.pos.data ~ b.dir.data, eps ); }
+}
+
 ///
 struct Ray(T) if( isFloatingPoint!T )
 {
-    alias Vector3!T vectype; //
+    ///
+    alias Vector3!T vectype;
 
     ///
     vectype pos, dir;
@@ -159,16 +166,14 @@ pure:
     }
 }
 
-alias Ray!float  fRay; ///
-alias Ray!double dRay; ///
-alias Ray!real   rRay; ///
+///
+alias Ray!float  fRay;
+///
+alias Ray!double dRay;
+///
+alias Ray!real   rRay;
 
-version(unittest)
-{
-    bool eq_seg(A,B,E=float)( in Ray!A a, in Ray!B b, in E eps=E.epsilon )
-    { return eq_approx( a.pos.data ~ a.dir.data, b.pos.data ~ b.dir.data, eps ); }
-}
-
+///
 unittest
 {
     auto r1 = fRay( vec3(1,2,3), vec3(2,3,4) );
@@ -240,6 +245,7 @@ unittest
     assert( eq( a1.dir, vec3(0,0,-2) ) );
 }
 
+///
 unittest
 {
     auto s1 = fRay( vec3(-2,0,0), vec3(1,0,0) );
@@ -249,6 +255,7 @@ unittest
     assert( eq_seg( a1, fRay(vec3(0,0,0), vec3(0,1,1)) ) );
 }
 
+///
 unittest
 {
     auto s1 = fRay( vec3(0,0,0), vec3(2,2,0) );

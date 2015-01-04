@@ -38,73 +38,95 @@ import des.il.region;
 import des.util.testsuite;
 public import des.util.data.type;
 
+///
 class ImageException : Exception
 { 
-    @safe pure nothrow this( string msg, string file=__FILE__, size_t line=__LINE__ ) 
+    ///
+    this( string msg, string file=__FILE__, size_t line=__LINE__ ) @safe pure nothrow
     { super( msg, file, line ); } 
 }
 
+/++
+params:
+N - dimensions count
+ +/
 struct Image(size_t N) if( N > 0 )
 {
+    ///
     alias Image!N selftype;
 
     static if( N <= 3 )
     {
+        /// if( N <=3 )
         alias Vector!(N,size_t,"whd"[0..N].spaceSep) imsize_t;
+        /// if( N <=3 )
         alias Vector!(N,size_t,"xyz"[0..N].spaceSep) imcrd_t;
+        /// if( N <=3 )
         alias Vector!(N,ptrdiff_t,"xyz"[0..N].spaceSep) imdiff_t;
     }
     else
     {
+        ///
         alias Vector!(N,size_t) imsize_t;
+        ///
         alias Vector!(N,size_t) imcrd_t;
+        ///
         alias Vector!(N,ptrdiff_t) imdiff_t;
     }
 
+    ///
     alias Region!(N,ptrdiff_t) imregion_t;
 
+    ///
     static struct Header
     {
+        ///
         ElemInfo info;
+        ///
         imsize_t size;
 
-        pure
+        pure const @safe nothrow @property @nogc
         {
-            @safe nothrow @property @nogc
-            {
-                size_t dataSize() const { return pixelCount * info.bpe; }
+            /// image data size
+            size_t dataSize() { return pixelCount * info.bpe; }
 
-                size_t pixelCount() const
-                {
-                    size_t sz = 1;
-                    foreach( v; size.data ) sz *= v;
-                    return sz;
-                }
+            ///
+            size_t pixelCount()
+            {
+                size_t sz = 1;
+                foreach( v; size.data ) sz *= v;
+                return sz;
             }
         }
     }
 
     private Header head;
+
+    ///
     void[] data;
 
     invariant() { assert( data.length == head.dataSize ); }
 
     pure
     {
+        ///
         this(this) { data = data.dup; }
 
+        ///
         this( in Image!N img )
         {
             head = img.head;
             data = img.data.dup;
         }
 
+        ///
         immutable this( in Image!N img )
         {
             head = img.head;
             data = img.data.idup;
         }
 
+        ///
         this( Header hdr, in void[] data=[] )
         {
             head = hdr;
@@ -118,20 +140,25 @@ struct Image(size_t N) if( N > 0 )
             }
         }
 
+        ///
         this( in size_t[N] sz, in ElemInfo pt, in void[] data=[] )
         { this( Header(pt,imsize_t(sz)), data ); }
 
+        ///
         this(V)( in V v, in ElemInfo pt, in void[] data=[] )
             if( isCompatibleVector!(N,size_t,V) )
         { this( to!(size_t[N])(v.data), pt, data ); }
 
+        ///
         this(T)( in size_t[N] sz, in T[] data=[] )
         { this( sz, ElemInfo( DataType.RAWBYTE, T.sizeof ), data ); }
 
+        ///
         this(V,T)( in V v, in T[] data=[] )
             if( isCompatibleVector!(N,size_t,V) )
         { this( to!(size_t[N])(v.data), ElemInfo( DataType.RAWBYTE, T.sizeof ), data ); }
 
+        /// fill data zeros
         void clear() { fill( cast(ubyte[])data, ubyte(0) ); }
 
         static if( N > 1 )
@@ -151,31 +178,39 @@ struct Image(size_t N) if( N > 0 )
 
         const @property
         {
+            /// get copy of image
             auto dup() { return selftype( this ); }
+
+            /// get immutable copy of image
             auto idup() { return immutable(selftype)( this ); }
         }
 
+        ///
         immutable(void[]) dump() const
         { return (cast(void[])[head] ~ data).idup; }
 
+        ///
         static auto load( immutable(void[]) rawdata )
         {
             auto head = (cast(Header[])rawdata[0..Header.sizeof])[0];
             return selftype( head, rawdata[Header.sizeof .. $] );
         }
 
+        /// access to pixel
         ref T pixel(T)( in size_t[N] crd... )
         {
             checkDataType!T;
             return (cast(T[])data)[index(crd)];
         }
 
+        /// ditto
         ref const(T) pixel(T)( in size_t[N] crd... ) const
         {
             checkDataType!T;
             return (cast(const(T)[])data)[index(crd)];
         }
 
+        /// ditto
         ref T pixel(T,V)( in V v )
             if( isCompatibleVector!(N,size_t,V) )
         {
@@ -183,6 +218,7 @@ struct Image(size_t N) if( N > 0 )
             return (cast(T[])data)[index(to!(size_t[N])(v.data))];
         }
 
+        /// ditto
         ref const(T) pixel(T,V)( in V v ) const
             if( isCompatibleVector!(N,size_t,V) )
         {
@@ -190,12 +226,14 @@ struct Image(size_t N) if( N > 0 )
             return (cast(const(T)[])data)[index(to!(size_t[N])(v.data))];
         }
 
+        /// cast data to `T[]`
         @property T[] mapAs(T)()
         {
             checkDataType!T;
             return cast(T[])data; 
         }
 
+        /// ditto
         @property const(T)[] mapAs(T)() const
         {
             checkDataType!T;
@@ -237,8 +275,10 @@ struct Image(size_t N) if( N > 0 )
 
         @property
         {
+            /// get size
             auto size() const { return head.size; }
 
+            /// set size
             auto size(V)( in V sz ) 
                 if( isCompatibleVector!(N,size_t,V) )
             in
@@ -254,8 +294,10 @@ struct Image(size_t N) if( N > 0 )
                 return sz;
             }
 
+            /// get info
             auto info() const { return head.info; }
 
+            /// set info
             auto info( in ElemInfo tp )
             {
                 head.info = tp;
@@ -264,9 +306,11 @@ struct Image(size_t N) if( N > 0 )
                 return tp;
             }
 
+            /// get header struct copy
             auto header() const { return head; }
         }
 
+        ///
         auto copy(T)( in Region!(N,T) r ) const if( isIntegral!T )
         {
             auto ret = selftype( imsize_t(r.size).data, this.header.info );
@@ -294,6 +338,7 @@ struct Image(size_t N) if( N > 0 )
             return ret;
         }
 
+        ///
         void paste(V)( in V pos, in Image!N im )
             if( isCompatibleVector!(N,size_t,V) )
         {
@@ -378,20 +423,14 @@ struct Image(size_t N) if( N > 0 )
     }
 }
 
+///
 alias Image!1 Image1;
+///
 alias Image!2 Image2;
+///
 alias Image!3 Image3;
 
-version(unittest)
-{
-    private struct bvec3
-    {
-        ubyte[3] data;
-        alias data this;
-        this( ubyte[3] d... ) { data = d; }
-    }
-}
-
+///
 unittest
 {
     auto a = Image2( [3,3], ElemInfo( DataType.UBYTE, 3 ) );
@@ -419,6 +458,7 @@ unittest
     assert( eq( b.pixel!bvec3(1,2), bvec3(0,0,0) ) );
 }
 
+///
 unittest
 {
     auto a = Image2( [3,3], to!(ubyte[])([ 1,2,3,4,5,6,7,8,9 ]) );
@@ -434,10 +474,11 @@ unittest
     assert( c.pixel!ubyte(0,0) == 2 );
 }
 
+///
 unittest
 {
     auto a = Image1( [3], to!(ubyte[])([ 1,2,3 ]) );
-    assert(  mustExcept({ a.pixel!(ubyte)(8) = 0; }) );
+    assert(  mustExcept({ a.pixel!(ubyte)(7) = 0; }) );
     assert( !mustExcept({ a.pixel!(ubyte)(0) = 0; }) );
 
     assert( a.pixel!ubyte(0) == 0 );
@@ -466,6 +507,7 @@ unittest
     assert( c.size.h == 2 );
 }
 
+///
 unittest
 {
     auto a = Image1( [5], ElemInfo( DataType.FLOAT, 2 ) );
@@ -476,6 +518,7 @@ unittest
     assert( b.pixel!vec2(1) == a.pixel!vec2(4) );
 }
 
+///
 unittest
 {
     auto a = Image2( [3,3], ElemInfo( DataType.FLOAT, 2 ) );
@@ -570,6 +613,7 @@ unittest
     assert( ddi.data == img.data );
 }
 
+///
 unittest 
 {
     ubyte[] data = 
@@ -654,6 +698,7 @@ unittest
     assert( orig.copy( iRegion2( 2, 2, 4, 4 ) ) == imv6 );
 }
 
+///
 unittest 
 {
     ubyte[] data = 
@@ -747,6 +792,7 @@ unittest
     static assert(  !__traits(compiles, { img.pixel!vec3(4,4) = vec3(1,1); }) );
 }
 
+///
 unittest
 {
     ubyte[] dt =
@@ -852,6 +898,7 @@ unittest
     assert( img.histoConv!(1,ubyte) == hi_y );
 }
 
+///
 unittest
 {
     ubyte[] src_data =

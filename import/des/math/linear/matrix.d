@@ -104,51 +104,46 @@ private @property
 }
 
 /++
-    enum isDynamic = H == 0 || W == 0;
-
-    enum isStatic = H != 0 && W != 0;
-
-    enum isDynamicHeight = H == 0;
-
-    enum isStaticHeight = H != 0;
-
-    enum isDynamicWidth = W == 0;
-
-    enum isStaticWidth = W != 0;
-
-    enum isStaticHeightOnly = isStaticHeight && isDynamicWidth;
-
-    enum isStaticWidthOnly = isStaticWidth && isDynamicHeight;
-
-    enum isDynamicAll = isDynamicHeight && isDynamicWidth;
-
-    enum isDynamicOne = isStaticWidthOnly || isStaticHeightOnly;
  +/
 struct Matrix(size_t H, size_t W, E)
 {
-    alias Matrix!(H,W,E) selftype; ///
-    alias E datatype; ///
+    ///
+    alias selftype = Matrix!(H,W,E);
 
-    enum isDynamic = H == 0 || W == 0;
-    enum isStatic = H != 0 && W != 0;
+    ///
+    alias datatype = E;
 
-    enum isDynamicHeight = H == 0;
-    enum isStaticHeight = H != 0;
+    /// `H == 0 || W == 0`
+    enum bool isDynamic = H == 0 || W == 0;
+    /// `H != 0 && W != 0`
+    enum bool isStatic = H != 0 && W != 0;
 
-    enum isDynamicWidth = W == 0;
-    enum isStaticWidth = W != 0;
+    /// `H == 0`
+    enum bool isDynamicHeight = H == 0;
+    /// `H != 0`
+    enum bool isStaticHeight = H != 0;
 
-    enum isStaticHeightOnly = isStaticHeight && isDynamicWidth;
-    enum isStaticWidthOnly = isStaticWidth && isDynamicHeight;
+    /// `W == 0`
+    enum bool isDynamicWidth = W == 0;
+    /// `W != 0`
+    enum bool isStaticWidth = W != 0;
 
-    enum isDynamicAll = isDynamicHeight && isDynamicWidth;
-    enum isDynamicOne = isStaticWidthOnly || isStaticHeightOnly;
+    /// `isStaticHeight && isDynamicWidth`
+    enum bool isStaticHeightOnly = isStaticHeight && isDynamicWidth;
+    /// `isStaticWidth && isDynamicHeight`
+    enum bool isStaticWidthOnly = isStaticWidth && isDynamicHeight;
+
+    /// `isDynamicHeight && isDynamicWidth`
+    enum bool isDynamicAll = isDynamicHeight && isDynamicWidth;
+    /// `isStaticWidthOnly || isStaticHeightOnly`
+    enum bool isDynamicOne = isStaticWidthOnly || isStaticHeightOnly;
 
     static if( isStatic )
     {
         static if( isNumeric!E )
         {
             static if( H == W )
+                /// static data ( if isNumeric!E fills valid numbers: if squred then identity matrix else zeros )
                 E[W][H] data = mixin( castArrayString!("E",H,H) ~ identityMatrixDataString!H );
             else 
                 E[W][H] data = mixin( castArrayString!("E",H,W) ~ zerosMatrixDataString!(H,W) );
@@ -156,11 +151,16 @@ struct Matrix(size_t H, size_t W, E)
         else E[W][H] data;
     }
     else static if( isStaticWidthOnly )
+        /// static width only
         E[W][] data;
     else static if( isStaticHeightOnly )
+        /// static height only
         E[][H] data;
-    else E[][] data;
+    else
+        /// full dynamic
+        E[][] data;
 
+    ///
     alias data this;
 
 pure:
@@ -168,61 +168,63 @@ pure:
     private static bool allowSomeOp(size_t A, size_t B )
     { return A==B || A==0 || B==0; }
 
-    static if( isStatic )
+    static if( isStatic || isDynamicOne )
     {
-        ///
-        this(X...)( in X vals )
-        {
-            static assert( is(typeof(flatData!E(vals))), "args not compatible" );
+        /++ fill data and set dynamic size for `isDynamicOne` matrix
 
-            static if( hasNoDynamic!X )
+            only:
+                if( isStatic || isDynamicOne )
+         +/
+        this(X...)( in X vals )
+            if( is(typeof(flatData!E(vals))) )
+        {
+            static if( isStatic )
             {
-                static if( X.length > 1 )
+                static if( hasNoDynamic!X )
                 {
-                    static assert( getElemCount!X == W*H, "wrong args count" );
-                    static assert( isConvertable!(E,X), "wrong args type" );
-                    mixin( matrixStaticFill!("E","data","vals",W,E,X) );
-                }
-                else static if( X.length == 1 && isStaticMatrix!(X[0]) )
-                {
-                    static assert( X[0].width == W && X[0].height == H );
-                    foreach( y; 0 .. H )
-                        foreach( x; 0 .. W )
-                            data[y][x] = vals[0][y][x];
+                    static if( X.length > 1 )
+                    {
+                        static assert( getElemCount!X == W*H, "wrong args count" );
+                        static assert( isConvertable!(E,X), "wrong args type" );
+                        mixin( matrixStaticFill!("E","data","vals",W,E,X) );
+                    }
+                    else static if( X.length == 1 && isStaticMatrix!(X[0]) )
+                    {
+                        static assert( X[0].width == W && X[0].height == H );
+                        foreach( y; 0 .. H )
+                            foreach( x; 0 .. W )
+                                data[y][x] = vals[0][y][x];
+                    }
+                    else enum __DF=true;
                 }
                 else enum __DF=true;
-            }
-            else enum __DF=true;
 
-            static if( is(typeof(__DF)) )
-                _fillData( flatData!E(vals) );
-        }
-    }
-    else static if( isStaticWidthOnly )
-    {
-        /// 
-        this(X...)( in X vals )
-        {
-            auto buf = flatData!E(vals);
-            enforce( !(buf.length%W), "wrong args length" );
-            resize( buf.length/W, W );
-            _fillData( buf );
-        }
-    }
-    else static if( isStaticHeightOnly )
-    {
-        ///
-        this(X...)( in X vals )
-        {
-            auto buf = flatData!E(vals);
-            enforce( !(buf.length%H), "wrong args length" );
-            resize( H, buf.length/H );
-            _fillData( buf );
+                static if( is(typeof(__DF)) )
+                    _fillData( flatData!E(vals) );
+            }
+            else static if( isStaticWidthOnly )
+            {
+                auto buf = flatData!E(vals);
+                enforce( !(buf.length%W), "wrong args length" );
+                resize( buf.length/W, W );
+                _fillData( buf );
+            }
+            else static if( isStaticHeightOnly )
+            {
+                auto buf = flatData!E(vals);
+                enforce( !(buf.length%H), "wrong args length" );
+                resize( H, buf.length/H );
+                _fillData( buf );
+            }
         }
     }
     else
     {
-        ///
+        /++ set size and fill data
+
+            only:
+                if( isDynamicAll )
+         +/
         this(X...)( size_t iH, size_t iW, in X vals )
         {
             auto buf = flatData!E(vals);
@@ -231,7 +233,11 @@ pure:
             _fillData( buf );
         }
 
-        ///
+        /++ set size
+
+            only:
+                if( isDynamicAll )
+         +/
         this( size_t iH, size_t iW ) { resize( iH, iW ); }
     }
 
@@ -248,7 +254,10 @@ pure:
 
     static if( isDynamic )
     {
-        /// available if( isDynamic )
+        /++
+            only:
+                if( isDynamic )
+         +/
         this(this)
         {
             data = data.dup;
@@ -256,7 +265,10 @@ pure:
                 row = row.dup;
         }
 
-        /// available if( isDynamic )
+        /++
+            only:
+                if( isDynamic )
+         +/
         ref typeof(this) opAssign(size_t bH, size_t bW, X)( in Matrix!(bH,bW,X) b )
             if( allowSomeOp(H,bH) && allowSomeOp(W,bW) && is(typeof(E(X.init))) )
         {
@@ -282,7 +294,7 @@ pure:
         else foreach( ref row; data ) row[] = vals[0];
     }
 
-    ///
+    /// fill data
     ref typeof(this) fill( in E[] vals... )
     {
         _fillData( vals );
@@ -291,7 +303,11 @@ pure:
 
     static if( (W==H && isStatic) || isDynamicOne )
     {
-        /// available if( (W==H && isStatic) || isDynamicOne )
+        /++ get diagonal matrix, diagonal elements fills cyclically
+
+            only:
+                if( (W==H && isStatic) || isDynamicOne )
+         +/
         static auto diag(X...)( in X vals )
         if( X.length > 0 && is(typeof(E(0))) && is(typeof(flatData!E(vals))) )
         {
@@ -320,7 +336,12 @@ pure:
         return this;
     }
 
-    static if( isStaticHeight ) enum height = H;
+    static if( isStaticHeight )
+        /++
+            only:
+                if( isStaticHeight )
+         +/
+        enum height = H;
     else
     {
         /// if isStaticHeight it's enum (not available to set)
@@ -333,7 +354,12 @@ pure:
         }
     }
 
-    static if( isStaticWidth ) enum width = W;
+    static if( isStaticWidth )
+        /++
+            only:
+                if( isStaticWidth )
+         +/
+        enum width = W;
     else
     {
         private size_t _width = W;
@@ -349,7 +375,11 @@ pure:
 
     static if( isDynamic )
     {
-        /// available if( isDynamic )
+        /++ resize dynamic matrix, new height/width must equals static height/width
+
+            only:
+                if( isDynamic )
+         +/
         ref typeof(this) resize( size_t nh, size_t nw )
         {
             static if( isStaticHeight ) enforce( nh == H, "height is static" );
@@ -638,7 +668,7 @@ pure:
         return sub( with_rows,with_cols );
     }
 
-    ///
+    /// get sub matrix
     auto sub( size_t[] with_rows, size_t[] with_cols ) const
     {
         auto wrows = array( uniq(with_rows) );
@@ -828,46 +858,6 @@ pure:
             return invt;
         }
     }
-}
-
-///
-auto quatToMatrix(E)( in Quaterni!E iq )
-{
-    auto q = iq / iq.len2;
-
-    E wx, wy, wz, xx, yy, yz, xy, xz, zz, x2, y2, z2;
-
-    x2 = q.i + q.i;
-    y2 = q.j + q.j;
-    z2 = q.k + q.k;
-    xx = q.i * x2;   xy = q.i * y2;   xz = q.i * z2;
-    yy = q.j * y2;   yz = q.j * z2;   zz = q.k * z2;
-    wx = q.a * x2;   wy = q.a * y2;   wz = q.a * z2;
-
-    return Matrix!(3,3,E)( 1.0-(yy+zz),  xy-wz,        xz+wy,
-                           xy+wz,        1.0-(xx+zz),  yz-wx,
-                           xz-wy,        yz+wx,        1.0-(xx+yy) );
-}
-
-///
-auto quatAndPosToMatrix(E,V)( in Quaterni!E iq, in V pos )
-    if( isCompatibleVector!(3,E,V) )
-{
-    auto q = iq / iq.len2;
-
-    E wx, wy, wz, xx, yy, yz, xy, xz, zz, x2, y2, z2;
-
-    x2 = q.i + q.i;
-    y2 = q.j + q.j;
-    z2 = q.k + q.k;
-    xx = q.i * x2;   xy = q.i * y2;   xz = q.i * z2;
-    yy = q.j * y2;   yz = q.j * z2;   zz = q.k * z2;
-    wx = q.a * x2;   wy = q.a * y2;   wz = q.a * z2;
-
-    return Matrix!(4,4,E)( 1.0-(yy+zz),  xy-wz,        xz+wy,       pos.x,
-                           xy+wz,        1.0-(xx+zz),  yz-wx,       pos.y,
-                           xz-wy,        yz+wx,        1.0-(xx+yy), pos.z,
-                           0,            0,            0,           1     );
 }
 
 alias Matrix2(T)   = Matrix!(2,2,T); ///
@@ -1405,6 +1395,25 @@ unittest
 }
 
 ///
+auto quatToMatrix(E)( in Quaterni!E iq )
+{
+    auto q = iq / iq.len2;
+
+    E wx, wy, wz, xx, yy, yz, xy, xz, zz, x2, y2, z2;
+
+    x2 = q.i + q.i;
+    y2 = q.j + q.j;
+    z2 = q.k + q.k;
+    xx = q.i * x2;   xy = q.i * y2;   xz = q.i * z2;
+    yy = q.j * y2;   yz = q.j * z2;   zz = q.k * z2;
+    wx = q.a * x2;   wy = q.a * y2;   wz = q.a * z2;
+
+    return Matrix!(3,3,E)( 1.0-(yy+zz),  xy-wz,        xz+wy,
+                           xy+wz,        1.0-(xx+zz),  yz-wx,
+                           xz-wy,        yz+wx,        1.0-(xx+yy) );
+}
+
+///
 unittest
 {
     auto q = rquat.fromAngle( PI_2, vec3(0,0,1) );
@@ -1414,6 +1423,28 @@ unittest
     assert( eq_approx( m, r, 1e-7 ) );
 }
 
+///
+auto quatAndPosToMatrix(E,V)( in Quaterni!E iq, in V pos )
+    if( isCompatibleVector!(3,E,V) )
+{
+    auto q = iq / iq.len2;
+
+    E wx, wy, wz, xx, yy, yz, xy, xz, zz, x2, y2, z2;
+
+    x2 = q.i + q.i;
+    y2 = q.j + q.j;
+    z2 = q.k + q.k;
+    xx = q.i * x2;   xy = q.i * y2;   xz = q.i * z2;
+    yy = q.j * y2;   yz = q.j * z2;   zz = q.k * z2;
+    wx = q.a * x2;   wy = q.a * y2;   wz = q.a * z2;
+
+    return Matrix!(4,4,E)( 1.0-(yy+zz),  xy-wz,        xz+wy,       pos.x,
+                           xy+wz,        1.0-(xx+zz),  yz-wx,       pos.y,
+                           xz-wy,        yz+wx,        1.0-(xx+yy), pos.z,
+                           0,            0,            0,           1     );
+}
+
+///
 unittest
 {
     auto q = rquat.fromAngle( PI_2, vec3(0,0,1) );

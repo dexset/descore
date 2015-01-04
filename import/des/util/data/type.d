@@ -4,33 +4,33 @@ import std.traits;
 import des.math.linear.vector;
 import des.math.linear.matrix;
 
-///
+/// data types description for untyped `void[]` arrays
 enum DataType
 {
-    RAWBYTE,      /// untyped data
-    BYTE,         ///
-    UBYTE,        ///
+    RAWBYTE,      /// untyped data `ubyte`
+    BYTE,         /// `byte`
+    UBYTE,        /// `ubyte`
 
-    SHORT,        ///
-    USHORT,       ///
-    NORM_HALF,    /// fixed point half [-1,1]
-    UNORM_HALF,   /// fixed point half [0,1]
+    SHORT,        /// `short`
+    USHORT,       /// `ushort`
+    NORM_HALF,    /// fixed point half [-1,1] `short`
+    UNORM_HALF,   /// fixed point half [0,1] `ushort`
 
-    INT,          ///
-    UINT,         ///
-    NORM_FIXED,   /// fixed point [-1,1]
-    UNORM_FIXED,  /// fixed point [0,1]
+    INT,          /// `int`
+    UINT,         /// `uint`
+    NORM_FIXED,   /// fixed point [-1,1] `int`
+    UNORM_FIXED,  /// fixed point [0,1] `uint`
 
-    LONG,         ///
-    ULONG,        ///
-    NORM_DOUBLE,  /// fixed point double [-1,1]
-    UNORM_DOUBLE, /// fixed point double [0,1]
+    LONG,         /// `long`
+    ULONG,        /// `ulong`
+    NORM_DOUBLE,  /// fixed point double [-1,1] `long`
+    UNORM_DOUBLE, /// fixed point double [0,1] `ulong`
 
-    FLOAT,        ///
-    DOUBLE        ///
+    FLOAT,        /// `float`
+    DOUBLE        /// `double`
 }
 
-///
+/// data types that has direct correspondence with Dlang data types
 enum StoreDataType : DataType
 {
     BYTE   = DataType.BYTE,  ///
@@ -49,23 +49,39 @@ enum StoreDataType : DataType
     DOUBLE = DataType.DOUBLE ///
 }
 
-///
-template getDataType(T)
+/++
+returns associated with type T DataType
+
+* `byte`   = `DataType.BYTE`
+* `ubyte`  = `DataType.UBYTE`
+* `short`  = `DataType.SHORT`
+* `ushort` = `DataType.USHORT`
+* `int`    = `DataType.INT`
+* `uint`   = `DataType.UINT`
+* `long`   = `DataType.LONG`
+* `ulong`  = `DataType.ULONG`
+* `float`  = `DataType.FLOAT`
+* `double` = `DataType.DOUBLE`
+* `else`   = `DataType.RAWBYTE`
+returns:
+    enum DataType
+ +/
+template assocDataType(T)
 {
-         static if( is( T == byte ) )   enum getDataType = DataType.BYTE;
-    else static if( is( T == ubyte ) )  enum getDataType = DataType.UBYTE;
-    else static if( is( T == short ) )  enum getDataType = DataType.SHORT;
-    else static if( is( T == ushort ) ) enum getDataType = DataType.USHORT;
-    else static if( is( T == int ) )    enum getDataType = DataType.INT;
-    else static if( is( T == uint ) )   enum getDataType = DataType.UINT;
-    else static if( is( T == long ) )   enum getDataType = DataType.LONG;
-    else static if( is( T == ulong ) )  enum getDataType = DataType.ULONG;
-    else static if( is( T == float ) )  enum getDataType = DataType.FLOAT;
-    else static if( is( T == double ) ) enum getDataType = DataType.DOUBLE;
-    else enum getDataType = DataType.RAWBYTE;
+         static if( is( T == byte ) )   enum assocDataType = DataType.BYTE;
+    else static if( is( T == ubyte ) )  enum assocDataType = DataType.UBYTE;
+    else static if( is( T == short ) )  enum assocDataType = DataType.SHORT;
+    else static if( is( T == ushort ) ) enum assocDataType = DataType.USHORT;
+    else static if( is( T == int ) )    enum assocDataType = DataType.INT;
+    else static if( is( T == uint ) )   enum assocDataType = DataType.UINT;
+    else static if( is( T == long ) )   enum assocDataType = DataType.LONG;
+    else static if( is( T == ulong ) )  enum assocDataType = DataType.ULONG;
+    else static if( is( T == float ) )  enum assocDataType = DataType.FLOAT;
+    else static if( is( T == double ) ) enum assocDataType = DataType.DOUBLE;
+    else                                enum assocDataType = DataType.RAWBYTE;
 }
 
-///
+/// size of associated data type
 size_t dataTypeSize( DataType dt ) pure nothrow @nogc @safe
 {
     final switch( dt )
@@ -101,7 +117,30 @@ size_t dataTypeSize( DataType dt ) pure nothrow @nogc @safe
     }
 }
 
-///
+/++
+ alias for assocated store type
+
+ * `DataType.RAWBYTE`      = `ubyte`
+ * `DataType.BYTE`         = `byte`
+ * `DataType.UBYTE`        = `ubyte`
+ * `DataType.SHORT`        = `short`
+ * `DataType.USHORT`       = `ushort`
+ * `DataType.NORM_HALF`    = `short`
+ * `DataType.UNORM_HALF`   = `ushort`
+ * `DataType.INT`          = `int`
+ * `DataType.UINT`         = `uint`
+ * `DataType.NORM_FIXED`   = `int`
+ * `DataType.UNORM_FIXED`  = `uint`
+ * `DataType.LONG`         = `long`
+ * `DataType.ULONG`        = `ulong`
+ * `DataType.NORM_DOUBLE`  = `long`
+ * `DataType.UNORM_DOUBLE` = `ulong`
+ * `DataType.FLOAT`        = `float`
+ * `DataType.DOUBLE`       = `double`
+
+ seealso:
+ [DataType](des/util/data/type/DataType.html)
+ +/
 template storeDataType( DataType dt )
 {
          static if( dt == DataType.RAWBYTE )      alias storeDataType = ubyte;
@@ -123,7 +162,24 @@ template storeDataType( DataType dt )
     else static if( dt == DataType.DOUBLE )       alias storeDataType = double;
 }
 
-///
+/++
+ alias for conformation type
+
+ diff with [storeDataType](des/util/data/type/storeDataType.html):
+
+ * `DataType.NORM_HALF`    = `float`
+ * `DataType.UNORM_HALF`   = `float`
+ * `DataType.NORM_FIXED`   = `float`
+ * `DataType.UNORM_FIXED`  = `float`
+ * `DataType.NORM_DOUBLE`  = `double`
+ * `DataType.UNORM_DOUBLE` = `double`
+
+ seealso:
+
+ * [DataType](des/util/data/type/DataType.html)
+ * [storeDataType](des/util/data/type/storeDataType.html):
+
+ +/
 template conformDataType( DataType dt )
 {
          static if( dt == DataType.RAWBYTE )      alias conformDataType = void;
@@ -145,7 +201,7 @@ template conformDataType( DataType dt )
     else static if( dt == DataType.DOUBLE )       alias conformDataType = double;
 }
 
-///
+/// check `storeDataType!dt == conformDataType!dt` for DataType dt
 template isDirectDataType( DataType dt )
 { enum isDirectDataType = is( storeDataType!dt == conformDataType!dt ); }
 
@@ -221,69 +277,82 @@ unittest
     static assert(  isDirectDataType!( StoreDataType.DOUBLE ) );
 }
 
-///
+/++
+ Description for untyped arrays with multidimension elements
+ +/
 struct ElemInfo
 {
-    ///
+    /// type of one component
     DataType comp = DataType.RAWBYTE;
 
-    ///
+    /// count of components in element
     size_t channels = 1;
 
     invariant() { assert( channels > 0 ); }
 
     pure @safe nothrow @nogc
     {
-
+        /++ get ElemInfo from type
+         +
+         + works with:
+         + * single numeric
+         + * static arrays
+         + * static [vector](des/math/linear/vector/Vector.html)
+         + * static [matrix](des/math/linear/matrix/Matrix.html)
+         +/
         static ElemInfo fromType(T)() @property
             if( !hasIndirections!T )
         {
             static if( isNumeric!T )
-                return ElemInfo( getDataType!T, 1 );
+                return ElemInfo( assocDataType!T, 1 );
             else static if( isStaticArray!T )
-                return ElemInfo( getDataType!( typeof(T.init[0]) ), T.length );
+                return ElemInfo( assocDataType!( typeof(T.init[0]) ), T.length );
             else static if( isStaticVector!T )
-                return ElemInfo( getDataType!( T.datatype ), T.length );
+                return ElemInfo( assocDataType!( T.datatype ), T.length );
             else static if( isStaticMatrix!T )
-                return ElemInfo( getDataType!( T.datatype ), T.width * T.height );
+                return ElemInfo( assocDataType!( T.datatype ), T.width * T.height );
             else static assert(0,"unsupported type");
         }
 
         ///
-        this( DataType ict, size_t ch )
+        unittest
         {
-            comp = ict;
-            channels = ch;
+            static assert( ElemInfo.fromType!vec2 == ElemInfo( DataType.FLOAT, 2 ) );
+            static assert( ElemInfo.fromType!mat4 == ElemInfo( DataType.FLOAT, 16 ) );
+            static assert( ElemInfo.fromType!(int[2]) == ElemInfo( DataType.INT, 2 ) );
+            static assert( ElemInfo.fromType!float == ElemInfo( DataType.FLOAT, 1 ) );
+
+            static class A{}
+
+            static assert( !__traits(compiles, ElemInfo.fromType!A ) );
+            static assert( !__traits(compiles, ElemInfo.fromType!(int[]) ) );
+            static assert( !__traits(compiles, ElemInfo.fromType!dvec ) );
         }
 
         ///
-        this( size_t ch )
+        this( DataType ict, size_t channels )
+        {
+            comp = ict;
+            this.channels = channels;
+        }
+
+        /// comp = `DataType.RAWBYTE`
+        this( size_t channels )
         {
             comp = DataType.RAWBYTE;
-            channels = ch;
+            this.channels = channels;
         }
 
         const @property
         {
-            /// bytes per element
+            /++ bytes per element
+                returns:
+                    compSize * channels
+             +/
             size_t bpe() { return compSize * channels; }
 
             /// size of component
             size_t compSize() { return dataTypeSize(comp); }
         }
     }
-}
-
-unittest
-{
-    static assert( ElemInfo.fromType!vec2 == ElemInfo( DataType.FLOAT, 2 ) );
-    static assert( ElemInfo.fromType!mat4 == ElemInfo( DataType.FLOAT, 16 ) );
-    static assert( ElemInfo.fromType!(int[2]) == ElemInfo( DataType.INT, 2 ) );
-    static assert( ElemInfo.fromType!float == ElemInfo( DataType.FLOAT, 1 ) );
-
-    static class A{}
-
-    static assert( !__traits(compiles, ElemInfo.fromType!A ) );
-    static assert( !__traits(compiles, ElemInfo.fromType!(int[]) ) );
-    static assert( !__traits(compiles, ElemInfo.fromType!dvec ) );
 }
