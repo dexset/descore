@@ -17,7 +17,7 @@ class TestWorkElement : WorkElement, EventProcessor
 
     override void process()
     {
-        string msg = toMessage( " element '%s' step %d", name, step++ );
+        string msg = ntFormat( " element '%s' step %d", name, step++ );
         pushEvent( Event( 0, msg ) );
         logger.info( "'%s' generate message event", name );
         Thread.sleep(dur!"msecs"(100+uniform(-50,50)));
@@ -41,7 +41,7 @@ class TestWorkElement : WorkElement, EventProcessor
 
     override EventProcessor[] getEventProcessors() { return [this]; }
 
-    protected void selfDestroy() { logger.info( "destroy '%s'", name ); }
+    protected override void selfDestroy() { logger.info( "destroy '%s'", name ); }
 }
 
 // it must be a function, not delegate
