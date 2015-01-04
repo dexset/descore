@@ -8,15 +8,24 @@ class SignalException : Exception
 { this( string m ) @safe pure nothrow { super(m); } }
 
 ///
+template isSignal(T)
+{
+    enum isSignal = is( typeof( impl(T.init) ) );
+    void impl(Args...)( Signal!(Args) ) {}
+}
+
+///
 class Signal(Args...) : SignalLeverage, ExternalMemoryManager
 {
     mixin EMM;
 
 protected:
 
-    alias Slot!Args TSlot; ///
+    ///
+    alias Slot!Args TSlot;
 
-    TSlot[] slots; ///
+    ///
+    TSlot[] slots;
 
 public:
 
@@ -67,6 +76,7 @@ public:
 
 protected:
 
+    ///
     ptrdiff_t indexOf( TSlot slot )
     {
         foreach( i, cs; slots )
@@ -75,6 +85,7 @@ protected:
         return -1;
     }
 
+    ///
     bool connected( TSlot slot )
     { return indexOf(slot) != -1; }
 
@@ -84,54 +95,6 @@ protected:
             slot.control.disconnect( this );
     }
 }
-
-///
-class SignalReverse( Args... ) : Signal!Args
-{
-    ///
-    override void opCall( Args args )
-    { foreach_reverse( slot; slots ) slot( args ); }
-}
-
-///
-class SignalBox( Args... ) : Signal!Args
-{
-    this()
-    {
-        begin = newEMM!(Signal!Args);
-        end = newEMM!(SignalReverse!Args);
-    }
-
-    Signal!Args begin; ///
-    SignalReverse!Args end; ///
-
-    /// calls: 1. begin; 2. this; 3. end
-    override void opCall( Args args )
-    {
-        begin( args );
-        super.opCall( args );
-        end( args );
-    }
-}
-
-///
-template isSignal(T)
-{
-    enum isSignal = is( typeof( impl(T.init) ) );
-    void impl(Args...)( Signal!(Args) ) {}
-}
-
-unittest
-{
-    static assert(  isSignal!( Signal!string ) );
-    static assert(  isSignal!( Signal!(float,int) ) );
-    static assert(  isSignal!( SignalReverse!string ) );
-    static assert(  isSignal!( SignalBox!(float,int) ) );
-    static assert( !isSignal!( string ) );
-    static assert( !isSignal!( int ) );
-    static assert( !isSignal!( Slot!int ) );
-}
-
 ///
 unittest
 {
@@ -246,3 +209,50 @@ unittest
     assert( robot_readed.length == 2 );
     assert( cliend_okdas.length == 3 );
 }
+
+///
+class SignalReverse( Args... ) : Signal!Args
+{
+    ///
+    override void opCall( Args args )
+    { foreach_reverse( slot; slots ) slot( args ); }
+}
+
+///
+class SignalBox( Args... ) : Signal!Args
+{
+    this()
+    {
+        begin = newEMM!(Signal!Args);
+        end = newEMM!(SignalReverse!Args);
+    }
+
+    ///
+    Signal!Args begin;
+    ///
+    SignalReverse!Args end;
+
+    /++ calls:
+     +  0. begin
+     +  0. this
+     +  0. end
+     +/
+    override void opCall( Args args )
+    {
+        begin( args );
+        super.opCall( args );
+        end( args );
+    }
+}
+
+unittest
+{
+    static assert(  isSignal!( Signal!string ) );
+    static assert(  isSignal!( Signal!(float,int) ) );
+    static assert(  isSignal!( SignalReverse!string ) );
+    static assert(  isSignal!( SignalBox!(float,int) ) );
+    static assert( !isSignal!( string ) );
+    static assert( !isSignal!( int ) );
+    static assert( !isSignal!( Slot!int ) );
+}
+

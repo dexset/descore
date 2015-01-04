@@ -3,24 +3,7 @@ module des.math.util.valuelim;
 import std.traits;
 import std.algorithm;
 
-struct lim_t(T) if( isNumeric!T )
-{
-    T minimum=0, maximum=T.max;
-    bool fix = false;
-
-    pure nothrow this( T Min, T Max )
-    {
-        minimum = Min;
-        maximum = Max;
-    }
-
-    T opCall( T old, T nval ) const
-    {
-        if( fix ) return old;
-        return nval >= minimum ? ( nval < maximum ? nval : maximum ) : minimum;
-    }
-}
-
+///
 struct ValueLimiter(size_t CNT,T=float)
 if( CNT > 0 && isFloatingPoint!T )
 {
@@ -28,13 +11,16 @@ protected:
     T min_limit;
     T max_limit;
 
+    ///
     T[CNT] values;
 
 public:
     @property
     {
+        ///
         T minLimit() const { return min_limit; }
 
+        ///
         T minLimit( T v )
         {
             min_limit = v > max_limit ? max_limit : v;
@@ -42,8 +28,10 @@ public:
             return min_limit;
         }
 
+        ///
         T maxLimit() const { return max_limit; }
 
+        ///
         T maxLimit( T v )
         {
             max_limit = v < min_limit ? min_limit : v;
@@ -52,6 +40,7 @@ public:
         }
     }
 
+    ///
     T set( size_t i, T v )
     in{ assert( i < CNT ); }
     body
@@ -61,6 +50,7 @@ public:
         return values[i];
     }
 
+    ///
     T setNorm( size_t i, T nv )
     in
     {
@@ -74,10 +64,12 @@ public:
         return getNorm(i);
     }
 
+    ///
     T get( size_t i )
     in{ assert( i < CNT ); }
     body { return values[i]; }
 
+    ///
     T getNorm( size_t i )
     in{ assert( i < CNT ); }
     body { return norm( get(i) ); }
@@ -108,6 +100,7 @@ protected:
     { return min_limit + v * (max_limit - min_limit); }
 }
 
+///
 unittest
 {
     auto vh = ValueLimiter!(2,float)();
@@ -125,6 +118,10 @@ unittest
 
     assert( vh.get(0) == 3 );
     assert( vh.get(1) == 3 );
+
+    vh.set(1,20);
+    assert( vh.get(0) == 3 );
+    assert( vh.get(1) == 10 );
 }
 
 unittest

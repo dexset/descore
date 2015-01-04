@@ -29,6 +29,8 @@ import std.traits;
 
 import des.util.testsuite;
 
+version(unittest) import std.math;
+
 ///
 auto df(size_t N, size_t M, T, E=T, alias string A, alias string B)
     ( Vector!(M,T,B) delegate( in Vector!(N,T,A) ) f, in Vector!(N,T,A) p, E step=E.epsilon*10 )
@@ -52,8 +54,6 @@ auto df(size_t N, size_t M, T, E=T, alias string A, alias string B)
 
     return ret;
 }
-
-version(unittest) import std.math;
 
 ///
 unittest

@@ -46,6 +46,32 @@ version(unittest)
 
         struct Bad { int[] data; }
     }
+
+    void asTest(A,B)( in A val, in B orig )
+    {
+        assert( (PData(val)).as!B              == orig || isPData!B );
+        assert( (const PData(val)).as!B        == orig || isPData!B );
+        assert( (immutable PData(val)).as!B    == orig || isPData!B );
+        assert( (shared PData(val)).as!B       == orig || isPData!B );
+        assert( (shared const PData(val)).as!B == orig || isPData!B );
+    }
+
+    void creationTest(T)( in T val )
+    {
+        asTest( val, val );
+
+        auto a = PData( val );
+        auto ac = const PData( val );
+        auto ai = immutable PData( val );
+        auto as = shared PData( val );
+        auto asc = shared const PData( val );
+
+        asTest( a, val );
+        asTest( ac, val );
+        asTest( ai, val );
+        asTest( as, val );
+        asTest( asc, val );
+    }
 }
 
 ///
@@ -105,8 +131,10 @@ template isPData(T) { enum isPData = is( typeof( (( PData a ){})( T.init ) ) ); 
 ///
 struct PData
 {
-    immutable(void)[] data; ///
-    alias data this; ///
+    ///
+    immutable(void)[] data;
+    ///
+    alias data this;
 
     pure
     {
@@ -146,35 +174,6 @@ unittest
     static assert( isPureType!PData );
 }
 
-version(unittest)
-{
-    void asTest(A,B)( in A val, in B orig )
-    {
-        assert( (PData(val)).as!B              == orig || isPData!B );
-        assert( (const PData(val)).as!B        == orig || isPData!B );
-        assert( (immutable PData(val)).as!B    == orig || isPData!B );
-        assert( (shared PData(val)).as!B       == orig || isPData!B );
-        assert( (shared const PData(val)).as!B == orig || isPData!B );
-    }
-
-    void creationTest(T)( in T val )
-    {
-        asTest( val, val );
-
-        auto a = PData( val );
-        auto ac = const PData( val );
-        auto ai = immutable PData( val );
-        auto as = shared PData( val );
-        auto asc = shared const PData( val );
-
-        asTest( a, val );
-        asTest( ac, val );
-        asTest( ai, val );
-        asTest( as, val );
-        asTest( asc, val );
-    }
-}
-
 unittest
 {
     creationTest( "hello" );
@@ -204,6 +203,7 @@ unittest
     static assert( !__traits(compiles, PData( [Bad([1,2])] ) ) );
 }
 
+///
 unittest
 {
     auto a = PData( [.1,.2,.3] );

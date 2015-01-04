@@ -1,4 +1,4 @@
-module des.view;
+module des.space;
 
 public
 {

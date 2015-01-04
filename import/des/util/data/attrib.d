@@ -2,7 +2,7 @@ module des.util.data.attrib;
 
 import des.util.data.type;
 
-///
+/// data array description
 interface Attribute
 {
     const @property

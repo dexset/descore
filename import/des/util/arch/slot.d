@@ -46,7 +46,8 @@ protected:
 class Slot(Args...)
 {
 package:
-    Func func; ///
+    ///
+    Func func;
 
     ///
     SlotController control() @property { return ctrl; }

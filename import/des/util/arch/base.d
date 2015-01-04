@@ -12,13 +12,7 @@ import des.util.stdext.traits;
 ///
 template isObject(alias f) { enum isObject = __traits(compiles,typeof(f)); }
 
-template isSlotObj(alias f)
-{
-    static if( isObject!f ) enum isSlotObj = isSlot!(typeof(f));
-    else enum isSlotObj = false;
-}
-
-//
+///
 template isSignalObj(alias f)
 {
     static if( isObject!f ) enum isSignalObj = isSignal!(typeof(f));
@@ -30,10 +24,13 @@ interface DesBase : ExternalMemoryManager, SlotHandler
 {
     protected
     {
-        void createSlotController(); ///
+        ///
+        void createSlotController();
+
         void __createSignals();
 
-        final void prepareDES() ///
+        ///
+        final void prepareDES()
         {
             createSlotController();
             __createSignals();

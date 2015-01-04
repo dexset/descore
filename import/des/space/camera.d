@@ -59,7 +59,10 @@ class Camera: SpaceNode
 ///
 class LookAtTransform : Transform
 {
+    ///
     vec3 pos=vec3(0), target=vec3(0), up=vec3(0,0,1);
+
+    ///
     @property mat4 matrix() const
     { return calcLookAt( pos, target, up ); }
 }

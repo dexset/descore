@@ -66,14 +66,19 @@ interface ExternalMemoryManager : TNode!(ExternalMemoryManager,"","EMM")
 
     protected
     {
-        @property void isDestroyed( bool d ); ///
+        ///
+        @property void isDestroyed( bool d );
 
-        void selfConstruct(); ///
-        void selfDestroy(); ///
-        void preChildsDestroy(); ///
+        ///
+        void selfConstruct();
+        ///
+        void selfDestroy();
+        ///
+        void preChildsDestroy();
     }
 
-    @property bool isDestroyed() const; ///
+    ///
+    @property bool isDestroyed() const;
 
     final
     {

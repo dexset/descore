@@ -32,6 +32,7 @@ import des.util.testsuite;
 import des.math.basic.traits;
 import des.math.linear.vector;
 
+///
 pure auto flatData(T,E...)( in E vals ) if( E.length > 0 )
 {
     T[] buf;
@@ -39,6 +40,7 @@ pure auto flatData(T,E...)( in E vals ) if( E.length > 0 )
     return buf;
 }
 
+///
 unittest
 {
     assert( eq( flatData!float([1.0,2],[[3,4]],5,[6,7]), [1,2,3,4,5,6,7] ) );
@@ -48,6 +50,7 @@ unittest
     assert( eq( flatData!cfloat(1-1i,2,3i), [1-1i,2+0i,0+3i] ) );
 }
 
+///
 template hasIterableData(T)
 { enum hasIterableData = is( typeof( isIterable!(typeof(T.init.data)) ) ); }
 

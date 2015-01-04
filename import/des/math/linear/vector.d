@@ -294,6 +294,8 @@ pure:
         }
     }
 
+    version(todos) pragma(msg, __FILE__, "TODO: rework rebase for all dimension vectors" );
+
     static if( N == 2 )
     {
         auto rebase(I,J)( in I x, in J y ) const

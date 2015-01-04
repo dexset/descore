@@ -24,27 +24,25 @@ The MIT License (MIT)
 
 /++
 
-<source>
-    mixin( useTranslatorMixin( "translate/dir" ) );
+Simple Usage:
 
-    writeln( _!"hello" );
+0. run program 
 
-    Translator.setLocalization( "ru" );
-
-    writeln( _!"hello" );
-    writeln( _!"world" );
-</source>
-
-1. run program 
-
-2. copy and rename "translate/dir/base" to "translate/dir/lang.lt",
+0. copy and rename "translate/dir/base" to "translate/dir/lang.lt",
     where <lang> is language to translate
 
-3. in each line in "translate/dir/lang.lt" write translation of line
-    example:
-    hello : привет
+0. in each line in "translate/dir/lang.lt" write translation of line,
+    for example `hello : привет`
 
-4. profit
+0. profit
+
+Example:
+
+    setTranslatePath( "<translate/dir>" );
+    writeln( _!"hello" );
+    Translator.setLocalization( "ru" );
+    writeln( _!"hello" );
+    writeln( _!"world" );
 
  +/
 
@@ -61,35 +59,57 @@ import std.typecons;
 
 import des.util.logsys;
 
-interface WordConverter { wstring opIndex( string key ); }
+/// convert key to word
+interface WordConverter
+{
+    ///
+    wstring opIndex( string key );
+}
 
+///
 interface Localization : WordConverter
 {
-    public const @property string name();
-    public bool has( string key );
+    ///
+    string name() const @property;
+
+    ///
+    bool has( string key );
+
+    /// return if opIndex can't find key
     protected wstring notFound( string key );
 }
 
+///
 class DictionaryLoaderException : Exception
 {
-    @safe pure nothrow this( string msg, string file=__FILE__, size_t line=__LINE__ ) 
+    ///
+    this( string msg, string file=__FILE__, size_t line=__LINE__ ) @safe pure nothrow
     { super( msg, file, line ); } 
 }
 
+/// localization handler
 interface DictionaryLoader
 {
+    ///
     Localization[string] load();
+
+    /// store using keys in program
     void store( lazy string[] keys );
 }
 
+///
 class BaseLocalization : Localization
 {
 protected:
+    ///
     string dict_name;
+
+    ///
     wstring[string] dict;
 
 public:
 
+    ///
     this( string dName, wstring[string] dict )
     {
         dict_name = dName;
@@ -98,15 +118,19 @@ public:
         this.dict.rehash;
     }
 
-    const @property string name() { return dict_name; }
+    /// returns `dict_name`
+    string name() const @property { return dict_name; }
 
+    /// find in `dict`
     bool has( string key ) { return !!( key in dict ); }
 
+    /// return `dict` element
     wstring opIndex( string key )
     { return dict.get( key, notFound(key) ); }
 
 protected:
 
+    /// return bad string
     wstring notFound( string key )
     {
         logger.error( "no translation for key '%s' in dict '%s'", key, name );
@@ -114,17 +138,23 @@ protected:
     }
 }
 
+/// load localizations from directory
 class DirDictionaryLoader : DictionaryLoader
 {
+    /// path to localization directory
     string path;
+
+    /// extension of localization files
     string ext;
 
+    ///
     this( string path, string ext="lt" )
     {
         this.path = path;
         this.ext = ext;
     }
 
+    ///
     Localization[string] load()
     {
         baseDictType base;
@@ -141,6 +171,7 @@ class DirDictionaryLoader : DictionaryLoader
         return ret;
     }
 
+    ///
     void store( lazy string[] keys )
     {
         if( !path.exists )
@@ -159,6 +190,7 @@ protected:
 
     alias ubyte[string] baseDictType;
 
+    ///
     baseDictType loadBase( string path )
     {
         auto base_dict = buildNormalizedPath( path, "base" );
@@ -175,6 +207,7 @@ protected:
         return ret;
     }
 
+    ///
     Localization[string] loadLocalizations( string path )
     {
         auto loc_files = dirEntries( path, "*."~ext, SpanMode.shallow );
@@ -190,8 +223,10 @@ protected:
         return ret;
     }
 
+    ///
     string getLabel( string name ) { return baseName( name, "." ~ ext ); }
 
+    ///
     Localization loadFromFile( string fname )
     {
         auto f = File( fname );
@@ -208,6 +243,7 @@ protected:
         return new BaseLocalization( name, dict );
     }
 
+    ///
     static auto splitLine( size_t no, string fname, string ln )
     {
         auto bf = ln.split(":");
@@ -215,6 +251,7 @@ protected:
         return tuple( bf[0], to!wstring(bf[1]) );
     }
 
+    ///
     static void processLine( ref wstring[string] d, size_t no, string fname, string line )
     {
         if( line.length == 0 ) return;
@@ -243,6 +280,7 @@ protected:
     }
 }
 
+/// singleton class for localization
 final class Translator
 {
 private:
@@ -323,21 +361,27 @@ public:
 
     static 
     {
+        ///
         void setDictionaryLoader( DictionaryLoader dl )
         { singleton.s_setDictionaryLoader( dl ); }
 
+        ///
         void reloadLocalizations()
         { singleton.s_reloadLocalizations(); }
 
-        wstring opIndex(string str)
+        /// get traslation in current localization
+        wstring opIndex( string str )
         { return singleton.s_opIndex(str); }
 
+        ///
         void setLocalization( string lang )
         { singleton.s_setLocalization( lang ); }
 
+        ///
         @property string[] usedKeys()
         { return singleton.s_usedKeys(); }
 
+        /// store used keys by DictionaryLoader
         void store() { singleton.s_store(); }
     }
 
@@ -360,6 +404,9 @@ public:
     }
 }
 
+/++ main function for localization
+when `debug(printlocalizationkeys)` output keys from pragma
+ +/
 @property wstring _(string str, string cfile=__FILE__, size_t cline=__LINE__)(string file=__FILE__, size_t line=__LINE__)
 {
     debug(printlocalizationkeys)
