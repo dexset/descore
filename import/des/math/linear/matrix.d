@@ -1228,6 +1228,7 @@ unittest
     assert( eq( a, mat3.diag(1) ) );
 }
 
+///
 unittest
 {
     alias Matrix!(4,5,float) mat4x5;
@@ -1269,6 +1270,7 @@ unittest
     assert( eq( a.col(0), [[1],[0],[4]] ) );
 }
 
+///
 unittest
 {
     auto b = mat3.diag(2) * vec3(2,3,4);
@@ -1280,6 +1282,7 @@ unittest
     assert( eq( c, [1,2,3] ) );
 }
 
+///
 unittest
 {
     auto mtr = matD(2,3).fill( 1,2,3, 
