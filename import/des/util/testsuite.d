@@ -96,11 +96,20 @@ bool mustExcept(E=Exception)( void delegate() fnc, bool throwUnexpected=false )
 if( is( E : Throwable ) )
 in { assert( fnc ); } body
 {
-    try fnc();
-    catch( E e ) return true;
-    catch( Throwable t )
-        if( throwUnexpected ) throw t;
-    return false;
+    static if( !is( E == Throwable ) )
+    {
+        try fnc();
+        catch( E e ) return true;
+        catch( Throwable t )
+            if( throwUnexpected ) throw t;
+        return false;
+    }
+    else
+    {
+        try fnc();
+        catch( Throwable t ) return true;
+        return false;
+    }
 }
 
 ///

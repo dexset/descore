@@ -28,6 +28,30 @@ import std.string;
 import std.algorithm;
 import std.stdio;
 
+/// construct valid value access strings
+string arrayAccessStringCtor( string sep1, string sep2, string[][] variants... ) pure
+in
+{
+    assert( sep1 != sep2 );
+    assert( variants.length > 0 );
+    auto l = variants[0].length;
+    assert( all!(a=>a.length == l)( variants ) );
+}
+body
+{
+    string[] rr;
+    foreach( var; variants )
+        rr ~= var.join(sep1);
+    return rr.join(sep2);
+}
+
+///
+unittest
+{
+    enum s1 = " ", s2 = "|";
+    static assert( isCompatibleArrayAccessStrings( 2, arrayAccessStringCtor( s1, s2, ["x","y"], ["alpha","beta"] ), s1, s2 ) );
+}
+
 /// compatible for creating access dispatches
 pure bool isCompatibleArrayAccessStrings( size_t N, string str, string sep1="", string sep2="|" )
 in { assert( sep1 != sep2 ); } body

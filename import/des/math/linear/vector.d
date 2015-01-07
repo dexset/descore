@@ -90,10 +90,10 @@ bool isValidOp(string op,T,E,K=T)() pure
 bool hasCompMltAndSum(T,E)() pure
 { return is( typeof( T(T.init * E.init) ) ) && is( typeof( T.init + T.init ) == T ); }
 
-private enum SEP1 = " ";
-private enum SEP2 = "|";
-
-pure @property string spaceSep(string str) { return str.split("").join(SEP1); }
+/// vector value access string element separator = `" "`
+enum VVASES = " ";
+/// vector value access string variant separator = `"|"`
+enum VVASVS = "|";
 
 private @property string zerosVectorData(size_t N)()
 {
@@ -112,7 +112,7 @@ Params:
           Must be valid access string ( see: [isCompatibleArrayAccessStrings](des/math/util/accessstring/isCompatibleArrayAccessStrings.html) )
 +/
 struct Vector( size_t N, T, alias string AS="")
-    if( isCompatibleArrayAccessStrings(N,AS,SEP1,SEP2) || AS.length == 0 )
+    if( isCompatibleArrayAccessStrings(N,AS,VVASES,VVASVS) || AS.length == 0 )
 {
     /// `N == 0`
     enum bool isDynamic = N == 0;
@@ -220,7 +220,7 @@ pure:
 
     /++
      + Any binary operations execs per element
-     + seealso:
+     + See_Also:
      + [isValidOp](des/math/linear/vector/isValidOp.html)
      +/
     auto opBinary(string op, size_t K, E, alias string oas )
@@ -359,39 +359,39 @@ pure:
                 if( AS.length > 0 )
             +/
             ref T opDispatch(string v)()
-                if( getIndex(AS,v,SEP1,SEP2) != -1 )
-            { mixin( format( "return data[%d];", getIndex(AS,v,SEP1,SEP2) ) ); }
+                if( getIndex(AS,v,VVASES,VVASVS) != -1 )
+            { mixin( format( "return data[%d];", getIndex(AS,v,VVASES,VVASVS) ) ); }
 
             ///ditto
             T opDispatch(string v)() const
-                if( getIndex(AS,v,SEP1,SEP2) != -1 )
-            { mixin( format( "return data[%d];", getIndex(AS,v,SEP1,SEP2) ) ); }
+                if( getIndex(AS,v,VVASES,VVASVS) != -1 )
+            { mixin( format( "return data[%d];", getIndex(AS,v,VVASES,VVASVS) ) ); }
 
-            static if( isOneSymbolPerFieldForAnyAccessString(AS,SEP1,SEP2) )
+            static if( isOneSymbolPerFieldForAnyAccessString(AS,VVASES,VVASVS) )
             {
                 /++
                     Get/set vector by access string.
 
                     only:
-                    if( AS.length > 0 && isOneSymbolPerFieldForAnyAccessString(AS,SEP1,SEP2) )
+                    if( AS.length > 0 && isOneSymbolPerFieldForAnyAccessString(AS,VVASES,VVASVS) )
                 +/
                 auto opDispatch(string v)() const
-                    if( v.length > 1 && oneOfAnyAccessAll(AS,v,SEP1,SEP2) )
+                    if( v.length > 1 && oneOfAnyAccessAll(AS,v,VVASES,VVASVS) )
                 {
                     mixin( format( `return Vector!(v.length,T,"%s")(%s);`,
-                                isCompatibleArrayAccessString(v.length,v)?v.split("").join(SEP1):"",
-                                array( map!(a=>format( `data[%d]`,getIndex(AS,a,SEP1,SEP2)))(v.split("")) ).join(",")
+                                isCompatibleArrayAccessString(v.length,v)?v.split("").join(VVASES):"",
+                                array( map!(a=>format( `data[%d]`,getIndex(AS,a,VVASES,VVASVS)))(v.split("")) ).join(",")
                                 ));
                 }
 
                 ///ditto
                 auto opDispatch( string v, U )( in U b )
-                    if( v.length > 1 && oneOfAnyAccessAll(AS,v,SEP1,SEP2) && isCompatibleArrayAccessString(v.length,v) &&
+                    if( v.length > 1 && oneOfAnyAccessAll(AS,v,VVASES,VVASVS) && isCompatibleArrayAccessString(v.length,v) &&
                             ( isCompatibleVector!(v.length,T,U) || ( isDynamicVector!U && is(typeof(T(U.datatype.init))) ) ) )
                 {
                     static if( b.isDynamic ) enforce( v.length == b.length );
                     foreach( i; 0 .. v.length )
-                        data[getIndex(AS,""~v[i],SEP1,SEP2)] = T( b[i] );
+                        data[getIndex(AS,""~v[i],VVASES,VVASVS)] = T( b[i] );
                     return opDispatch!v;
                 }
             }
@@ -400,7 +400,7 @@ pure:
 }
 
 /// `"x y|u v"`
-private enum string AS2D = "x y|u v";
+private enum string AS2D = "x y|w h|u v";
 /// `"x y z|u v t|r g b"`
 private enum string AS3D = "x y z|u v t|r g b";
 /// `"x y z w|r g b a"`
@@ -923,4 +923,3 @@ unittest
     auto cfy = vec4(0,1,0,0);
     static assert( !__traits(compiles,x*cfy) );
 }
-

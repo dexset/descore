@@ -29,24 +29,16 @@ import std.string;
 import std.traits;
 import des.math.linear.vector;
 
+import des.il.util;
+
 /// rectangle region of space
 struct Region(size_t N,T)
     if( N >= 1 && isNumeric!T )
 {
-    static if( N <= 3 )
-    {
-        /// `if( N <= 3 )`
-        alias Vector!(N,T,"xyz"[0..N].spaceSep) ptype;
-        /// `if( N <= 3 )`
-        alias Vector!(N*2,T,("xyz"[0..N]~"whd"[0..N]).spaceSep) rtype;
-    }
-    else
-    {
-        ///
-        alias Vector!(N,T) ptype;
-        ///
-        alias Vector!(N*2,T) rtype;
-    }
+    ///
+    alias CoordVector!(N,T) ptype;
+    ///
+    alias VolumeVector!(N,T) rtype;
 
     ///
     alias Region!(N,T) selftype;

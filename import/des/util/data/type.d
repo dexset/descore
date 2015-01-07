@@ -1,8 +1,15 @@
 module des.util.data.type;
 
+import std.string : format, join;
+import std.algorithm;
+import std.conv : to;
 import std.traits;
+import std.math : abs;
+import std.exception : enforce;
 import des.math.linear.vector;
 import des.math.linear.matrix;
+import des.math.util.flatdata;
+import des.util.testsuite;
 
 /// data types description for untyped `void[]` arrays
 enum DataType
@@ -10,6 +17,8 @@ enum DataType
     RAWBYTE,      /// untyped data `ubyte`
     BYTE,         /// `byte`
     UBYTE,        /// `ubyte`
+    NORM_QUART,   /// fixed point quartered [-1,1] `byte`
+    UNORM_QUART,  /// fixed point quartered [0,1] `ubyte`
 
     SHORT,        /// `short`
     USHORT,       /// `ushort`
@@ -89,6 +98,8 @@ size_t dataTypeSize( DataType dt ) pure nothrow @nogc @safe
         case DataType.RAWBYTE:
         case DataType.BYTE:
         case DataType.UBYTE:
+        case DataType.NORM_QUART:
+        case DataType.UNORM_QUART:
             return byte.sizeof;
 
         case DataType.SHORT:
@@ -123,6 +134,8 @@ size_t dataTypeSize( DataType dt ) pure nothrow @nogc @safe
  * `DataType.RAWBYTE`      = `ubyte`
  * `DataType.BYTE`         = `byte`
  * `DataType.UBYTE`        = `ubyte`
+ * `DataType.NORM_QUART`   = `byte`
+ * `DataType.UNORM_QUART`  = `ubyte`
  * `DataType.SHORT`        = `short`
  * `DataType.USHORT`       = `ushort`
  * `DataType.NORM_HALF`    = `short`
@@ -138,28 +151,30 @@ size_t dataTypeSize( DataType dt ) pure nothrow @nogc @safe
  * `DataType.FLOAT`        = `float`
  * `DataType.DOUBLE`       = `double`
 
- seealso:
+ See_Also:
  [DataType](des/util/data/type/DataType.html)
  +/
-template storeDataType( DataType dt )
+template storeDataType( DataType DT )
 {
-         static if( dt == DataType.RAWBYTE )      alias storeDataType = ubyte;
-    else static if( dt == DataType.BYTE )         alias storeDataType = byte;
-    else static if( dt == DataType.UBYTE )        alias storeDataType = ubyte;
-    else static if( dt == DataType.SHORT )        alias storeDataType = short;
-    else static if( dt == DataType.USHORT )       alias storeDataType = ushort;
-    else static if( dt == DataType.NORM_HALF )    alias storeDataType = short;
-    else static if( dt == DataType.UNORM_HALF )   alias storeDataType = ushort;
-    else static if( dt == DataType.INT )          alias storeDataType = int;
-    else static if( dt == DataType.UINT )         alias storeDataType = uint;
-    else static if( dt == DataType.NORM_FIXED )   alias storeDataType = int;
-    else static if( dt == DataType.UNORM_FIXED )  alias storeDataType = uint;
-    else static if( dt == DataType.LONG )         alias storeDataType = long;
-    else static if( dt == DataType.ULONG )        alias storeDataType = ulong;
-    else static if( dt == DataType.NORM_DOUBLE )  alias storeDataType = long;
-    else static if( dt == DataType.UNORM_DOUBLE ) alias storeDataType = ulong;
-    else static if( dt == DataType.FLOAT )        alias storeDataType = float;
-    else static if( dt == DataType.DOUBLE )       alias storeDataType = double;
+         static if( DT == DataType.RAWBYTE )      alias storeDataType = ubyte;
+    else static if( DT == DataType.BYTE )         alias storeDataType = byte;
+    else static if( DT == DataType.UBYTE )        alias storeDataType = ubyte;
+    else static if( DT == DataType.NORM_QUART )   alias storeDataType = byte;
+    else static if( DT == DataType.UNORM_QUART )  alias storeDataType = ubyte;
+    else static if( DT == DataType.SHORT )        alias storeDataType = short;
+    else static if( DT == DataType.USHORT )       alias storeDataType = ushort;
+    else static if( DT == DataType.NORM_HALF )    alias storeDataType = short;
+    else static if( DT == DataType.UNORM_HALF )   alias storeDataType = ushort;
+    else static if( DT == DataType.INT )          alias storeDataType = int;
+    else static if( DT == DataType.UINT )         alias storeDataType = uint;
+    else static if( DT == DataType.NORM_FIXED )   alias storeDataType = int;
+    else static if( DT == DataType.UNORM_FIXED )  alias storeDataType = uint;
+    else static if( DT == DataType.LONG )         alias storeDataType = long;
+    else static if( DT == DataType.ULONG )        alias storeDataType = ulong;
+    else static if( DT == DataType.NORM_DOUBLE )  alias storeDataType = long;
+    else static if( DT == DataType.UNORM_DOUBLE ) alias storeDataType = ulong;
+    else static if( DT == DataType.FLOAT )        alias storeDataType = float;
+    else static if( DT == DataType.DOUBLE )       alias storeDataType = double;
 }
 
 /++
@@ -167,6 +182,8 @@ template storeDataType( DataType dt )
 
  diff with [storeDataType](des/util/data/type/storeDataType.html):
 
+ * `DataType.NORM_QUART`   = `float`
+ * `DataType.UNORM_QUART`  = `float`
  * `DataType.NORM_HALF`    = `float`
  * `DataType.UNORM_HALF`   = `float`
  * `DataType.NORM_FIXED`   = `float`
@@ -174,50 +191,54 @@ template storeDataType( DataType dt )
  * `DataType.NORM_DOUBLE`  = `double`
  * `DataType.UNORM_DOUBLE` = `double`
 
- seealso:
+ See_Also:
 
  * [DataType](des/util/data/type/DataType.html)
  * [storeDataType](des/util/data/type/storeDataType.html):
 
  +/
-template conformDataType( DataType dt )
+template conformDataType( DataType DT )
 {
-         static if( dt == DataType.RAWBYTE )      alias conformDataType = void;
-    else static if( dt == DataType.BYTE )         alias conformDataType = byte;
-    else static if( dt == DataType.UBYTE )        alias conformDataType = ubyte;
-    else static if( dt == DataType.SHORT )        alias conformDataType = short;
-    else static if( dt == DataType.USHORT )       alias conformDataType = ushort;
-    else static if( dt == DataType.NORM_HALF )    alias conformDataType = float;
-    else static if( dt == DataType.UNORM_HALF )   alias conformDataType = float;
-    else static if( dt == DataType.INT )          alias conformDataType = int;
-    else static if( dt == DataType.UINT )         alias conformDataType = uint;
-    else static if( dt == DataType.NORM_FIXED )   alias conformDataType = float;
-    else static if( dt == DataType.UNORM_FIXED )  alias conformDataType = float;
-    else static if( dt == DataType.LONG )         alias conformDataType = long;
-    else static if( dt == DataType.ULONG )        alias conformDataType = ulong;
-    else static if( dt == DataType.NORM_DOUBLE )  alias conformDataType = double;
-    else static if( dt == DataType.UNORM_DOUBLE ) alias conformDataType = double;
-    else static if( dt == DataType.FLOAT )        alias conformDataType = float;
-    else static if( dt == DataType.DOUBLE )       alias conformDataType = double;
+         static if( DT == DataType.RAWBYTE )      alias conformDataType = void;
+    else static if( DT == DataType.BYTE )         alias conformDataType = byte;
+    else static if( DT == DataType.UBYTE )        alias conformDataType = ubyte;
+    else static if( DT == DataType.NORM_QUART )   alias conformDataType = float;
+    else static if( DT == DataType.UNORM_QUART )  alias conformDataType = float;
+    else static if( DT == DataType.SHORT )        alias conformDataType = short;
+    else static if( DT == DataType.USHORT )       alias conformDataType = ushort;
+    else static if( DT == DataType.NORM_HALF )    alias conformDataType = float;
+    else static if( DT == DataType.UNORM_HALF )   alias conformDataType = float;
+    else static if( DT == DataType.INT )          alias conformDataType = int;
+    else static if( DT == DataType.UINT )         alias conformDataType = uint;
+    else static if( DT == DataType.NORM_FIXED )   alias conformDataType = float;
+    else static if( DT == DataType.UNORM_FIXED )  alias conformDataType = float;
+    else static if( DT == DataType.LONG )         alias conformDataType = long;
+    else static if( DT == DataType.ULONG )        alias conformDataType = ulong;
+    else static if( DT == DataType.NORM_DOUBLE )  alias conformDataType = double;
+    else static if( DT == DataType.UNORM_DOUBLE ) alias conformDataType = double;
+    else static if( DT == DataType.FLOAT )        alias conformDataType = float;
+    else static if( DT == DataType.DOUBLE )       alias conformDataType = double;
 }
 
-/// check `storeDataType!dt == conformDataType!dt` for DataType dt
-template isDirectDataType( DataType dt )
-{ enum isDirectDataType = is( storeDataType!dt == conformDataType!dt ); }
+/// check `is( storeDataType!DT == conformDataType!DT )` for DataType DT
+template isDirectDataType( DataType DT )
+{ enum isDirectDataType = is( storeDataType!DT == conformDataType!DT ); }
 
 unittest
 {
     import std.string;
 
-    template F(DataType dt)
+    template F( DataType DT )
     {
-        enum F = (storeDataType!dt).sizeof == dataTypeSize(dt);
-        static assert( F, format("%s",dt) );
+        enum F = (storeDataType!DT).sizeof == dataTypeSize(DT);
+        static assert( F, format("%s",DT) );
     }
 
     static assert( F!( DataType.RAWBYTE ) );
     static assert( F!( DataType.BYTE ) );
     static assert( F!( DataType.UBYTE ) );
+    static assert( F!( DataType.NORM_QUART ) );
+    static assert( F!( DataType.UNORM_QUART ) );
     static assert( F!( DataType.SHORT ) );
     static assert( F!( DataType.USHORT ) );
     static assert( F!( DataType.NORM_HALF ) );
@@ -250,6 +271,8 @@ unittest
     static assert( !isDirectDataType!( DataType.RAWBYTE ) );
     static assert(  isDirectDataType!( DataType.BYTE ) );
     static assert(  isDirectDataType!( DataType.UBYTE ) );
+    static assert( !isDirectDataType!( DataType.NORM_QUART ) );
+    static assert( !isDirectDataType!( DataType.UNORM_QUART ) );
     static assert(  isDirectDataType!( DataType.SHORT ) );
     static assert(  isDirectDataType!( DataType.USHORT ) );
     static assert( !isDirectDataType!( DataType.NORM_HALF ) );
@@ -355,4 +378,275 @@ struct ElemInfo
             size_t compSize() { return dataTypeSize(comp); }
         }
     }
+}
+
+///
+class DataTypeException : Exception
+{
+    this( string msg, string file=__FILE__, size_t line=__LINE__ ) @safe pure nothrow
+    { super( msg, file, line ); }
+}
+
+///
+struct ArrayData { /++ +/size_t size, ptr; }
+
+///
+union AlienArray(T)
+{
+    alias type=T;
+    ArrayData raw;
+    T[] arr;
+    alias arr this;
+}
+
+///
+auto getTypedArray(T)( size_t sz, void* addr ) pure nothrow
+{ return AlienArray!T( ArrayData( sz, cast(size_t)addr ) ); }
+
+///
+unittest
+{
+    float[] buf = [ 1.1f, 2.2, 3.3, 4.4, 5.5 ];
+    auto a = getTypedArray!float( 2, cast(void*)(buf.ptr + 1) );
+    import std.stdio;
+    assert( eq( a, [2.2, 3.3] ) );
+    a[0] = 10;
+    assert( eq( buf, [1.1, 10, 3.3, 4.4, 5.5] ) );
+}
+
+///
+template convertValue( DataType DT )
+{
+    auto convertValue(T)( T val ) pure
+    {
+        alias SDT = storeDataType!DT;
+
+        static if( isDirectDataType!DT )
+            return cast(SDT)( val );
+        else static if( DT == DataType.RAWBYTE )
+            static assert( 0, "can't convert any value to RAWBYTE" );
+        else
+        {
+            static if( isFloatingPoint!T )
+            {
+                static if( isSigned!SDT )
+                {
+                    enforce( val >= -1 && val <= 1, "value exceed signed limits [-1,1]" );
+                    return cast(SDT)( (val>0?SDT.max:SDT.min) * abs(val) );
+                }
+                else
+                {
+                    enforce( val >= 0 && val <= 1, "value exceed unsigned limits [0,1]" );
+                    return cast(SDT)( SDT.max * val );
+                }
+            }
+            else static assert(0, "can't convert int value to fixed point value" );
+        }
+    }
+}
+
+///
+unittest
+{
+    static assert( convertValue!(DataType.NORM_FIXED)(1.0)  == int.max );
+    static assert( convertValue!(DataType.NORM_FIXED)(0.5)  == int.max/2 );
+    static assert( convertValue!(DataType.NORM_FIXED)(0.0)  == 0 );
+    static assert( convertValue!(DataType.NORM_FIXED)(-0.5) == int.min/2 );
+    static assert( convertValue!(DataType.NORM_FIXED)(-1.0) == int.min );
+    static assert( is( typeof( convertValue!(DataType.NORM_FIXED)(1.0) ) == int ) );
+}
+
+unittest
+{
+    static assert( convertValue!(DataType.BYTE)(1) == 1 );
+    static assert( is( typeof( convertValue!(DataType.BYTE)(1) ) == byte ) );
+
+    static assert( convertValue!(DataType.FLOAT)(1) == 1 );
+    static assert( convertValue!(DataType.FLOAT)(1.1) == 1.1 );
+    static assert( is( typeof( convertValue!(DataType.FLOAT)(1) ) == float ) );
+
+    static assert( convertValue!(DataType.UNORM_QUART)(1.0) == ubyte.max );
+    static assert( convertValue!(DataType.UNORM_QUART)(0.5) == ubyte.max/2 );
+    static assert( convertValue!(DataType.UNORM_QUART)(0.0) == 0 );
+    static assert( is( typeof( convertValue!(DataType.UNORM_QUART)(1.0) ) == ubyte ) );
+
+    static assert( convertValue!(DataType.UNORM_HALF)(1.0) == ushort.max );
+    static assert( convertValue!(DataType.UNORM_HALF)(0.5) == ushort.max/2 );
+    static assert( convertValue!(DataType.UNORM_HALF)(0.0) == 0 );
+    static assert( is( typeof( convertValue!(DataType.UNORM_HALF)(1.0) ) == ushort ) );
+
+    static assert( convertValue!(DataType.UNORM_FIXED)(1.0) == uint.max );
+    static assert( convertValue!(DataType.UNORM_FIXED)(0.5) == uint.max/2 );
+    static assert( convertValue!(DataType.UNORM_FIXED)(0.0) == 0 );
+    static assert( is( typeof( convertValue!(DataType.UNORM_FIXED)(1.0) ) == uint ) );
+
+    static assert( convertValue!(DataType.UNORM_DOUBLE)(1.0) == ulong.max );
+    static assert( convertValue!(DataType.UNORM_DOUBLE)(0.5) == ulong.max/2 );
+    static assert( convertValue!(DataType.UNORM_DOUBLE)(0.0) == 0 );
+    static assert( is( typeof( convertValue!(DataType.UNORM_DOUBLE)(1.0) ) == ulong ) );
+
+    static assert( convertValue!(DataType.NORM_QUART)(1.0)  == byte.max );
+    static assert( convertValue!(DataType.NORM_QUART)(0.5)  == byte.max/2 );
+    static assert( convertValue!(DataType.NORM_QUART)(0.0)  == 0 );
+    static assert( convertValue!(DataType.NORM_QUART)(-0.5) == byte.min/2 );
+    static assert( convertValue!(DataType.NORM_QUART)(-1.0) == byte.min );
+    static assert( is( typeof( convertValue!(DataType.NORM_QUART)(1.0) ) == byte ) );
+
+    static assert( convertValue!(DataType.NORM_HALF)(1.0)  == short.max );
+    static assert( convertValue!(DataType.NORM_HALF)(0.5)  == short.max/2 );
+    static assert( convertValue!(DataType.NORM_HALF)(0.0)  == 0 );
+    static assert( convertValue!(DataType.NORM_HALF)(-0.5) == short.min/2 );
+    static assert( convertValue!(DataType.NORM_HALF)(-1.0) == short.min );
+    static assert( is( typeof( convertValue!(DataType.NORM_HALF)(1.0) ) == short ) );
+
+    static assert( convertValue!(DataType.NORM_FIXED)(1.0)  == int.max );
+    static assert( convertValue!(DataType.NORM_FIXED)(0.5)  == int.max/2 );
+    static assert( convertValue!(DataType.NORM_FIXED)(0.0)  == 0 );
+    static assert( convertValue!(DataType.NORM_FIXED)(-0.5) == int.min/2 );
+    static assert( convertValue!(DataType.NORM_FIXED)(-1.0) == int.min );
+    static assert( is( typeof( convertValue!(DataType.NORM_FIXED)(1.0) ) == int ) );
+
+    static assert( convertValue!(DataType.NORM_DOUBLE)(1.0)  == long.max );
+    static assert( convertValue!(DataType.NORM_DOUBLE)(0.5)  == long.max/2 );
+    static assert( convertValue!(DataType.NORM_DOUBLE)(0.0)  == 0 );
+    static assert( convertValue!(DataType.NORM_DOUBLE)(-0.5) == long.min/2 );
+    static assert( convertValue!(DataType.NORM_DOUBLE)(-1.0) == long.min );
+    static assert( is( typeof( convertValue!(DataType.NORM_DOUBLE)(1.0) ) == long ) );
+
+    assert(  mustExcept({ convertValue!(DataType.NORM_FIXED)(1.1); }) );
+    assert( !mustExcept({ convertValue!(DataType.NORM_FIXED)(-0.1); }) );
+
+    assert(  mustExcept({ convertValue!(DataType.UNORM_FIXED)(1.1); }) );
+    assert(  mustExcept({ convertValue!(DataType.UNORM_FIXED)(-0.1); }) );
+}
+
+/// untyped data assign
+void utDataAssign(T...)( in ElemInfo info, void* buffer, in T vals ) pure
+    if( is(typeof(flatData!real(vals))) )
+in
+{
+    assert( buffer !is null );
+    assert( info.channels == flatData!real(vals).length );
+}
+body
+{
+    enum fmt = q{
+        auto dst = getTypedArray!(storeDataType!(%1$s))( info.channels, buffer );
+        auto src = flatData!real(vals);
+        foreach( i, ref t; dst )
+            t = convertValue!(%1$s)( src[i] );
+    };
+    mixin( getSwitchDataType( "info.comp", fmt, ["RAWBYTE": "can't operate RAWBYTE"] ) );
+}
+
+///
+unittest
+{
+    float[] buf = [ 1.1, 2.2, 3.3, 4.4, 5.5, 6.6 ];
+
+    utDataAssign( ElemInfo( DataType.FLOAT, 3 ), cast(void*)buf.ptr, vec3(8,9,10) );
+
+    assert( eq( buf, [8,9,10,4.4,5.5,6.6] ) );
+}
+
+/++
+    binary operation between untyped buffers
+
+    Params:
+        info = common to all buffers information
+        dst = result buffer ptr
+        uta = buffer ptr A
+        utb = buffer ptr B
+ +/
+void utDataOp(string op)( in ElemInfo info, void* dst, void* utb ) pure
+if( ( op == "+" || op == "-" || op == "*" || op == "/" ) )
+in
+{
+    assert( dst !is null );
+    assert( utb !is null );
+}
+body
+{
+    enum fmt = format( q{
+        alias SDT = storeDataType!(%%1$s);
+        auto ta = getTypedArray!SDT( info.channels, dst );
+        auto tb = getTypedArray!SDT( info.channels, utb );
+        foreach( i, ref r; ta )
+            r = cast(SDT)( ta[i] %s tb[i] );
+    }, op );
+    mixin( getSwitchDataType( "info.comp", fmt, ["RAWBYTE": "can't operate RAWBYTE"] ) );
+}
+
+///
+unittest
+{
+    ubyte[] a = [ 10, 20, 30, 40 ];
+    ubyte[] b = [ 60, 70, 40, 20 ];
+
+    utDataOp!"+"( ElemInfo( DataType.UNORM_QUART, 4 ), a.ptr, b.ptr );
+
+    assert( eq( a, [70,90,70,60] ) );
+
+    utDataOp!"+"( ElemInfo( DataType.UBYTE, 2 ), a.ptr, a.ptr + 2 );
+
+    assert( eq( a, [140,150,70,60] ) );
+}
+
+/++ generate switch for all DataType elements
+
+Params:
+subj = past as `switch( subj )`
+fmt = body of all cases past as formated with one argument (DataType) string
+except = exception in selected cases
+
+Example:
+    enum fmt = q{
+        auto dst = getTypedArray!(storeDataType!(%1$s))( info.channels, buffer );
+        auto src = flatData!real(vals);
+        foreach( i, ref t; dst )
+            t = convertValue!(%1$s)( src[i] );
+    };
+    writeln( genSwitchDataType( "info.comp", fmt, ["RAWBYTE": "can't operate RAWBYTE"] ) );
+
+Output like this:
+
+    final switch( info.comp ) {
+    case DataType.RAWBYTE: throw new DataTypeException( "can't operate RAWBYTE" );
+    case DataType.BYTE: 
+            auto dst = getTypedArray!(storeDataType!(DataType.BYTE))( info.channels, buffer );
+            auto src = flatData!real(vals);
+            foreach( i, ref t; dst )
+                t = convertValue!(DataType.BYTE)( src[i] );
+    break;
+    case DataType.UBYTE: 
+            auto dst = getTypedArray!(storeDataType!(DataType.UBYTE))( info.channels, buffer );
+            auto src = flatData!real(vals);
+            foreach( i, ref t; dst )
+                t = convertValue!(DataType.UBYTE)( src[i] );
+    break;
+    ...
+    }
++/
+string getSwitchDataType( string subj, string fmt, string[string] except ) pure
+{
+    string[] ret = [ format( `final switch( %s ) {`, subj ) ];
+
+    auto _type( string dt ) { return "DataType." ~ dt; }
+    auto _case( string dt ) { return "case " ~ _type(dt) ~ ": "; }
+
+    auto fmt_case( string dt, string fmt )
+    { return _case(dt) ~ "\n" ~ format( fmt, _type(dt) ) ~ "\nbreak;"; }
+
+    auto fmt_except( string dt, string msg )
+    { return _case( dt ) ~ format( `throw new DataTypeException( "%s" );`, msg ); }
+
+    foreach( dt; [EnumMembers!DataType].map!(a=>to!string(a)) )
+    {
+        if( dt in except ) ret ~= fmt_except( dt, except[dt] );
+        else ret ~= fmt_case( dt, fmt );
+    }
+
+    ret ~= "}";
+
+    return ret.join("\n");
 }
