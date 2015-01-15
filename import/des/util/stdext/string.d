@@ -28,6 +28,8 @@ import std.string;
 import std.array;
 import std.algorithm;
 
+import des.util.data.type : ArrayData, AlienArray;
+
 @trusted pure
 {
     ///
@@ -64,21 +66,25 @@ import std.algorithm;
     string toCamelCase( in string str, bool first_capitalize=true ) @property
     { return toCamelCaseBySep( str, "_", first_capitalize ); }
 
-    ///
+    /// copy chars to string
     string toDString( const(char*) c_str ) nothrow
     {
-        string buf;
         char *ch = cast(char*)c_str;
-        while( *ch != '\0' ) buf ~= *(ch++);
-        return buf;
+        size_t n;
+        while( *ch != '\0' ) n++;
+        return AlienArray!char( ArrayData( n, cast(size_t)c_str ) ).arr.idup;
     }
 
-    ///
+    /// ditto
     string toDStringFix(size_t S)( const(char[S]) c_buf ) nothrow
     {
-        string buf;
-        foreach( c; c_buf ) buf ~= c;
-        return buf;
+        size_t n;
+        foreach( c; c_buf )
+        {
+            if( c == '\0' ) break;
+            n++;
+        }
+        return AlienArray!char( ArrayData( n, cast(size_t)c_buf.ptr ) ).arr.idup;
     }
 }
 

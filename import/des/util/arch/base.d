@@ -9,6 +9,8 @@ import des.util.arch.emm;
 
 import des.util.stdext.traits;
 
+import des.util.logsys;
+
 ///
 template isObject(alias f) { enum isObject = __traits(compiles,typeof(f)); }
 
@@ -103,7 +105,11 @@ interface DesBase : ExternalMemoryManager, SlotHandler
 
     ///
     final void connect(Args...)( Signal!Args sig, void delegate(Args) fnc )
-    { sig.connect( newSlot!Args( fnc ) ); }
+    in { assert( sig !is null, "signal is null" ); } body
+    {
+        sig.connect( newSlot!Args( fnc ) );
+        logger.Debug( "sig: %s, fnc: %s", sig, fnc );
+    }
 }
 
 ///

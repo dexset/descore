@@ -393,9 +393,13 @@ struct ArrayData { /++ +/size_t size, ptr; }
 ///
 union AlienArray(T)
 {
-    alias type=T;
+    ///
     ArrayData raw;
+    ///
     T[] arr;
+    ///
+    alias type=T;
+    ///
     alias arr this;
 }
 
