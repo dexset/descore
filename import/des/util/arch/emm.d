@@ -83,7 +83,7 @@ interface ExternalMemoryManager : TNode!(ExternalMemoryManager,"","EMM")
     final
     {
         ///
-        T registerChildsEMM(T)( T obj )
+        T registerChildEMM(T)( T obj )
             if( is( T == class ) || is( T == interface ) )
         {
             auto cemm = cast(ExternalMemoryManager)obj;
@@ -92,17 +92,17 @@ interface ExternalMemoryManager : TNode!(ExternalMemoryManager,"","EMM")
         }
 
         ///
-        T[] registerChildsEMM(T)( T[] objs )
+        T[] registerChildEMM(T)( T[] objs )
             if( is( T == class ) || is( T == interface ) )
         {
             foreach( obj; objs )
-                registerChildsEMM( obj );
+                registerChildEMM( obj );
             return objs;
         }
 
         ///
         T newEMM(T,Args...)( Args args )
-        { return registerChildsEMM( new T(args) ); }
+        { return registerChildEMM( new T(args) ); }
 
         ///
         void destroy()
