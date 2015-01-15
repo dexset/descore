@@ -72,7 +72,7 @@ import des.util.data.type : ArrayData, AlienArray;
         if( c_str is null ) return "";
         char *ch = cast(char*)c_str;
         size_t n;
-        while( *ch != '\0' ) n++;
+        while( *ch++ != '\0' ) n++;
         return AlienArray!char( ArrayData( n, cast(size_t)c_str ) ).arr.idup;
     }
 
