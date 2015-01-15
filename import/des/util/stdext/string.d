@@ -69,6 +69,7 @@ import des.util.data.type : ArrayData, AlienArray;
     /// copy chars to string
     string toDString( const(char*) c_str ) nothrow
     {
+        if( c_str is null ) return "";
         char *ch = cast(char*)c_str;
         size_t n;
         while( *ch != '\0' ) n++;
