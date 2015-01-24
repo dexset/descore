@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" type="text/css" href="../../../style.css"/>
+<script src="../../../highlight.pack.js"></script>
+<title>des.math.linear.vector</title>
+<base href="../../../"/>
+<script src="search.js"></script>
+<script src="show_hide.js"></script>
+</head>
+<body>
+<div class="main">
+<div class="breadcrumbs">
+<table id="results"></table>
+<a href="index.html" class="home">⌂</a><input type="search" id="search" placeholder="Search" onkeyup="searchSubmit(this.value, event)"/>
+<small>des.math.linear.vector</small>
+</div>
+<div class="sidebar">
+<a href="des/math/linear/vector.html#hide-toc" class="hide" id="hide-toc">&#171;</a>
+<a href="des/math/linear/vector.html#show-toc" class="show" id="show-toc">&#187;</a>
+<div id="toc-id" class="toc">
+<ul><li><span class="package" onclick="show_hide('des');">des</span>
+<ul id="des" style='display:block'>
+<li><span class="package" onclick="show_hide('des.flow');">des.<a href="des/flow.html">flow</a></span>
+<ul id="des.flow">
+<li>des.flow.<a href="des/flow/base.html">base</a></li>
+<li>des.flow.<a href="des/flow/element.html">element</a></li>
+<li>des.flow.<a href="des/flow/event.html">event</a></li>
+<li>des.flow.<a href="des/flow/signal.html">signal</a></li>
+<li>des.flow.<a href="des/flow/sync.html">sync</a></li>
+<li>des.flow.<a href="des/flow/sysevdata.html">sysevdata</a></li>
+<li>des.flow.<a href="des/flow/thread.html">thread</a></li>
+</ul>
+</li>
+<li><span class="package" onclick="show_hide('des.il');">des.<a href="des/il.html">il</a></span>
+<ul id="des.il">
+<li>des.il.<a href="des/il/func.html">func</a></li>
+<li>des.il.<a href="des/il/image.html">image</a></li>
+<li>des.il.<a href="des/il/region.html">region</a></li>
+<li>des.il.<a href="des/il/util.html">util</a></li>
+</ul>
+</li>
+<li><span class="package" onclick="show_hide('des.isys');">des.isys</span>
+<ul id="des.isys">
+<li><span class="package" onclick="show_hide('des.isys.neiro');">des.isys.<a href="des/isys/neiro.html">neiro</a></span>
+<ul id="des.isys.neiro">
+<li>des.isys.neiro.<a href="des/isys/neiro/func.html">func</a></li>
+<li><span class="package" onclick="show_hide('des.isys.neiro.layer');">des.isys.neiro.<a href="des/isys/neiro/layer.html">layer</a></span>
+<ul id="des.isys.neiro.layer">
+<li>des.isys.neiro.layer.<a href="des/isys/neiro/layer/neiron.html">neiron</a></li>
+<li>des.isys.neiro.layer.<a href="des/isys/neiro/layer/net.html">net</a></li>
+<li>des.isys.neiro.layer.<a href="des/isys/neiro/layer/rand.html">rand</a></li>
+<li>des.isys.neiro.layer.<a href="des/isys/neiro/layer/structure.html">structure</a></li>
+</ul>
+</li>
+<li>des.isys.neiro.<a href="des/isys/neiro/neiron.html">neiron</a></li>
+<li>des.isys.neiro.<a href="des/isys/neiro/traits.html">traits</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><span class="package" onclick="show_hide('des.math');">des.<a href="des/math.html">math</a></span>
+<ul id="des.math" style='display:block'>
+<li><span class="package" onclick="show_hide('des.math.basic');">des.math.<a href="des/math/basic.html">basic</a></span>
+<ul id="des.math.basic">
+<li>des.math.basic.<a href="des/math/basic/mathstruct.html">mathstruct</a></li>
+<li>des.math.basic.<a href="des/math/basic/traits.html">traits</a></li>
+</ul>
+</li>
+<li>des.math.<a href="des/math/combin.html">combin</a></li>
+<li><span class="package" onclick="show_hide('des.math.linear');">des.math.<a href="des/math/linear.html">linear</a></span>
+<ul id="des.math.linear" style='display:block'>
+<li>des.math.linear.<a href="des/math/linear/matrix.html">matrix</a></li>
+<li>des.math.linear.<a href="des/math/linear/quaterni.html">quaterni</a></li>
+<li>des.math.linear.<a href="des/math/linear/ray.html">ray</a></li>
+<li>des.math.linear.<a href="des/math/linear/triangle.html">triangle</a></li>
+<li><span class=" selected">des.math.linear.<a href="des/math/linear/vector.html">vector</a></span>
+</li>
+</ul>
+</li>
+<li><span class="package" onclick="show_hide('des.math.method');">des.math.<a href="des/math/method.html">method</a></span>
+<ul id="des.math.method">
+<li><span class="package" onclick="show_hide('des.math.method.approx');">des.math.method.<a href="des/math/method/approx.html">approx</a></span>
+<ul id="des.math.method.approx">
+<li>des.math.method.approx.<a href="des/math/method/approx/interp.html">interp</a></li>
+</ul>
+</li>
+<li><span class="package" onclick="show_hide('des.math.method.calculus');">des.math.method.<a href="des/math/method/calculus.html">calculus</a></span>
+<ul id="des.math.method.calculus">
+<li>des.math.method.calculus.<a href="des/math/method/calculus/diff.html">diff</a></li>
+<li>des.math.method.calculus.<a href="des/math/method/calculus/integ.html">integ</a></li>
+</ul>
+</li>
+<li><span class="package" onclick="show_hide('des.math.method.stat');">des.math.method.<a href="des/math/method/stat.html">stat</a></span>
+<ul id="des.math.method.stat">
+<li>des.math.method.stat.<a href="des/math/method/stat/randn.html">randn</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><span class="package" onclick="show_hide('des.math.util');">des.math.<a href="des/math/util.html">util</a></span>
+<ul id="des.math.util">
+<li>des.math.util.<a href="des/math/util/accessstring.html">accessstring</a></li>
+<li>des.math.util.<a href="des/math/util/flatdata.html">flatdata</a></li>
+<li>des.math.util.<a href="des/math/util/valuelim.html">valuelim</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><span class="package" onclick="show_hide('des.space');">des.<a href="des/space.html">space</a></span>
+<ul id="des.space">
+<li>des.space.<a href="des/space/camera.html">camera</a></li>
+<li>des.space.<a href="des/space/node.html">node</a></li>
+<li>des.space.<a href="des/space/resolver.html">resolver</a></li>
+<li>des.space.<a href="des/space/transform.html">transform</a></li>
+</ul>
+</li>
+<li><span class="package" onclick="show_hide('des.util');">des.<a href="des/util.html">util</a></span>
+<ul id="des.util">
+<li><span class="package" onclick="show_hide('des.util.arch');">des.util.<a href="des/util/arch.html">arch</a></span>
+<ul id="des.util.arch">
+<li>des.util.arch.<a href="des/util/arch/base.html">base</a></li>
+<li>des.util.arch.<a href="des/util/arch/emm.html">emm</a></li>
+<li>des.util.arch.<a href="des/util/arch/sig.html">sig</a></li>
+<li>des.util.arch.<a href="des/util/arch/slot.html">slot</a></li>
+<li>des.util.arch.<a href="des/util/arch/tree.html">tree</a></li>
+</ul>
+</li>
+<li>des.util.<a href="des/util/colorparse.html">colorparse</a></li>
+<li><span class="package" onclick="show_hide('des.util.data');">des.util.<a href="des/util/data.html">data</a></span>
+<ul id="des.util.data">
+<li>des.util.data.<a href="des/util/data/attrib.html">attrib</a></li>
+<li>des.util.data.<a href="des/util/data/pdata.html">pdata</a></li>
+<li>des.util.data.<a href="des/util/data/type.html">type</a></li>
+</ul>
+</li>
+<li>des.util.<a href="des/util/helpers.html">helpers</a></li>
+<li>des.util.<a href="des/util/localization.html">localization</a></li>
+<li><span class="package" onclick="show_hide('des.util.logsys');">des.util.<a href="des/util/logsys.html">logsys</a></span>
+<ul id="des.util.logsys">
+<li>des.util.logsys.<a href="des/util/logsys/base.html">base</a></li>
+<li>des.util.logsys.<a href="des/util/logsys/logcls.html">logcls</a></li>
+<li>des.util.logsys.<a href="des/util/logsys/output.html">output</a></li>
+<li>des.util.logsys.<a href="des/util/logsys/rule.html">rule</a></li>
+</ul>
+</li>
+<li>des.util.<a href="des/util/socket.html">socket</a></li>
+<li><span class="package" onclick="show_hide('des.util.stdext');">des.util.<a href="des/util/stdext.html">stdext</a></span>
+<ul id="des.util.stdext">
+<li>des.util.stdext.<a href="des/util/stdext/algorithm.html">algorithm</a></li>
+<li>des.util.stdext.<a href="des/util/stdext/string.html">string</a></li>
+<li>des.util.stdext.<a href="des/util/stdext/traits.html">traits</a></li>
+</ul>
+</li>
+<li>des.util.<a href="des/util/testsuite.html">testsuite</a></li>
+<li>des.util.<a href="des/util/timer.html">timer</a></li>
+</ul>
+</li>
+</ul>
+</li>
+
+</ul>
+</div>
+</div>
+<div class="content">
+<div class="section "><p>Provides work with vector and some aliases and functions.
+</p>
+
+
+</div>
+<div class="section "><h2>Aliases</h2><table><tr><td><a href="des/math/linear/vector/Vector2.html">Vector2</a></td><td><pre><code><a href="des/math/linear/vector/Vector.html">Vector</a>!(2, T, <a href="des/math/linear/vector/AS2D.html">AS2D</a>)
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/Vector3.html">Vector3</a></td><td><pre><code><a href="des/math/linear/vector/Vector.html">Vector</a>!(3, T, <a href="des/math/linear/vector/AS3D.html">AS3D</a>)
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/Vector4.html">Vector4</a></td><td><pre><code><a href="des/math/linear/vector/Vector.html">Vector</a>!(4, T, <a href="des/math/linear/vector/AS4D.html">AS4D</a>)
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/vec2.html">vec2</a></td><td><pre><code><a href="des/math/linear/vector/Vector2.html">Vector2</a>!float
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/vec3.html">vec3</a></td><td><pre><code><a href="des/math/linear/vector/Vector3.html">Vector3</a>!float
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/vec4.html">vec4</a></td><td><pre><code><a href="des/math/linear/vector/Vector4.html">Vector4</a>!float
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/dvec2.html">dvec2</a></td><td><pre><code><a href="des/math/linear/vector/Vector2.html">Vector2</a>!double
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/dvec3.html">dvec3</a></td><td><pre><code><a href="des/math/linear/vector/Vector3.html">Vector3</a>!double
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/dvec4.html">dvec4</a></td><td><pre><code><a href="des/math/linear/vector/Vector4.html">Vector4</a>!double
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/rvec2.html">rvec2</a></td><td><pre><code><a href="des/math/linear/vector/Vector2.html">Vector2</a>!real
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/rvec3.html">rvec3</a></td><td><pre><code><a href="des/math/linear/vector/Vector3.html">Vector3</a>!real
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/rvec4.html">rvec4</a></td><td><pre><code><a href="des/math/linear/vector/Vector4.html">Vector4</a>!real
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/bvec2.html">bvec2</a></td><td><pre><code><a href="des/math/linear/vector/Vector2.html">Vector2</a>!byte
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/bvec3.html">bvec3</a></td><td><pre><code><a href="des/math/linear/vector/Vector3.html">Vector3</a>!byte
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/bvec4.html">bvec4</a></td><td><pre><code><a href="des/math/linear/vector/Vector4.html">Vector4</a>!byte
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/ubvec2.html">ubvec2</a></td><td><pre><code><a href="des/math/linear/vector/Vector2.html">Vector2</a>!ubyte
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/ubvec3.html">ubvec3</a></td><td><pre><code><a href="des/math/linear/vector/Vector3.html">Vector3</a>!ubyte
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/ubvec4.html">ubvec4</a></td><td><pre><code><a href="des/math/linear/vector/Vector4.html">Vector4</a>!ubyte
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/ivec2.html">ivec2</a></td><td><pre><code><a href="des/math/linear/vector/Vector2.html">Vector2</a>!int
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/ivec3.html">ivec3</a></td><td><pre><code><a href="des/math/linear/vector/Vector3.html">Vector3</a>!int
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/ivec4.html">ivec4</a></td><td><pre><code><a href="des/math/linear/vector/Vector4.html">Vector4</a>!int
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/uivec2.html">uivec2</a></td><td><pre><code><a href="des/math/linear/vector/Vector2.html">Vector2</a>!uint
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/uivec3.html">uivec3</a></td><td><pre><code><a href="des/math/linear/vector/Vector3.html">Vector3</a>!uint
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/uivec4.html">uivec4</a></td><td><pre><code><a href="des/math/linear/vector/Vector4.html">Vector4</a>!uint
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/lvec2.html">lvec2</a></td><td><pre><code><a href="des/math/linear/vector/Vector2.html">Vector2</a>!long
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/lvec3.html">lvec3</a></td><td><pre><code><a href="des/math/linear/vector/Vector3.html">Vector3</a>!long
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/lvec4.html">lvec4</a></td><td><pre><code><a href="des/math/linear/vector/Vector4.html">Vector4</a>!long
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/ulvec2.html">ulvec2</a></td><td><pre><code><a href="des/math/linear/vector/Vector2.html">Vector2</a>!ulong
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/ulvec3.html">ulvec3</a></td><td><pre><code><a href="des/math/linear/vector/Vector3.html">Vector3</a>!ulong
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/ulvec4.html">ulvec4</a></td><td><pre><code><a href="des/math/linear/vector/Vector4.html">Vector4</a>!ulong
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/col3.html">col3</a></td><td><pre><code><a href="des/math/linear/vector/Vector.html">Vector</a>!(3, <a href="http://dlang.org/type.html#basic-data-types">float</a>, "r g b")
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/col4.html">col4</a></td><td><pre><code><a href="des/math/linear/vector/Vector.html">Vector</a>!(4, <a href="http://dlang.org/type.html#basic-data-types">float</a>, "r g b a")
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/ubcol3.html">ubcol3</a></td><td><pre><code><a href="des/math/linear/vector/Vector.html">Vector</a>!(3, <a href="http://dlang.org/type.html#basic-data-types">ubyte</a>, "r g b")
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/ubcol4.html">ubcol4</a></td><td><pre><code><a href="des/math/linear/vector/Vector.html">Vector</a>!(4, <a href="http://dlang.org/type.html#basic-data-types">ubyte</a>, "r g b a")
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/bvecD.html">bvecD</a></td><td><pre><code><a href="des/math/linear/vector/Vector.html">Vector</a>!(0, <a href="http://dlang.org/type.html#basic-data-types">byte</a>)
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/ubvecD.html">ubvecD</a></td><td><pre><code><a href="des/math/linear/vector/Vector.html">Vector</a>!(0, <a href="http://dlang.org/type.html#basic-data-types">ubyte</a>)
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/ivecD.html">ivecD</a></td><td><pre><code><a href="des/math/linear/vector/Vector.html">Vector</a>!(0, <a href="http://dlang.org/type.html#basic-data-types">int</a>)
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/uivecD.html">uivecD</a></td><td><pre><code><a href="des/math/linear/vector/Vector.html">Vector</a>!(0, <a href="http://dlang.org/type.html#basic-data-types">uint</a>)
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/svecD.html">svecD</a></td><td><pre><code><a href="des/math/linear/vector/Vector.html">Vector</a>!(0, <a href="http://dlang.org/type.html#basic-data-types">short</a>)
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/usvecD.html">usvecD</a></td><td><pre><code><a href="des/math/linear/vector/Vector.html">Vector</a>!(0, <a href="http://dlang.org/type.html#basic-data-types">ushort</a>)
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/lvecD.html">lvecD</a></td><td><pre><code><a href="des/math/linear/vector/Vector.html">Vector</a>!(0, <a href="http://dlang.org/type.html#basic-data-types">long</a>)
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/ulvecD.html">ulvecD</a></td><td><pre><code><a href="des/math/linear/vector/Vector.html">Vector</a>!(0, <a href="http://dlang.org/type.html#basic-data-types">ulong</a>)
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/vecD.html">vecD</a></td><td><pre><code><a href="des/math/linear/vector/Vector.html">Vector</a>!(0, <a href="http://dlang.org/type.html#basic-data-types">float</a>)
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/dvecD.html">dvecD</a></td><td><pre><code><a href="des/math/linear/vector/Vector.html">Vector</a>!(0, <a href="http://dlang.org/type.html#basic-data-types">double</a>)
+</code></pre>
+</td><td></td></tr><tr><td><a href="des/math/linear/vector/rvecD.html">rvecD</a></td><td><pre><code><a href="des/math/linear/vector/Vector.html">Vector</a>!(0, <a href="http://dlang.org/type.html#basic-data-types">real</a>)
+</code></pre>
+</td><td></td></tr></table><h2>Variables</h2><table><tr><td><a href="des/math/linear/vector/VVASES.html">VVASES</a></td><td><pre><code>auto
+</code></pre>
+</td><td><p>vector value access string element separator = <code class="prettyprint">" "</code>
+</p>
+</td></tr><tr><td><a href="des/math/linear/vector/VVASVS.html">VVASVS</a></td><td><pre><code>auto
+</code></pre>
+</td><td><p>vector value access string variant separator = <code class="prettyprint">"|"</code>
+</p>
+</td></tr><tr><td><a href="des/math/linear/vector/AS2D.html">AS2D</a></td><td><pre><code>string
+</code></pre>
+</td><td><p><code class="prettyprint">"x y|u v"</code>
+</p>
+</td></tr><tr><td><a href="des/math/linear/vector/AS3D.html">AS3D</a></td><td><pre><code>string
+</code></pre>
+</td><td><p><code class="prettyprint">"x y z|u v t|r g b"</code>
+</p>
+</td></tr><tr><td><a href="des/math/linear/vector/AS4D.html">AS4D</a></td><td><pre><code>string
+</code></pre>
+</td><td><p><code class="prettyprint">"x y z w|r g b a"</code>
+</p>
+</td></tr></table><h2>Functions</h2><table><tr><td><a href="des/math/linear/vector/isValidOp.html">isValidOp</a><span class="extrainfo"><span class="method-attribs"><span class="attr-pure">pure</span></span></span></td><td></td><td><p>validate operation between types <code class="prettyprint">T</code> and <code class="prettyprint">E</code>
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-auto">auto</span></span></span><a href="des/math/linear/vector/dot.html">dot</a><span class="extrainfo"></span></td><td></td><td><p>dot multiplication for compaitable vectors.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-auto">auto</span></span></span><a href="des/math/linear/vector/cross.html">cross</a><span class="extrainfo"></span></td><td></td><td><p>cross multiplication for compaitable vectors.
+</p>
+</td></tr></table><h2>Structs</h2><table><tr><td><a href="des/math/linear/vector/Vector.html">Vector</a></td><td></td><td></td></tr></table><h2>Templates</h2><table><tr><td><a href="des/math/linear/vector/isVector.html">isVector</a></td><td></td><td><p>checks type is vector
+</p>
+</td></tr><tr><td><a href="des/math/linear/vector/isStaticVector.html">isStaticVector</a></td><td></td><td><p>checks type is static vector
+</p>
+</td></tr><tr><td><a href="des/math/linear/vector/isDynamicVector.html">isDynamicVector</a></td><td></td><td><p>checks type is dynamic vector
+</p>
+</td></tr><tr><td><a href="des/math/linear/vector/isCompatibleVector.html">isCompatibleVector</a></td><td></td><td><p>сhecks type E is vector and E.dims == N and E.datatype can casted to T
+</p>
+</td></tr></table>
+</div>
+
+<script>hljs.initHighlightingOnLoad();</script>
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" type="text/css" href="../../style.css"/>
+<script src="../../highlight.pack.js"></script>
+<title>des.util.logsys</title>
+<base href="../../"/>
+<script src="search.js"></script>
+<script src="show_hide.js"></script>
+</head>
+<body>
+<div class="main">
+<div class="breadcrumbs">
+<table id="results"></table>
+<a href="index.html" class="home">⌂</a><input type="search" id="search" placeholder="Search" onkeyup="searchSubmit(this.value, event)"/>
+<small>des.util.logsys</small>
+</div>
+<div class="sidebar">
+<a href="des/util/logsys.html#hide-toc" class="hide" id="hide-toc">&#171;</a>
+<a href="des/util/logsys.html#show-toc" class="show" id="show-toc">&#187;</a>
+<div id="toc-id" class="toc">
+<ul><li><span class="package" onclick="show_hide('des');">des</span>
+<ul id="des" style='display:block'>
+<li><span class="package" onclick="show_hide('des.flow');">des.<a href="des/flow.html">flow</a></span>
+<ul id="des.flow">
+<li>des.flow.<a href="des/flow/base.html">base</a></li>
+<li>des.flow.<a href="des/flow/element.html">element</a></li>
+<li>des.flow.<a href="des/flow/event.html">event</a></li>
+<li>des.flow.<a href="des/flow/signal.html">signal</a></li>
+<li>des.flow.<a href="des/flow/sync.html">sync</a></li>
+<li>des.flow.<a href="des/flow/sysevdata.html">sysevdata</a></li>
+<li>des.flow.<a href="des/flow/thread.html">thread</a></li>
+</ul>
+</li>
+<li><span class="package" onclick="show_hide('des.il');">des.<a href="des/il.html">il</a></span>
+<ul id="des.il">
+<li>des.il.<a href="des/il/func.html">func</a></li>
+<li>des.il.<a href="des/il/image.html">image</a></li>
+<li>des.il.<a href="des/il/region.html">region</a></li>
+<li>des.il.<a href="des/il/util.html">util</a></li>
+</ul>
+</li>
+<li><span class="package" onclick="show_hide('des.isys');">des.isys</span>
+<ul id="des.isys">
+<li><span class="package" onclick="show_hide('des.isys.neiro');">des.isys.<a href="des/isys/neiro.html">neiro</a></span>
+<ul id="des.isys.neiro">
+<li>des.isys.neiro.<a href="des/isys/neiro/func.html">func</a></li>
+<li><span class="package" onclick="show_hide('des.isys.neiro.layer');">des.isys.neiro.<a href="des/isys/neiro/layer.html">layer</a></span>
+<ul id="des.isys.neiro.layer">
+<li>des.isys.neiro.layer.<a href="des/isys/neiro/layer/neiron.html">neiron</a></li>
+<li>des.isys.neiro.layer.<a href="des/isys/neiro/layer/net.html">net</a></li>
+<li>des.isys.neiro.layer.<a href="des/isys/neiro/layer/rand.html">rand</a></li>
+<li>des.isys.neiro.layer.<a href="des/isys/neiro/layer/structure.html">structure</a></li>
+</ul>
+</li>
+<li>des.isys.neiro.<a href="des/isys/neiro/neiron.html">neiron</a></li>
+<li>des.isys.neiro.<a href="des/isys/neiro/traits.html">traits</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><span class="package" onclick="show_hide('des.math');">des.<a href="des/math.html">math</a></span>
+<ul id="des.math">
+<li><span class="package" onclick="show_hide('des.math.basic');">des.math.<a href="des/math/basic.html">basic</a></span>
+<ul id="des.math.basic">
+<li>des.math.basic.<a href="des/math/basic/mathstruct.html">mathstruct</a></li>
+<li>des.math.basic.<a href="des/math/basic/traits.html">traits</a></li>
+</ul>
+</li>
+<li>des.math.<a href="des/math/combin.html">combin</a></li>
+<li><span class="package" onclick="show_hide('des.math.linear');">des.math.<a href="des/math/linear.html">linear</a></span>
+<ul id="des.math.linear">
+<li>des.math.linear.<a href="des/math/linear/matrix.html">matrix</a></li>
+<li>des.math.linear.<a href="des/math/linear/quaterni.html">quaterni</a></li>
+<li>des.math.linear.<a href="des/math/linear/ray.html">ray</a></li>
+<li>des.math.linear.<a href="des/math/linear/triangle.html">triangle</a></li>
+<li>des.math.linear.<a href="des/math/linear/vector.html">vector</a></li>
+</ul>
+</li>
+<li><span class="package" onclick="show_hide('des.math.method');">des.math.<a href="des/math/method.html">method</a></span>
+<ul id="des.math.method">
+<li><span class="package" onclick="show_hide('des.math.method.approx');">des.math.method.<a href="des/math/method/approx.html">approx</a></span>
+<ul id="des.math.method.approx">
+<li>des.math.method.approx.<a href="des/math/method/approx/interp.html">interp</a></li>
+</ul>
+</li>
+<li><span class="package" onclick="show_hide('des.math.method.calculus');">des.math.method.<a href="des/math/method/calculus.html">calculus</a></span>
+<ul id="des.math.method.calculus">
+<li>des.math.method.calculus.<a href="des/math/method/calculus/diff.html">diff</a></li>
+<li>des.math.method.calculus.<a href="des/math/method/calculus/integ.html">integ</a></li>
+</ul>
+</li>
+<li><span class="package" onclick="show_hide('des.math.method.stat');">des.math.method.<a href="des/math/method/stat.html">stat</a></span>
+<ul id="des.math.method.stat">
+<li>des.math.method.stat.<a href="des/math/method/stat/randn.html">randn</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><span class="package" onclick="show_hide('des.math.util');">des.math.<a href="des/math/util.html">util</a></span>
+<ul id="des.math.util">
+<li>des.math.util.<a href="des/math/util/accessstring.html">accessstring</a></li>
+<li>des.math.util.<a href="des/math/util/flatdata.html">flatdata</a></li>
+<li>des.math.util.<a href="des/math/util/valuelim.html">valuelim</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><span class="package" onclick="show_hide('des.space');">des.<a href="des/space.html">space</a></span>
+<ul id="des.space">
+<li>des.space.<a href="des/space/camera.html">camera</a></li>
+<li>des.space.<a href="des/space/node.html">node</a></li>
+<li>des.space.<a href="des/space/resolver.html">resolver</a></li>
+<li>des.space.<a href="des/space/transform.html">transform</a></li>
+</ul>
+</li>
+<li><span class="package" onclick="show_hide('des.util');">des.<a href="des/util.html">util</a></span>
+<ul id="des.util" style='display:block'>
+<li><span class="package" onclick="show_hide('des.util.arch');">des.util.<a href="des/util/arch.html">arch</a></span>
+<ul id="des.util.arch">
+<li>des.util.arch.<a href="des/util/arch/base.html">base</a></li>
+<li>des.util.arch.<a href="des/util/arch/emm.html">emm</a></li>
+<li>des.util.arch.<a href="des/util/arch/sig.html">sig</a></li>
+<li>des.util.arch.<a href="des/util/arch/slot.html">slot</a></li>
+<li>des.util.arch.<a href="des/util/arch/tree.html">tree</a></li>
+</ul>
+</li>
+<li>des.util.<a href="des/util/colorparse.html">colorparse</a></li>
+<li><span class="package" onclick="show_hide('des.util.data');">des.util.<a href="des/util/data.html">data</a></span>
+<ul id="des.util.data">
+<li>des.util.data.<a href="des/util/data/attrib.html">attrib</a></li>
+<li>des.util.data.<a href="des/util/data/pdata.html">pdata</a></li>
+<li>des.util.data.<a href="des/util/data/type.html">type</a></li>
+</ul>
+</li>
+<li>des.util.<a href="des/util/helpers.html">helpers</a></li>
+<li>des.util.<a href="des/util/localization.html">localization</a></li>
+<li><span class="package selected" onclick="show_hide('des.util.logsys');">des.util.<a href="des/util/logsys.html">logsys</a></span>
+<ul id="des.util.logsys" style='display:block'>
+<li>des.util.logsys.<a href="des/util/logsys/base.html">base</a></li>
+<li>des.util.logsys.<a href="des/util/logsys/logcls.html">logcls</a></li>
+<li>des.util.logsys.<a href="des/util/logsys/output.html">output</a></li>
+<li>des.util.logsys.<a href="des/util/logsys/rule.html">rule</a></li>
+</ul>
+</li>
+<li>des.util.<a href="des/util/socket.html">socket</a></li>
+<li><span class="package" onclick="show_hide('des.util.stdext');">des.util.<a href="des/util/stdext.html">stdext</a></span>
+<ul id="des.util.stdext">
+<li>des.util.stdext.<a href="des/util/stdext/algorithm.html">algorithm</a></li>
+<li>des.util.stdext.<a href="des/util/stdext/string.html">string</a></li>
+<li>des.util.stdext.<a href="des/util/stdext/traits.html">traits</a></li>
+</ul>
+</li>
+<li>des.util.<a href="des/util/testsuite.html">testsuite</a></li>
+<li>des.util.<a href="des/util/timer.html">timer</a></li>
+</ul>
+</li>
+</ul>
+</li>
+
+</ul>
+</div>
+</div>
+<div class="content">
+<div class="section imports"><h2>Public imports</h2><ul><li><a href="des/util/logsys/base.html">des.util.logsys.base</a></li><li><a href="des/util/logsys/logcls.html">des.util.logsys.logcls</a></li><li><a href="des/util/logsys/output.html">des.util.logsys.output</a></li>
+</ul>
+
+</div>
+<div class="section "><p>Package provides static <code class="prettyprint"><a href="des/util/logsys/logcls/Logger.html">Logger</a> <a href="des/util/logsys/logger.html">logger</a></code>
+</p>
+
+
+</div>
+<div class="section"><p>Logger functions:
+</p>
+<pre class="prettyprint"><code>void <a href="des/util/logsys/logger.html">logger</a>.error(Args...)( Args args );
+void <a href="des/util/logsys/logger.html">logger</a>.warn (Args...)( Args args );
+void <a href="des/util/logsys/logger.html">logger</a>.info (Args...)( Args args );
+void <a href="des/util/logsys/logger.html">logger</a>.Debug(Args...)( Args args );
+void <a href="des/util/logsys/logger.html">logger</a>.trace(Args...)( Args args );
+</code></pre><pre class="prettyprint"><code>...
+<a href="des/util/logsys/logger.html">logger</a>.info( "format %s %f %d", "str", 3.14, 4 );
+<a href="des/util/logsys/logger.html">logger</a>.Debug( "some info" );
+<a href="des/util/logsys/logger.html">logger</a>.trace( 12 );
+...
+</code></pre><p>If program starts as <code class="prettyprint">./program --log trace</code> output must be like this
+</p>
+<pre class="prettyprint"><code>[000000.111427128][ INFO][module.function]: format str 3.14 4
+[000000.111427128][DEBUG][module.function]: some info
+[000000.111938579][TRACE][module.function]: 12
+</code></pre><p>If log function has string as first argument it tries to format other args to this
+string, if it failed print converted to string and concatenated args.
+</p>
+<p>If program starts as <code class="prettyprint">./program --log debug</code> output must be like this (without trace)
+</p>
+<pre class="prettyprint"><code>[000000.111427128][ INFO][module.function]: format str 3.14 4
+</code></pre><p>Flag <code class="prettyprint">--log</code> used for setting max level of logging output.
+Default level is <code class="prettyprint">error</code>. If log function called with greater level it's skipped.
+Level has attitudes <code class="prettyprint">off &lt; fatal &lt; error &lt; warn &lt; info &lt; debug &lt; trace</code>.
+</p>
+<p>Flag <code class="prettyprint">--log</code> can be used with module name <code class="prettyprint">./program --log draw.point:debug</code>.
+It will set <code class="prettyprint">debug</code> level for module <code class="prettyprint">draw.point</code> and default to other.
+</p>
+<p>Flag <code class="prettyprint">--log-use-min</code> is boolean flag. It forces logging system to skip output from
+all child modules if their level greater than parent. Default is <code class="prettyprint">false</code>.
+</p>
+<p><code class="prettyprint">./program --log trace --log draw:info --log draw.point:trace --log-use-min=true</code> 
+skips all output from <code class="prettyprint"><a href="des/util/logsys/logger.html">logger</a>.trace</code> and <code class="prettyprint"><a href="des/util/logsys/logger.html">logger</a>.Debug</code> from whole draw.point,
+and doesn't skip from other modules.
+</p>
+<p><code class="prettyprint">./program --log trace --log draw:info --log draw.point:trace</code> allow <code class="prettyprint">log_trace</code>
+and <code class="prettyprint">log_debug</code> only from <code class="prettyprint">draw.point</code> from module <code class="prettyprint">draw</code>. For other modules in
+<code class="prettyprint">draw</code> sets level <code class="prettyprint">info</code>
+</p>
+<p>You can compile program with <code class="prettyprint">version=logonlyerror</code> for skip all
+<code class="prettyprint">trace</code>, <code class="prettyprint">debug</code>, <code class="prettyprint">info</code> and <code class="prettyprint">warn</code> outputs in logger. It can improve program
+release speed.
+</p>
+<h2> Class logging</h2>
+<p>Module provides some functional for useful logging classes.
+</p>
+
+
+</div>
+<div class="section"><h2>Example</h2>
+<pre class="prettyprint"><code>module x;
+import des.util.<a href="des/util/logsys/logger.html">logger</a>;
+class A
+{
+    mixin <a href="des/util/logsys/ClassLogger.html">ClassLogger</a>;
+    void func() { <a href="des/util/logsys/logger.html">logger</a>.trace( "hello" ); }
+}
+</code></pre><pre class="prettyprint"><code>module y;
+import x;
+class B : A { }
+</code></pre><pre class="prettyprint"><code>auto b = new B;
+...
+b.func();
+</code></pre>
+
+</div>
+<div class="section"><h2>outputs</h2>
+<pre class="prettyprint"><code>[000000.148628473][TRACE][x.A.func]: hello
+</code></pre><p>If create instance logger 
+</p>
+<pre class="prettyprint"><code>class B : A { this(){ <a href="des/util/logsys/logger.html">logger</a> = new <a href="des/util/logsys/logcls/InstanceLogger.html">InstanceLogger</a>(this); } }
+</code></pre>
+
+</div>
+<div class="section"><h2>outputs</h2>
+<pre class="prettyprint"><code>[000000.148628473][TRACE][y.B.func]: hello
+</code></pre><p>If create instance logger with instance name
+</p>
+<pre class="prettyprint"><code>class B : A { this(){ <a href="des/util/logsys/logger.html">logger</a> = new <a href="des/util/logsys/logcls/InstanceLogger.html">InstanceLogger</a>(this,"my object"); } }
+</code></pre>
+
+</div>
+<div class="section"><h2>outputs</h2>
+<pre class="prettyprint"><code>[000000.148628473][TRACE][y.B.[my object].func]: hello
+</code></pre><p>If create instance full logger
+</p>
+<pre class="prettyprint"><code>class B : A { this(){ <a href="des/util/logsys/logger.html">logger</a> = new <a href="des/util/logsys/logcls/InstanceFullLogger.html">InstanceFullLogger</a>(this); } }
+</code></pre>
+
+</div>
+<div class="section"><h2>outputs</h2>
+<pre class="prettyprint"><code>[000000.148628473][TRACE][y.B.[x.A.func]]: hello
+</code></pre><p>If create instance full logger with name
+</p>
+<pre class="prettyprint"><code>class B : A { this(){ <a href="des/util/logsys/logger.html">logger</a> = new <a href="des/util/logsys/logcls/InstanceFullLogger.html">InstanceFullLogger</a>(this,"name"); } }
+</code></pre>
+
+</div>
+<div class="section"><h2>outputs</h2>
+<pre class="prettyprint"><code>[000000.148628473][TRACE][y.B.[name].[x.A.func]]: hello
+</code></pre><p>Flag <code class="prettyprint">--log</code> can get full emitter string <code class="prettyprint">y.B.[name].[x.A.func]</code>.
+</p>
+<pre class="prettyprint"><code>./program --log "y.B.[one]:trace" --log "y.B.[two]:debug"
+</code></pre>
+
+</div>
+<div class="section "><h2>Variables</h2><table><tr><td><a href="des/util/logsys/logger.html">logger</a></td><td><pre><code><a href="des/util/logsys/logcls/Logger.html">Logger</a>
+</code></pre>
+</td><td></td></tr></table><h2>Templates</h2><table><tr><td><a href="des/util/logsys/ClassLogger.html">ClassLogger</a></td><td></td><td><p>for simple adding logging to class
+</p>
+</td></tr></table>
+</div>
+
+<script>hljs.initHighlightingOnLoad();</script>
+</div>
+</div>
+</body>
+</html>
