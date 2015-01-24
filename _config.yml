@@ -1,0 +1,7 @@
+# Server
+source: doc
+destination: _gh_pages
+
+# Custom vars
+repo: https://github.com/dexset/descore
+description: D Extended Set Core
