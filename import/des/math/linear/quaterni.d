@@ -10,27 +10,30 @@ import std.math;
 import des.util.testsuite;
 
 import des.math.util;
+import des.math.basic;
 
 ///
 struct Quaterni(T) if( isFloatingPoint!T )
 {
     ///
-    alias vectype = Vector!(4,T,"i j k a");
+    alias vectype = Vector!(4,T);
     ///
-    vectype vec;
+    vectype data;
     ///
-    alias vec this;
-
+    alias data this;
     ///
     alias selftype = Quaterni!T;
 
 pure:
     ///
     this(E...)( in E vals ) if( is( typeof( vectype(vals) ) ) )
-    { vec = vectype(vals); }
+    { data = vectype(vals); }
+
+    mixin accessByString!(4,T,"data.data","i j k a");
+    mixin( BasicMathOp!"data" );
 
     ///
-    static selftype fromAngle(size_t K,E,alias string bs)( T alpha, in Vector!(K,E,bs) axis )
+    static selftype fromAngle(size_t K,E)( T alpha, in Vector!(K,E) axis )
         if( (K==0||K==3) && isFloatingPoint!E )
     {
         static if( K==0 ) enforce( axis.length == 3, "wrong length" );
@@ -50,12 +53,12 @@ pure:
     }
 
     ///
-    auto rot(size_t K,E,alias string bs)( in Vector!(K,E,bs) b ) const
+    auto rot(size_t K,E)( in Vector!(K,E) b ) const
         if( (K==0||K==3) && is( CommonType!(T,E) : T ) )
     {
         static if( K==0 ) enforce( b.length == 3, "wrong length" );
         auto res = this * selftype(b,0) * inv;
-        return Vector!(K,T,bs)( res.ijk );
+        return Vector!(K,T)( res.ijk );
     }
 
     const @property
@@ -68,6 +71,8 @@ pure:
         auto con() { return selftype( -this.ijk, this.a ); }
         ///
         auto inv() { return selftype( con / norm ); }
+
+        auto len2() { return data.len2; }
     }
 }
 

@@ -50,13 +50,13 @@ struct Ray(T) if( isFloatingPoint!T )
 
 pure:
     ///
-    static auto fromPoints(A,B)( in A start, in B end )
-        if( isCompatibleVector!(3,T,A) && isCompatibleVector!(3,T,B) )
+    static auto fromPoints(A,B)( in Vector!(3,A) start, in Vector!(3,B) end )
+        if( is(typeof(vectype(start))) && is(typeof(vectype(start))) )
     { return Ray!T( start, end - start ); }
 
     ///
-    this(A,B)( in A a, in B b )
-        if( isCompatibleVector!(3,T,A) && isCompatibleVector!(3,T,B) )
+    this(A,B)( in Vector!(3,A) a, in Vector!(3,B) b )
+        if( is(typeof(vectype(a))) && is(typeof(vectype(b))) )
     {
         pos = a;
         dir = b;

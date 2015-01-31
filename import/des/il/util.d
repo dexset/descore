@@ -19,7 +19,7 @@ class ImageException : Exception
     { super( msg, file, line ); } 
 }
 
-string coordinateAccessString( size_t N ) pure
+string coordinateAccessString( size_t N, string VVASES=" ", string VVASVS="|" ) pure
 {
     if( N > 3 ) return "";
 
@@ -34,10 +34,10 @@ unittest
     static assert( coordinateAccessString(4) == "" );
     static assert( coordinateAccessString(3) == "x y z|abscissa ordinate applicate" );
     static assert( coordinateAccessString(2) == "x y|abscissa ordinate" );
-    static assert( isCompatibleArrayAccessStrings( 2, coordinateAccessString(2), VVASES, VVASVS ) ); 
+    static assert( isCompatibleArrayAccessStrings( 2, coordinateAccessString(2), " ", "|" ) ); 
 }
 
-string sizeAccessString( size_t N ) pure 
+string sizeAccessString( size_t N, string VVASES=" ", string VVASVS="|" ) pure
 {
     if( N > 3 ) return "";
 
@@ -52,10 +52,10 @@ unittest
     static assert( sizeAccessString(4) == "" );
     static assert( sizeAccessString(3) == "w h d|width height depth" );
     static assert( sizeAccessString(2) == "w h|width height" );
-    static assert( isCompatibleArrayAccessStrings( 2, sizeAccessString(2), VVASES, VVASVS ) ); 
+    static assert( isCompatibleArrayAccessStrings( 2, sizeAccessString(2), " ", "|" ) ); 
 }
 
-string volumeAccessString( size_t N )
+string volumeAccessString( size_t N, string VVASES=" ", string VVASVS="|" ) pure
 {
     if( N > 3 ) return "";
 
@@ -73,17 +73,10 @@ unittest
     static assert( volumeAccessString(4) == "" );
     static assert( volumeAccessString(3) == "x y z w h d|abscissa ordinate applicate width height depth" );
     static assert( volumeAccessString(2) == "x y w h|abscissa ordinate width height" );
-    static assert( isCompatibleArrayAccessStrings( 4, volumeAccessString(2), VVASES, VVASVS ) ); 
+    static assert( isCompatibleArrayAccessStrings( 4, volumeAccessString(2), " ", "|" ) ); 
 }
 
-///
-alias CoordType = ptrdiff_t;
-///
-alias CoordVector(size_t N,T=CoordType) = Vector!(N,T,coordinateAccessString(N));
-///
-alias SizeVector(size_t N,T=CoordType) = Vector!(N,T,sizeAccessString(N));
-///
-alias VolumeVector(size_t N,T=CoordType) = Vector!(N*2,T,volumeAccessString(N));
+alias CrdVector(size_t N) = Vector!(N,ptrdiff_t);
 
 /++ checks all components
  Returns:
@@ -101,7 +94,7 @@ unittest
 {
     assert(  isAllCompPositive( [1,2,3] ) );
     assert(  isAllCompPositive( vec3( 1,2,3 ) ) );
-    assert(  isAllCompPositive( SizeVector!3( 1,2,3 ) ) );
+    assert(  isAllCompPositive( CrdVector!3( 1,2,3 ) ) );
     assert( !isAllCompPositive( [-1,2,3] ) );
 }
 
@@ -114,12 +107,13 @@ unittest
  Returns:
  index in 1-dim array
  +/
-size_t getIndex(size_t N)( in CoordType[N] size, in CoordType[N] crd ) pure
+size_t getIndex(size_t N,A,B)( in Vector!(N,A) size, in Vector!(N,B) crd ) pure
+if( isIntegral!A && isIntegral!B )
 in
 {
     assert( isAllCompPositive( size ) );
     assert( isAllCompPositive( crd ) );
-    assert( all!"a[0]>a[1]"( zip( size.dup, crd.dup ) ), "range violation" );
+    assert( all!"a[0]>a[1]"( zip( size.data.dup, crd.data.dup ) ), "range violation" );
 }
 body
 {
@@ -143,16 +137,17 @@ version(todos) pragma( msg, __FILE__,":", __LINE__, " TODO: add tests to indexCa
  Retrurns:
  N-dim array of coordinates in N-dim space
  +/
-CoordType[N] getCoord(size_t N)( in CoordType[N] size, size_t index ) pure
+CrdVector!N getCoord(size_t N,A)( in Vector!(N,A) size, size_t index ) pure
+if( isIntegral!A )
 in
 {
     assert( isAllCompPositive( size ) );
-    assert( index <= getIndex( size, to!(CoordType[N])( amap!(a=>a-1)(size.dup) ) ), "range violation" );
+    assert( index <= getIndex( size, CrdVector!N(size)-CrdVector!N(1) ), "range violation" );
 }
 body
 {
     size_t buf = index;
-    CoordType[N] ret;
+    CrdVector!N ret;
     foreach_reverse( i; 0 .. N )
     {
         auto vol = reduce!((a,b)=>(a*=b))(1U,size[0..i]);
@@ -164,8 +159,8 @@ body
 
 unittest
 {
-    CoordType[4] size = [ 10, 20, 30, 40 ];
-    CoordType[4] crd = [ 3, 5, 8, 10 ];
+    auto size = CrdVector!4( 10, 20, 30, 40 );
+    auto crd = CrdVector!4( 3, 5, 8, 10 );
     assert( eq( crd, getCoord( size, getIndex( size, crd ) ) ) );
 }
 
@@ -177,11 +172,12 @@ unittest
  lindex = line index in layer
  lno = layer number
  +/
-size_t getOrigIndexByLayerCoord(size_t N)( in CoordType[N] size, size_t K, size_t lindex, size_t lno ) pure
+size_t getOrigIndexByLayerCoord(size_t N,A)( in Vector!(N,A) size, size_t K, size_t lindex, size_t lno ) pure
+if( isIntegral!A )
 in { assert( K < N ); } body
 {
-    auto lcrd = getCoord( removeStat( size, K ), lindex );
-    return getIndex( size, pasteStat( lcrd, K, lno ) );
+    auto lcrd = getCoord( ivec!N( removeStat( size, K ) ), lindex );
+    return getIndex( size, ivec!N( pasteStat( lcrd, K, lno ) ) );
 }
 
 /++ remove value from static array

@@ -36,9 +36,9 @@ struct Region(size_t N,T)
     if( N >= 1 && isNumeric!T )
 {
     ///
-    alias CoordVector!(N,T) ptype;
+    alias Vector!(N,T) ptype;
     ///
-    alias VolumeVector!(N,T) rtype;
+    alias Vector!(N*2,T) rtype;
 
     ///
     alias Region!(N,T) selftype;
@@ -53,6 +53,9 @@ struct Region(size_t N,T)
 
     ///
     alias vr this;
+
+    static if( N >= 2 && N <= 4 )
+        mixin accessByString!(N*2,T,"vr.data",volumeAccessString(N));
 
     ///
     pure this(K)( in Region!(N,K) e ) { vr = e.vr; }
@@ -85,7 +88,7 @@ struct Region(size_t N,T)
     }
 
     ///
-    bool opBinaryRight(string op, E, alias string AS)( in Vector!(N,E,AS) p ) const
+    bool opBinaryRight(string op, E)( in Vector!(N,E) p ) const
         if( op == "in" && is(typeof(typeof(p).init[0] > rtype.init[0])) )
     { 
         foreach( i; 0 .. N )
@@ -103,7 +106,7 @@ struct Region(size_t N,T)
 
     ///
     bool opBinaryRight(string op, E)( in Region!(N,E) p ) const
-        if( is( generalType!(T,E) ) && op == "in" )
+        if( op == "in" && is( generalType!(T,E) ) )
     { return ( p.pt[0] in this ) && ( p.pt[1] in this ); }
 
     /// logic and
@@ -142,8 +145,8 @@ struct Region(size_t N,T)
     }
 
     ///
-    auto expand(E)( in E pnt ) const
-        if( isCompatibleVector!(N,T,E) )
+    auto expand(E)( in Vector!(N,E) pnt ) const
+        if( is( E : T ) )
     {
         ptype r1, r2;
 
@@ -203,7 +206,8 @@ unittest
 unittest
 {
     auto a = fRegion3( vec3(0,0,0), vec3(1,1,1) );
-    assert( vec3(.5,.2,.8) in a );
+    //assert( vec3(.5,.2,.8) in a );
+    assert( a.opBinaryRight!"in"( vec3(.5,.2,.8) ) );
     assert( a == a.expand( vec3(.2,.3,.4) ) );
     assert( a != a.expand( vec3(1.2,.3,.4) ) );
     assert( fRegion3( vec3(0,0,0), vec3(1.2,1,1) ) == 

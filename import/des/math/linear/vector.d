@@ -1,52 +1,25 @@
-/+
- + License:
- + The MIT License (MIT)
- + 
- +     Copyright (c) <2013> <Oleg Butko (deviator), Anton Akzhigitov (Akzwar)>
- + 
- +     Permission is hereby granted, free of charge, to any person obtaining a copy
- +     of this software and associated documentation files (the "Software"), to deal
- +     in the Software without restriction, including without limitation the rights
- +     to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- +     copies of the Software, and to permit persons to whom the Software is
- +     furnished to do so, subject to the following conditions:
- + 
- +     The above copyright notice and this permission notice shall be included in
- +     all copies or substantial portions of the Software.
- + 
- +     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- +     IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- +     FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- +     AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- +     LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- +     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- +     THE SOFTWARE.
- +/
-
 /++
-    Provides work with vector and some aliases and functions.
+    Provides work with linear algebra vector and some aliases and functions.
 +/
-
 module des.math.linear.vector;
 
-import std.math;
-import std.algorithm;
-import std.array;
-import std.traits;
 import std.exception;
+import std.traits;
+import std.typetuple;
 import std.string;
+import std.math;
 
 import des.util.testsuite;
 
 import des.math.util;
 
-version(unittest) import std.stdio;
+import des.math.linear.matrix;
 
 /// checks type is vector
 template isVector(E)
 {
     enum isVector = is( typeof(impl(E.init)) );
-    void impl(size_t N,T,alias string AS)( in Vector!(N,T,AS) ) {}
+    void impl(size_t N,T)( in Vector!(N,T) ) {}
 }
 
 /// checks type is static vector
@@ -71,14 +44,6 @@ unittest
     static assert( !isDynamicVector!float );
 }
 
-/// сhecks type E is vector and E.dims == N and E.datatype can casted to T
-template isCompatibleVector(size_t N,T,E)
-{
-    static if( !isVector!E )
-        enum isCompatibleVector = false;
-    else enum isCompatibleVector = E.dims == N && is( E.datatype : T );
-}
-
 /++
     validate operation between types `T` and `E`
 code:
@@ -87,38 +52,32 @@ code:
 bool isValidOp(string op,T,E,K=T)() pure
 { mixin( `return is( typeof( T.init ` ~ op ~ ` E.init ) : K );` ); }
 
-bool hasCompMltAndSum(T,E)() pure
-{ return is( typeof( T(T.init * E.init) ) ) && is( typeof( T.init + T.init ) == T ); }
-
-/// vector value access string element separator = `" "`
-enum VVASES = " ";
-/// vector value access string variant separator = `"|"`
-enum VVASVS = "|";
-
-private @property string zerosVectorData(size_t N)()
+private string zerosVectorData( size_t N ) @property
 {
     string[] ret;
-    foreach( j; 0 .. N )
-        ret ~= format( "%d", 0 );
+    foreach( j; 0 .. N ) ret ~= "0";
     return "[" ~ ret.join(",") ~ "]";
+}
+
+/// сhecks type E is vector and E.dims == N and E.datatype can casted to T
+template isSpecVector(size_t N,T,E)
+{
+    static if( !isVector!E ) enum isSpecVector = false;
+    else enum isSpecVector = E.dims == N && is( E.datatype : T );
 }
 
 /++
 Params:
-    N   = Number of dimmensions. 
-          Vector can be dynamic (`N==0`) or static (`N>0`).
-    T   = Vector data type.
-    AS  = Access string.
-          Must be valid access string ( see: [isCompatibleArrayAccessStrings](des/math/util/accessstring/isCompatibleArrayAccessStrings.html) )
+    N = Number of dimensions, if 0 then vector is dynamic
+    T = data type
 +/
-struct Vector( size_t N, T, alias string AS="")
-    if( isCompatibleArrayAccessStrings(N,AS,VVASES,VVASVS) || AS.length == 0 )
+struct Vector(size_t N,T)
 {
     /// `N == 0`
     enum bool isDynamic = N == 0;
     /// `N != 0`
     enum bool isStatic = N != 0;
-    /// equals N
+    /// equals `N`
     enum size_t dims = N;
 
     /// 
@@ -127,7 +86,7 @@ struct Vector( size_t N, T, alias string AS="")
         static if( !isNumeric!T )
             /// if `isStatic` ( fills by zeros if `isNumeric!T` )
             T[N] data;
-        else T[N] data = mixin( zerosVectorData!N );
+        else T[N] data = mixin( zerosVectorData(N) );
     }
     else T[] data; /// if `isDynamic`
 
@@ -138,26 +97,25 @@ struct Vector( size_t N, T, alias string AS="")
     alias datatype = T;
 
     ///
-    alias access_string = AS;
+    alias selftype = Vector!(N,T);
 
-    ///
-    alias selftype = Vector!(N,T,AS);
+    /// `isSpecVector!(N,T)`
+    template isCompatible(E) { enum isCompatible = isSpecVector!(N,T,E); }
 
 pure:
 
     static if( isDynamic )
     {
-        /++
-            Length of elements. 
-            Enum, if vector is static.
-         +/
-        pure @property auto length() const { return data.length; }
-
-        ///ditto
-        pure @property auto length( size_t nl )
+        @property
         {
-            data.length = nl;
-            return data.length;
+            /++
+                Length of elements. 
+                Enum, if vector is static.
+            +/
+            auto length() const { return data.length; }
+
+            ///ditto
+            auto length( size_t nl ) { data.length = nl; return nl; }
         }
     }
     else enum length = N;
@@ -186,25 +144,34 @@ pure:
             {
                 auto buf = flatData!T(vals);
 
-                if( buf.length == length )
-                    data[] = buf[];
-                else if( buf.length == 1 )
-                    data[] = buf[0];
+                if( buf.length == length ) data[] = buf[];
+                else if( buf.length == 1 ) data[] = buf[0];
                 else enforce( false, "bad args length" );
             }
         }
         else data = flatData!T(vals);
     }
 
-    static if( isDynamic ) this(this) { data = this.data.dup; }
+    static if( isDynamic ) this(this) { data = data.dup; }
 
     ///
-    auto opAssign( size_t K, E, alias string oas )( in Vector!(K,E,oas) b )
+    auto opAssign(size_t K,E)( in Vector!(K,E) b )
         if( (K==N||K==0||N==0) && is( typeof(T(E.init)) ) )
     {
         static if( isDynamic ) length = b.length;
         foreach( i; 0 .. length ) data[i] = T(b[i]);
         return this;
+    }
+
+    static if( N == 2 || N == 3 || N == 4 )
+    {
+        static if( N == 2 ) enum AccessString = "x y|w h|u v";
+        else
+        static if( N == 3 ) enum AccessString = "x y z|w h d|u v t|r g b";
+        else
+        static if( N == 4 ) enum AccessString = "x y z w|r g b a";
+
+        mixin accessByString!( N, T, "data", AccessString );
     }
 
     /// 
@@ -223,8 +190,7 @@ pure:
      + See_Also:
      + [isValidOp](des/math/linear/vector/isValidOp.html)
      +/
-    auto opBinary(string op, size_t K, E, alias string oas )
-        ( in Vector!(K,E,oas) b ) const
+    auto opBinary(string op,size_t K,E)( in Vector!(K,E) b ) const
         if( isValidOp!(op,T,E) && (K==N||K==0||N==0) )
     {
         selftype ret;
@@ -237,7 +203,7 @@ pure:
     }
 
     /// ditto
-    auto opBinary(string op, E)( in E b ) const
+    auto opBinary(string op,E)( in E b ) const
         if( isValidOp!(op,T,E) && op != "+" && op != "-" )
     {
         selftype ret;
@@ -259,11 +225,14 @@ pure:
 
     /// checks all elements is finite
     bool opCast(E)() const if( is( E == bool ) )
-    { return all!isFinite( data.dup ); }
+    {
+        foreach( v; data ) if( !isFinite(v) ) return false;
+        return true;
+    }
 
     const @property
     {
-        static if( is( typeof( dot(selftype.init,selftype.init) ) ) )
+        static if( is( typeof( dot( selftype.init, selftype.init ) ) ) )
         {
             /++ Square of euclidean length of the vector.
 
@@ -294,203 +263,107 @@ pure:
         }
     }
 
-    version(todos) pragma(msg, __FILE__, "TODO: rework rebase for all dimension vectors" );
-
-    static if( N == 2 )
+    auto rebase(Args...)( Args e ) const
+        if( allSatisfy!(isCompatible,Args) && Args.length == N )
     {
-        auto rebase(I,J)( in I x, in J y ) const
-            if( isCompatibleVector!(2,T,I) &&
-                isCompatibleVector!(2,T,J) )
-        {
-            alias this m;
-
-            auto  d = x[0] * y[1] - y[0] * x[1];
-            auto rx = m[0] * y[1] - y[0] * m[1];
-            auto ry = x[0] * m[1] - m[0] * x[1];
-
-            return selftype( rx/d, ry/d );
-        }
-    }
-
-    static if( N == 3 )
-    {
-        auto rebase(I,J,K)( in I x, in J y, in K z ) const
-            if( isCompatibleVector!(3,T,I) &&
-                isCompatibleVector!(3,T,J) &&
-                isCompatibleVector!(3,T,K) )
-        {
-            alias this m;
-
-            auto a1 =  (y[1] * z[2] - z[1] * y[2]);
-            auto a2 = -(x[1] * z[2] - z[1] * x[2]);
-            auto a3 =  (x[1] * y[2] - y[1] * x[2]);
-
-            auto x2 = -(m[1] * z[2] - z[1] * m[2]);
-            auto x3 =  (m[1] * y[2] - y[1] * m[2]);
-
-            auto y1 =  (m[1] * z[2] - z[1] * m[2]);
-            auto y3 =  (x[1] * m[2] - m[1] * x[2]);
-
-            auto z1 =  (y[1] * m[2] - m[1] * y[2]);
-            auto z2 = -(x[1] * m[2] - m[1] * x[2]);
-
-            auto ad1 = x[0] * a1;
-            auto ad2 = y[0] * a2;
-            auto ad3 = z[0] * a3;
-
-            auto d  = x[0] * a1 + y[0] * a2 + z[0] * a3;
-
-            auto nxd = m[0] * a1 + y[0] * x2 + z[0] * x3;
-            auto nyd = x[0] * y1 + m[0] * a2 + z[0] * y3;
-            auto nzd = x[0] * z1 + y[0] * z2 + m[0] * a3;
-
-            return selftype( nxd/d, nyd/d, nzd/d );
-        }
-    }
-
-    static if( AS.length > 0 )
-    {
-        @property
-        {
-            /++
-                Get/set element data by access string.
-
-                only:
-                if( AS.length > 0 )
-            +/
-            ref T opDispatch(string v)()
-                if( getIndex(AS,v,VVASES,VVASVS) != -1 )
-            { mixin( format( "return data[%d];", getIndex(AS,v,VVASES,VVASVS) ) ); }
-
-            ///ditto
-            T opDispatch(string v)() const
-                if( getIndex(AS,v,VVASES,VVASVS) != -1 )
-            { mixin( format( "return data[%d];", getIndex(AS,v,VVASES,VVASVS) ) ); }
-
-            static if( isOneSymbolPerFieldForAnyAccessString(AS,VVASES,VVASVS) )
-            {
-                /++
-                    Get/set vector by access string.
-
-                    only:
-                    if( AS.length > 0 && isOneSymbolPerFieldForAnyAccessString(AS,VVASES,VVASVS) )
-                +/
-                auto opDispatch(string v)() const
-                    if( v.length > 1 && oneOfAnyAccessAll(AS,v,VVASES,VVASVS) )
-                {
-                    mixin( format( `return Vector!(v.length,T,"%s")(%s);`,
-                                isCompatibleArrayAccessString(v.length,v)?v.split("").join(VVASES):"",
-                                array( map!(a=>format( `data[%d]`,getIndex(AS,a,VVASES,VVASVS)))(v.split("")) ).join(",")
-                                ));
-                }
-
-                ///ditto
-                auto opDispatch( string v, U )( in U b )
-                    if( v.length > 1 && oneOfAnyAccessAll(AS,v,VVASES,VVASVS) && isCompatibleArrayAccessString(v.length,v) &&
-                            ( isCompatibleVector!(v.length,T,U) || ( isDynamicVector!U && is(typeof(T(U.datatype.init))) ) ) )
-                {
-                    static if( b.isDynamic ) enforce( v.length == b.length );
-                    foreach( i; 0 .. v.length )
-                        data[getIndex(AS,""~v[i],VVASES,VVASVS)] = T( b[i] );
-                    return opDispatch!v;
-                }
-            }
-        }
+        auto m = Matrix!(N,N,T)(e).T.inv;
+        return m * this;
     }
 }
 
-/// `"x y|u v"`
-private enum string AS2D = "x y|w h|u v";
-/// `"x y z|u v t|r g b"`
-private enum string AS3D = "x y z|u v t|r g b";
-/// `"x y z w|r g b a"`
-private enum string AS4D = "x y z w|r g b a";
+///
+alias Vector2(T) = Vector!(2,T);
+///
+alias Vector3(T) = Vector!(3,T);
+///
+alias Vector4(T) = Vector!(4,T);
 
 ///
-alias Vector2(T) = Vector!(2,T,AS2D);
+alias fvec(size_t N) = Vector!(N,float);
 ///
-alias Vector3(T) = Vector!(3,T,AS3D);
+alias vec2 = fvec!2;
 ///
-alias Vector4(T) = Vector!(4,T,AS4D);
+alias vec3 = fvec!3;
+///
+alias vec4 = fvec!4;
 
 ///
-alias Vector2!float vec2;
+alias dvec(size_t N) = Vector!(N,double);
 ///
-alias Vector3!float vec3;
+alias dvec2 = dvec!2;
 ///
-alias Vector4!float vec4;
+alias dvec3 = dvec!3;
+///
+alias dvec4 = dvec!4;
 
 ///
-alias Vector2!double dvec2;
+alias rvec(size_t N) = Vector!(N,real);
 ///
-alias Vector3!double dvec3;
+alias rvec2 = rvec!2;
 ///
-alias Vector4!double dvec4;
+alias rvec3 = rvec!3;
+///
+alias rvec4 = rvec!4;
 
 ///
-alias Vector2!real rvec2;
+alias bvec(size_t N) = Vector!(N,byte);
 ///
-alias Vector3!real rvec3;
+alias bvec2 = bvec!2;
 ///
-alias Vector4!real rvec4;
+alias bvec3 = bvec!3;
+///
+alias bvec4 = bvec!4;
 
 ///
-alias Vector2!byte bvec2;
+alias ubvec(size_t N) = Vector!(N,ubyte);
 ///
-alias Vector3!byte bvec3;
+alias ubvec2 = ubvec!2;
 ///
-alias Vector4!byte bvec4;
+alias ubvec3 = ubvec!3;
+///
+alias ubvec4 = ubvec!4;
 
 ///
-alias Vector2!ubyte ubvec2;
+alias ivec(size_t N) = Vector!(N,int);
 ///
-alias Vector3!ubyte ubvec3;
+alias ivec2 = ivec!2;
 ///
-alias Vector4!ubyte ubvec4;
+alias ivec3 = ivec!3;
+///
+alias ivec4 = ivec!4;
 
 ///
-alias Vector2!int ivec2;
+alias uivec(size_t N) = Vector!(N,uint);
 ///
-alias Vector3!int ivec3;
+alias uivec2 = uivec!2;
 ///
-alias Vector4!int ivec4;
+alias uivec3 = uivec!3;
+///
+alias uivec4 = uivec!4;
 
 ///
-alias Vector2!uint uivec2;
+alias lvec(size_t N) = Vector!(N,long);
 ///
-alias Vector3!uint uivec3;
+alias lvec2 = lvec!2;
 ///
-alias Vector4!uint uivec4;
+alias lvec3 = lvec!3;
+///
+alias lvec4 = lvec!4;
 
 ///
-alias Vector2!long lvec2;
+alias ulvec(size_t N) = Vector!(N,ulong);
 ///
-alias Vector3!long lvec3;
+alias ulvec2 = ulvec!2;
 ///
-alias Vector4!long lvec4;
-
+alias ulvec3 = ulvec!3;
 ///
-alias Vector2!ulong ulvec2;
-///
-alias Vector3!ulong ulvec3;
-///
-alias Vector4!ulong ulvec4;
-
-///
-alias Vector!(3,float,"r g b") col3;
-///
-alias Vector!(4,float,"r g b a") col4;
-
-///
-alias Vector!(3,ubyte,"r g b") ubcol3;
-///
-alias Vector!(4,ubyte,"r g b a") ubcol4;
+alias ulvec4 = ulvec!4;
 
 unittest
 {
     static assert( is( Vector2!float == vec2 ) );
     static assert( is( Vector3!real == rvec3 ) );
-    static assert( is( Vector4!float == vec4 ) );
+    static assert( is( Vector4!double == dvec4 ) );
 }
 
 ///
@@ -527,29 +400,19 @@ unittest
     static assert(  isVector!ivec2 );
     static assert(  isVector!ivec3 );
     static assert(  isVector!ivec4 );
-    static assert(  isVector!col3 );
-    static assert(  isVector!col4 );
-    static assert(  isVector!ubcol3 );
-    static assert(  isVector!ubcol4 );
     static assert(  isVector!vecD );
     static assert(  isVector!ivecD );
     static assert(  isVector!dvecD );
 
-    static assert(  isCompatibleVector!(2,float,vec2) );
-    static assert(  isCompatibleVector!(3,float,vec3) );
-    static assert(  isCompatibleVector!(4,float,vec4) );
-    static assert(  isCompatibleVector!(2,double,dvec2) );
-    static assert(  isCompatibleVector!(3,double,dvec3) );
-    static assert(  isCompatibleVector!(4,double,dvec4) );
-    static assert(  isCompatibleVector!(2,int,ivec2) );
-    static assert(  isCompatibleVector!(3,int,ivec3) );
-    static assert(  isCompatibleVector!(4,int,ivec4) );
-    static assert(  isCompatibleVector!(3,float,col3) );
-    static assert(  isCompatibleVector!(4,float,col4) );
-    static assert(  isCompatibleVector!(3,ubyte,ubcol3) );
-    static assert(  isCompatibleVector!(4,ubyte,ubcol4) );
-    static assert( !isCompatibleVector!(2,ubyte,ubcol3) );
-    static assert( !isCompatibleVector!(3,ubyte,ubcol4) );
+    static assert(  isSpecVector!(2,float,vec2) );
+    static assert(  isSpecVector!(3,float,vec3) );
+    static assert(  isSpecVector!(4,float,vec4) );
+    static assert(  isSpecVector!(2,double,dvec2) );
+    static assert(  isSpecVector!(3,double,dvec3) );
+    static assert(  isSpecVector!(4,double,dvec4) );
+    static assert(  isSpecVector!(2,int,ivec2) );
+    static assert(  isSpecVector!(3,int,ivec3) );
+    static assert(  isSpecVector!(4,int,ivec4) );
 }
 
 ///
@@ -564,14 +427,10 @@ unittest
     static assert( isVector!(Vector!(3,float)) );
     static assert( isVector!(Vector!(0,float)) );
 
-    static assert( !__traits(compiles,Vector!(3,float,"x y")) );
-    static assert( !__traits(compiles,Vector!(3,float,"x y")) );
-    static assert(  __traits(compiles,Vector!(3,float,"x y z")) );
-
-    static assert( Vector!(3,float,"x y z").sizeof == float.sizeof * 3 );
+    static assert( Vector!(3,float).sizeof == float.sizeof * 3 );
     static assert( Vector!(0,float).sizeof == (float[]).sizeof );
 
-    static assert( Vector!(3,float,"x y z").length == 3 );
+    static assert( Vector!(3,float).length == 3 );
 }
 
 ///
@@ -651,21 +510,65 @@ unittest
 ///
 unittest
 {
-    auto a = Vector!(3,int,"x y z|u v t|r g b")(1,2,3);
+    auto a = Vector!(3,int)(1,2,3);
     assert( a.x == a.r );
     assert( a.y == a.g );
     assert( a.z == a.b );
     assert( a.x == a.u );
     assert( a.y == a.v );
     assert( a.z == a.t );
+}
 
-    auto b = Vector!(2,int,"near far|n f")(1,100);
-    assert( b.near == b.n );
-    assert( b.far  == b.f );
+///
+unittest
+{
+    auto a = vec3(1,2,3);
 
-    b.nf = ivec2( 10,20 );
-    assert( b.near == 10 );
-    assert( b.far == 20 );
+    assert( a.opDispatch!"x" == 1 );
+    assert( a.y == 2 );
+    assert( a.z == 3 );
+
+    a.opDispatch!"x" = 2;
+    a.x = 2;
+    assert( a.x == 2 );
+}
+
+///
+unittest
+{
+    auto a = vec3(1,2,3);
+
+    auto b = a.opDispatch!"xy";
+    auto c = a.xx;
+    auto d = a.xxxyyzyx;
+
+    static assert( is(typeof(b) == Vector!(2,float) ) );
+    static assert( is(typeof(c) == Vector!(2,float) ) );
+    static assert( is(typeof(d) == Vector!(8,float) ) );
+
+    assert( eq( b, [1,2] ) );
+    assert( eq( c, [1,1] ) );
+    assert( eq( d, [1,1,1,2,2,3,2,1] ) );
+}
+
+///
+unittest
+{
+    auto a = vec3(1,2,3);
+    auto b = dvec4(4,5,6,7);
+    auto c = vecD( 9, 10 );
+    a.opDispatch!"xz"( b.yw );
+    assert( eq( a, [5,2,7] ) );
+    a.zy = c;
+    assert( eq( a, [5,10,9] ) );
+    static assert( !__traits(compiles, a.xy=vec3(1,2,3)) );
+    static assert( !__traits(compiles, a.xx=vec2(1,2)) );
+    auto d = a.zxy = b.wyx;
+    static assert( is( d.datatype == double ) );
+    assert( eq( d, [ 7,5,4 ] ) );
+    assert( eq( a, [ 5,4,7 ] ) );
+    a.yzx = a.zxz;
+    assert( eq( a, [ 7,7,5 ] ) );
 }
 
 ///
@@ -716,69 +619,6 @@ unittest
 {
     auto a = vec3(2,2,1);
     assert( eq(a.rebase(vec3(2,0,0),vec3(0,2,0),vec3(0,0,2)), [1,1,.5] ) );
-}
-
-///
-unittest
-{
-    auto a = vec3(1,2,3);
-
-    assert( a.opDispatch!"x" == 1 );
-    assert( a.y == 2 );
-    assert( a.z == 3 );
-
-    a.x = 2;
-    assert( a.x == 2 );
-}
-
-///
-unittest
-{
-    alias Vector!(4,float,"x y dx dy") vec2p;
-
-    auto a = vec2p(1,2,0,0);
-
-    assert( a.opDispatch!"x" == 1 );
-    assert( a.dx == 0 );
-}
-
-///
-unittest
-{
-    auto a = vec3(1,2,3);
-
-    auto b = a.opDispatch!"xy";
-    auto c = a.xx;
-    auto d = a.xxxyyzyx;
-
-    static assert( is(typeof(b) == Vector!(2,float,"x y") ) );
-    static assert( is(typeof(c) == Vector!(2,float) ) );
-    static assert( is(typeof(d) == Vector!(8,float) ) );
-
-    assert( eq( b, [1,2] ) );
-    assert( eq( c, [1,1] ) );
-    assert( eq( d, [1,1,1,2,2,3,2,1] ) );
-}
-
-///
-unittest
-{
-    auto a = vec3(1,2,3);
-    auto b = dvec4(4,5,6,7);
-    auto c = vecD( 9, 10 );
-    a.xz = b.yw;
-    assert( eq( a, [5,2,7] ) );
-    a.zy = c;
-    assert( eq( a, [5,10,9] ) );
-    static assert( !__traits(compiles, a.xy=vec3(1,2,3)) );
-    static assert( !__traits(compiles, a.xx=vec2(1,2)) );
-    auto d = a.zxy = b.wyx;
-    static assert( d.access_string == "z x y" );
-    static assert( is( d.datatype == float ) );
-    assert( eq( d, [ 7,5,4 ] ) );
-    assert( eq( a, [ 5,4,7 ] ) );
-    a.yzx = a.zxz;
-    assert( eq( a, [ 7,7,5 ] ) );
 }
 
 ///
@@ -867,7 +707,7 @@ unittest
 }
 
 /// dot multiplication for compaitable vectors.
-auto dot( size_t N, size_t K, T,E, alias string S1, alias string S2 )( in Vector!(N,T,S1) a, in Vector!(K,E,S2) b )
+auto dot(size_t N,size_t K,T,E)( in Vector!(N,T) a, in Vector!(K,E) b )
     if( (N==K||K==0||N==0) && hasCompMltAndSum!(T,E) )
 {
     static if( a.isDynamic || b.isDynamic )
@@ -890,8 +730,11 @@ unittest
     assert( eq( dot(a,b), 1+4+9 ) );
 }
 
+bool hasCompMltAndSum(T,E)() pure
+{ return is( typeof( T(T.init * E.init) ) ) && is( typeof( T.init + T.init ) == T ); }
+
 /// cross multiplication for compaitable vectors.
-auto cross( size_t N, size_t K, T,E, alias string S1, alias string S2 )( in Vector!(N,T,S1) a, in Vector!(K,E,S2) b )
+auto cross(size_t N,size_t K,T,E)( in Vector!(N,T) a, in Vector!(K,E) b )
     if( ((K==3||K==0)&&(N==3||N==0)) && hasCompMltAndSum!(T,E) )
 {
     static if( a.isDynamic ) enforce( a.length == 3, "wrong length a" );
@@ -923,3 +766,78 @@ unittest
     auto cfy = vec4(0,1,0,0);
     static assert( !__traits(compiles,x*cfy) );
 }
+
+///
+mixin template accessByString( size_t N, T, string data, string AS, string VVASES=" ", string VVASVS="|")
+    if( isCompatibleArrayAccessStrings(N,AS,VVASES,VVASVS) )
+{
+    pure @property
+    {
+        import std.string;
+        import des.math.util;
+
+        T opDispatch(string v)() const
+            if( getIndex(AS,v,VVASES,VVASVS) != -1 )
+        { mixin( format( "return this.%s[%d];", data, getIndex(AS,v,VVASES,VVASVS) ) ); }
+
+        ref T opDispatch(string v)()
+            if( getIndex(AS,v,VVASES,VVASVS) != -1 )
+        { mixin( format( "return this.%s[%d];", data, getIndex(AS,v,VVASES,VVASVS) ) ); }
+
+        static if( isOneSymbolPerFieldForAnyAccessString(AS,VVASES,VVASVS) )
+        {
+            auto opDispatch(string v)() const
+                if( v.length > 1 && oneOfAnyAccessAll(AS,v,VVASES,VVASVS) )
+            {
+                static string gen()
+                {
+                    string[] res;
+                    foreach( i, sym; v )
+                        res ~= format( "this.%s[%d]", data, getIndex( AS, ""~sym, VVASES, VVASVS ) );
+                    return res.join(",");
+                }
+
+                mixin( `return Vector!(v.length,T)(` ~ gen() ~ `);` );
+            }
+
+            auto opDispatch(string v,U)( in U b )
+                if( v.length > 1 && oneOfAnyAccessAll(AS,v,VVASES,VVASVS) && isCompatibleArrayAccessString(v.length,v) &&
+                        ( isSpecVector!(v.length,T,U) || ( isDynamicVector!U && is(typeof(T(U.datatype.init))) ) ) )
+            {
+                static if( b.isDynamic ) enforce( v.length == b.length );
+
+                static string gen()
+                {
+                    string[] res;
+                    foreach( i, sym; v )
+                        res ~= format( "this.%s[%d] = T( b[%d] );", data,
+                                    getIndex( AS, ""~sym, VVASES, VVASVS ), i );
+                    return res.join("\n");
+                }
+
+                mixin( gen() );
+                return b;
+            }
+        }
+    }
+}
+
+///
+unittest
+{
+    struct NF
+    {
+        ivec2 data;
+        this(E...)( E e ) if( is(typeof(ivec2(e))) ) { data = ivec2(e); }
+        mixin accessByString!( 2,int,"data", "near far|n f" );
+    }
+
+    auto b = NF(1,100);
+    assert( b.near == b.n );
+    assert( b.far  == b.f );
+
+    b.nf = ivec2( 10,20 );
+    assert( b.near == 10 );
+    assert( b.far == 20 );
+}
+

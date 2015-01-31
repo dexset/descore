@@ -97,10 +97,7 @@ private @property
     }
 
     string castArrayString(string type, size_t H, size_t W)()
-    {
-        return format( "cast(%s[%d][%d])", type, W, H );
-    }
-
+    { return format( "cast(%s[%d][%d])", type, W, H ); }
 }
 
 /++
@@ -622,16 +619,13 @@ pure:
     }
 
     ///
-    auto opBinary(string op,size_t K,X,alias string AS)( in Vector!(K,X,AS) v ) const
+    auto opBinary(string op,size_t K,X)( in Vector!(K,X) v ) const
         if( op=="*" && allowSomeOp(W,K) && isValidOp!("*",E,X) && isValidOp!("+",E,E) )
     {
         static if( isDynamic || v.isDynamic )
             enforce( width == v.length, "wrong vector length" );
 
-        static if( isStatic && W == H )
-            Vector!(H,E,AS) ret;
-        else
-            Vector!(H,E) ret;
+        Vector!(H,E) ret;
 
         static if( ret.isDynamic )
             ret.length = height;
@@ -648,7 +642,7 @@ pure:
     }
 
     ///
-    auto opBinaryRight(string op,size_t K,X,alias string AS)( in Vector!(K,X,AS) v ) const
+    auto opBinaryRight(string op,size_t K,X)( in Vector!(K,X) v ) const
         if( op=="*" && isVector!(typeof(selftype.init.T * typeof(v).init)) )
     { return this.T * v; }
 
@@ -1428,7 +1422,7 @@ unittest
 
 ///
 auto quatAndPosToMatrix(E,V)( in Quaterni!E iq, in V pos )
-    if( isCompatibleVector!(3,E,V) )
+    if( isSpecVector!(3,E,V) )
 {
     auto q = iq / iq.len2;
 

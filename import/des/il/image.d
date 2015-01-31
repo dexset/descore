@@ -1,27 +1,3 @@
-/+
-The MIT License (MIT)
-
-    Copyright (c) <2013> <Oleg Butko (deviator), Anton Akzhigitov (Akzwar)>
-
-    Permission is hereby granted, free of charge, to any person obtaining a copy
-    of this software and associated documentation files (the "Software"), to deal
-    in the Software without restriction, including without limitation the rights
-    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is
-    furnished to do so, subject to the following conditions:
-
-    The above copyright notice and this permission notice shall be included in
-    all copies or substantial portions of the Software.
-
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-    THE SOFTWARE.
-+/
-
 module des.il.image;
 
 import std.exception;
@@ -56,7 +32,14 @@ struct Image(size_t N) if( N > 0 )
         ///
         ElemInfo info;
         ///
-        SizeVector!N size;
+        CrdVector!N size;
+
+        this(T)( in ElemInfo i, in Vector!(N,T) s )
+        if( isIntegral!T )
+        {
+            info = i;
+            size = Vector!(N,ptrdiff_t)(s);
+        }
 
         invariant() { assert( isAllCompPositive(size) ); }
 
@@ -115,16 +98,16 @@ pure:
     }
 
     /// from size, element info and data
-    this(T)( in T[N] sz, in ElemInfo pt, in void[] data=[] )
+    this(T)( in Vector!(N,T) sz, in ElemInfo pt, in void[] data=[] )
         if( isIntegral!T )
     in { assert( isAllCompPositive(sz) ); } body
-    { this( Header(pt,SizeVector!N(sz)), data ); }
+    { this( Header(pt,sz), data ); }
 
     /// from size, data type, channel count and data
-    this(T)( in T[N] sz, DataType dt, size_t ch, in void[] data=[] )
+    this(T)( in Vector!(N,T) sz, DataType dt, size_t ch, in void[] data=[] )
         if( isIntegral!T )
     in { assert( isAllCompPositive(sz) ); } body
-    { this( Header(ElemInfo(dt,ch),SizeVector!N(sz)), data ); }
+    { this( Header(ElemInfo(dt,ch),sz), data ); }
 
     /// fill data zeros
     void clear() { fill( cast(ubyte[])data, ubyte(0) ); }
@@ -134,7 +117,7 @@ pure:
         this( in Image!(N-1) img, size_t dim=N-1 )
         in { assert( dim < N ); } body
         {
-            SizeVector!N sz;
+            CrdVector!N sz;
             foreach( i; 0 .. N )
                 if( i == dim ) sz[i] = 1;
                 else sz[i] = img.size[i-(i>dim)];
@@ -175,12 +158,40 @@ pure:
     body
     {
         checkDataType!T;
-        return (cast(T[])data)[index(crd)];
+        return (cast(T[])data)[index(CrdVector!N(crd))];
     }
 
     /// ditto
     ref const(T) pixel(T,C,size_t Z)( in C[Z] crd... ) const
         if( isIntegral!C && Z == N )
+    in
+    {
+        assert( isAllCompPositive(crd), "negative coordinate" );
+        assert( all!"a[0]>a[1]"( zip( size.dup, crd.dup ) ), "range violation" );
+    }
+    body
+    {
+        checkDataType!T;
+        return (cast(const(T)[])data)[index(ivec!N(crd))];
+    }
+
+    /// ditto
+    ref T pixel(T,C)( in Vector!(N,C) crd )
+        if( isIntegral!C )
+    in
+    {
+        assert( isAllCompPositive(crd), "negative coordinate" );
+        assert( all!"a[0]>a[1]"( zip( size.dup, crd.dup ) ), "range violation" );
+    }
+    body
+    {
+        checkDataType!T;
+        return (cast(T[])data)[index(crd)];
+    }
+
+    /// ditto
+    ref const(T) pixel(T,C)( in Vector!(N,C) crd ) const
+        if( isIntegral!C )
     in
     {
         assert( isAllCompPositive(crd), "negative coordinate" );
@@ -216,10 +227,22 @@ pure:
     }
 
     /// return line index by coordinate
-    size_t index(T,size_t Z)( in T[Z] crd... ) const
-        if( isIntegral!T && Z == N )
+    size_t index(T)( in Vector!(N,T) crd ) const
+        if( isIntegral!T )
     in { assert( isAllCompPositive(crd) ); } body
-    { return getIndex( size.data, to!(CoordType[N])(crd) ); }
+    { return getIndex( size, CrdVector!N(crd) ); }
+
+    /// return line index by coordinate
+    size_t index(T,size_t Z)( in T[Z] crd... ) const
+        if( isIntegral!T && Z==N )
+    in { assert( isAllCompPositive(crd) ); } body
+    { return getIndex( size, CrdVector!N(crd) ); }
+
+    static if( N == 1 )
+    size_t index(T)( in T crd ) const
+        if( isIntegral!T )
+    in { assert( crd > 0 ); } body
+    { return crd; }
 
     @property
     {
@@ -227,11 +250,11 @@ pure:
         auto size() const { return head.size; }
 
         /// set size
-        auto size(V)( in V sz ) if( CIV!V )
+        auto size(V)( in Vector!(N,V) sz ) if( isIntegral!V )
         in { assert( isAllCompPositive(sz) ); } body
         {
             auto old_size = head.size;
-            head.size = SizeVector!N( sz );
+            head.size = CrdVector!N(sz);
             if( old_size != head.size )
                 data = new void[]( head.dataSize );
             return sz;
@@ -264,7 +287,7 @@ alias Image!3 Image3;
 ///
 unittest
 {
-    auto a = Image2( [3,3], ElemInfo( DataType.UBYTE, 3 ) );
+    auto a = Image2( ivec2(3,3), ElemInfo( DataType.UBYTE, 3 ) );
     assert( a.data.length != 0 );
     assert( eq( a.size, [3,3] ) );
     a.pixel!bvec3(0,0) = bvec3(1,2,3);
@@ -292,7 +315,7 @@ unittest
 ///
 unittest
 {
-    auto a = Image2( [3,3], ElemInfo( DataType.UBYTE, 1 ), to!(ubyte[])([ 1,2,3,4,5,6,7,8,9 ]) );
+    auto a = Image2( ivec2(3,3), ElemInfo( DataType.UBYTE, 1 ), to!(ubyte[])([ 1,2,3,4,5,6,7,8,9 ]) );
     auto b = Image2(a);
 
     assert( a.pixel!ubyte(0,0) == 1 );
@@ -308,7 +331,7 @@ unittest
 ///
 unittest
 {
-    auto a = Image1( [3], DataType.UBYTE, 1, to!(ubyte[])([ 1,2,3 ]) );
+    auto a = Image1( ivec!1(3), DataType.UBYTE, 1, to!(ubyte[])([ 1,2,3 ]) );
     assert(  mustExcept!Throwable({ a.pixel!(ubyte)(7) = 0; }) );
     assert( !mustExcept({ a.pixel!(ubyte)(0) = 0; }) );
 
@@ -341,7 +364,7 @@ unittest
 ///
 unittest
 {
-    auto a = Image2( [3,3], ElemInfo( DataType.FLOAT, 2 ) );
+    auto a = Image2( ivec2(3,3), ElemInfo( DataType.FLOAT, 2 ) );
 
     assert( a.index(1,2) == 7 );
     assert( a.index(ivec2(1,2)) == 7 );
@@ -361,7 +384,7 @@ unittest
         return reduce!((a,b)=>(a+=b))(vec2(0,0),buf);
     }
 
-    auto a = Image2( [3,3], ElemInfo( DataType.FLOAT, 2 ) );
+    auto a = Image2( ivec2(3,3), ElemInfo( DataType.FLOAT, 2 ) );
 
     a.pixel!vec2(0,0) = vec2(1,2);
     a.pixel!vec2(1,2) = vec2(2,2);
@@ -375,7 +398,7 @@ unittest
     Image2 img;
     assert( img.data.length == 0 );
     assert( img.data is null );
-    assert( img.size == SizeVector!2(0,0) );
+    assert( img.size == CrdVector!2(0,0) );
 
     img.size = ivec2(3,3);
     img.info = ElemInfo( DataType.NORM_FIXED, 3 );
@@ -384,7 +407,7 @@ unittest
     assert( img.data.length == 27 * float.sizeof );
     assert( img.info.bpe == 3 * float.sizeof );
 
-    img.pixel!col3(0,1) = col3( .2,.1,.3 );
+    img.pixel!vec3(0,1) = vec3( .2,.1,.3 );
     assert( img.pixel!vec3(0,1) == vec3(.2,.1,.3) );
 
     auto di = Image2.load( img.dump() );
@@ -454,7 +477,7 @@ unittest
 ///
 unittest
 {
-    assert( mustExcept({ Image2( [3,3], ElemInfo( DataType.UBYTE, 3 ), [ 1, 2, 3 ] ); }) );
+    assert( mustExcept({ Image2( ivec2(3,3), ElemInfo( DataType.UBYTE, 3 ), [ 1, 2, 3 ] ); }) );
 
     auto dt = [ vec2(1,0), vec2(0,1) ];
     assert( mustExcept({ Image2( ivec2(3,3), DataType.FLOAT, 2, dt ); }) );
@@ -462,7 +485,7 @@ unittest
     auto img = Image2( ivec2(3,3), ElemInfo( DataType.NORM_FIXED, 3 ) );
     assert( mustExcept({ auto d = img.mapAs!vec2; }) );
 
-    assert( !mustExcept({ img.pixel!col3(1,0) = col3(1,1,1); }) );
+    assert( !mustExcept({ img.pixel!vec3(1,0) = vec3(1,1,1); }) );
     assert(  mustExcept({ img.pixel!vec2(1,0) = vec2(1,1); }) );
     static assert(  !__traits(compiles, { img.pixel!vec3(4,4) = vec3(1,1); }) );
 }

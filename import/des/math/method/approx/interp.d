@@ -95,18 +95,18 @@ unittest
 
 unittest
 {
-    alias InterpolateTableData!col3 TC;
+    alias InterpolateTableData!vec3 TC;
     auto tbl =
         [
-        TC( 0, col3(1,0,0) ),
-        TC( 1, col3(0,1,0) ),
-        TC( 2, col3(0,0,1) )
+        TC( 0, vec3(1,0,0) ),
+        TC( 1, vec3(0,1,0) ),
+        TC( 2, vec3(0,0,1) )
         ];
 
-    assert( lineInterpolate( tbl, -1 ) == col3(1,0,0) );
-    assert( lineInterpolate( tbl, 0 ) == col3(1,0,0) );
-    assert( lineInterpolate( tbl, 0.5 ) == col3(0.5,0.5,0) );
-    assert( lineInterpolate( tbl, 3 ) == col3(0,0,1) );
+    assert( lineInterpolate( tbl, -1 ) == vec3(1,0,0) );
+    assert( lineInterpolate( tbl, 0 ) == vec3(1,0,0) );
+    assert( lineInterpolate( tbl, 0.5 ) == vec3(0.5,0.5,0) );
+    assert( lineInterpolate( tbl, 3 ) == vec3(0,0,1) );
 }
 
 @property bool canBezierInterpolate(T,F)()
@@ -241,7 +241,7 @@ body
 }
 
 auto angleSplineCriteria(T)( float angle )
-    if( isCompatibleVector!(2,float,T) || isCompatibleVector!(3,float,T) )
+    if( isSpecVector!(2,float,T) || isSpecVector!(3,float,T) )
 {
     auto cos_angle = cos( angle );
     return ( in T[] accepted, in T newpoint )
@@ -258,7 +258,7 @@ auto angleSplineCriteria(T)( float angle )
 }
 
 auto lengthSplineCriteria(T)( float len )
-if( isCompatibleVector!(2,float,T) || isCompatibleVector!(3,float,T) )
+if( isSpecVector!(2,float,T) || isSpecVector!(3,float,T) )
 in{ assert( len > 0 ); } body
 {
     return ( in T[] accepted, in T newpoint )

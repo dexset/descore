@@ -32,8 +32,8 @@ import des.util.testsuite;
 version(unittest) import std.math;
 
 ///
-auto df(size_t N, size_t M, T, E=T, alias string A, alias string B)
-    ( Vector!(M,T,B) delegate( in Vector!(N,T,A) ) f, in Vector!(N,T,A) p, E step=E.epsilon*10 )
+auto df(size_t N, size_t M, T, E=T)
+    ( Vector!(M,T) delegate( in Vector!(N,T) ) f, in Vector!(N,T) p, E step=E.epsilon*10 )
     if( isFloatingPoint!T && isFloatingPoint!E )
 {
     Matrix!(M,N,T) ret;
@@ -41,9 +41,9 @@ auto df(size_t N, size_t M, T, E=T, alias string A, alias string B)
     T dstep = 2.0 * step;
     foreach( i; 0 .. N )
     {
-        Vector!(N,T,A) p1 = p;
+        Vector!(N,T) p1 = p;
         p1[i] -= step;
-        Vector!(N,T,A) p2 = p;
+        Vector!(N,T) p2 = p;
         p2[i] += step;
 
         auto r1 = f(p1);
