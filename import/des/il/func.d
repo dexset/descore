@@ -360,7 +360,7 @@ in { assert( K < N ); } body
         utDataAssign( img.info, buf, 0 );
         foreach( j; 0 .. img.size[K] )
             utDataOp!"+"( img.info, buf,
-            cast(void*)( img.data.ptr + getOrigIndexByLayerCoord(img.size,K,i,j) * bpe ) );
+            cast(void*)( img.data.ptr + getOrigIndexByLayerCoord( img.size, K, i, j ) * bpe ) );
     }
 
     return ret;

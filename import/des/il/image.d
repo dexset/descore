@@ -23,9 +23,6 @@ N - dimensions count
  +/
 struct Image(size_t N) if( N > 0 )
 {
-    /// is compatible image vector
-    template CIV(V) { enum CIV = isCompatibleVector!(N,CoordType,V); }
-
     ///
     static struct Header
     {
@@ -108,6 +105,25 @@ pure:
         if( isIntegral!T )
     in { assert( isAllCompPositive(sz) ); } body
     { this( Header(ElemInfo(dt,ch),sz), data ); }
+
+    static
+    {
+        Image!N external( in Header hdr, void[] data )
+        {
+            Image!N ret;
+            ret.head = hdr;
+            ret.data = data;
+            return ret;
+        }
+
+        Image!N external(T)( in Vector!(N,T) sz, in ElemInfo pt, void[] data )
+            if( isIntegral!T )
+        { return Image!N.external( Header(pt,sz), data ); }
+
+        Image!N external(T)( in Vector!(N,T) sz, in DataType dt, size_t ch, void[] data )
+            if( isIntegral!T )
+        { return Image!N.external( Header(ElemInfo(dt,ch),sz), data ); }
+    }
 
     /// fill data zeros
     void clear() { fill( cast(ubyte[])data, ubyte(0) ); }
@@ -390,6 +406,17 @@ unittest
     a.pixel!vec2(1,2) = vec2(2,2);
 
     assert( sum(a) == vec2(3,4) );
+}
+
+/// use external memory
+unittest
+{
+    float[] data = [ 1.0, 2, 3, 4 ];
+    auto img = Image2.external( ivec2(2,2), DataType.FLOAT, 1, data );
+
+    img.pixel!float(0,0) = 8.0f;
+
+    assert( data[0] == 8.0f );
 }
 
 ///

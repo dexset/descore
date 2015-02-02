@@ -176,7 +176,7 @@ size_t getOrigIndexByLayerCoord(size_t N,A)( in Vector!(N,A) size, size_t K, siz
 if( isIntegral!A )
 in { assert( K < N ); } body
 {
-    auto lcrd = getCoord( ivec!N( removeStat( size, K ) ), lindex );
+    auto lcrd = getCoord( ivec!(N-1)( removeStat( size, K ) ), lindex );
     return getIndex( size, ivec!N( pasteStat( lcrd, K, lno ) ) );
 }
 
