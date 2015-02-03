@@ -73,7 +73,7 @@ import des.util.data.type : ArrayData, AlienArray;
         char *ch = cast(char*)c_str;
         size_t n;
         while( *ch++ != '\0' ) n++;
-        return AlienArray!char( ArrayData( n, cast(size_t)c_str ) ).arr.idup;
+        return AlienArray!char( ArrayData( n, cast(void*)c_str ) ).arr.idup;
     }
 
     /// ditto
@@ -85,7 +85,7 @@ import des.util.data.type : ArrayData, AlienArray;
             if( c == '\0' ) break;
             n++;
         }
-        return AlienArray!char( ArrayData( n, cast(size_t)c_buf.ptr ) ).arr.idup;
+        return AlienArray!char( ArrayData( n, cast(void*)c_buf.ptr ) ).arr.idup;
     }
 }
 

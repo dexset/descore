@@ -388,7 +388,13 @@ class DataTypeException : Exception
 }
 
 ///
-struct ArrayData { /++ +/size_t size, ptr; }
+struct ArrayData
+{
+    ///
+    size_t size;
+    ///
+    void* ptr;
+}
 
 ///
 union AlienArray(T)
@@ -405,7 +411,7 @@ union AlienArray(T)
 
 ///
 auto getTypedArray(T)( size_t sz, void* addr ) pure nothrow
-{ return AlienArray!T( ArrayData( sz, cast(size_t)addr ) ); }
+{ return AlienArray!T( ArrayData( sz, addr ) ); }
 
 ///
 unittest
