@@ -27,6 +27,8 @@ module des.space.camera;
 public import des.space.node;
 public import des.space.resolver;
 
+import des.util.logsys;
+
 import std.math;
 
 ///
@@ -68,17 +70,115 @@ class LookAtTransform : Transform
 }
 
 ///
-class PerspectiveTransform : Transform
+class ViewTransform : Transform
 {
 protected:
-    float _fov = 70;
+
     float _ratio = 4.0f / 3.0f;
     float _near = 1e-1;
     float _far = 1e5;
 
+    float nflim = 1e-5;
+
     mat4 self_mtr;
 
-    void recalc() { self_mtr = calcPerspective( _fov, _ratio, _near, _far ); }
+    ///
+    abstract void recalc();
+
+    invariant()
+    {
+        assert( _ratio > 0 );
+        assert( _near > 0 && _near < _far );
+        assert( _far > 0 );
+        assert( nflim > 0 );
+        assert( !!self_mtr );
+    }
+
+public:
+
+    @property
+    {
+        ///
+        float ratio() const { return _ratio; }
+        ///
+        float ratio( float v )
+        in { assert( v !is float.nan ); } body
+        {
+            enum lim = 1000000.0f;
+            if( v <= 0 )
+            {
+                v = 1 / lim;
+                logger.warning( "value <= 0, set to: ", 1 / lim );
+            }
+            if( v > lim )
+            {
+                v = lim;
+                logger.warning( "value > %s, set to: %s", lim, lim );
+            }
+            _ratio = v;
+            recalc();
+            return v;
+        }
+
+        ///
+        float near() const { return _near; }
+        ///
+        float near( float v )
+        in { assert( v !is float.nan ); } body
+        {
+            if( v > _far )
+            {
+                _far = v + nflim;
+                logger.warning( "value > far, far set to 'value + nflim': ", v + nflim );
+            }
+            if( v < 0 )
+            {
+                v = 0;
+                logger.warning( "value < 0, set to: 0" );
+            }
+            _near = v;
+            recalc();
+            return v;
+        }
+
+        ///
+        float far() const { return _far; }
+        ///
+        float far( float v )
+        in { assert( v !is float.nan ); } body
+        {
+            if( v < nflim * 2 )
+            {
+                v = nflim * 2;
+                logger.warning( "value < nflim * 2, set to: ", nflim * 2 );
+            }
+            if( v < _near )
+            {
+                _near = v - nflim;
+                logger.warning( "value < near, near set to 'value - nflim': ", v - nflim );
+            }
+            _far = v;
+            recalc();
+            return v;
+        }
+
+        ///
+        mat4 matrix() const { return self_mtr; }
+    }
+}
+
+///
+class PerspectiveTransform : ViewTransform
+{
+protected:
+    float _fov = 70;
+
+    override void recalc() { self_mtr = calcPerspective( _fov, _ratio, _near, _far ); }
+
+    invariant()
+    {
+        assert( _fov > 0 );
+    }
 
 public:
 
@@ -87,38 +187,81 @@ public:
         ///
         float fov() const { return _fov; }
         ///
-        float fov( float v ) in { assert(v>0); }
-        body { _fov = v; recalc(); return _fov; }
-
-        ///
-        float ratio() const { return _ratio; }
-        ///
-        float ratio( float v ) in { assert(v>0); }
-        body { _ratio = v; recalc(); return _ratio; }
-
-        ///
-        float near() const { return _near; }
-        ///
-        float near( float v ) in { assert(v>0); }
-        body { _near = v; recalc(); return _near; }
-
-        ///
-        float far() const { return _far; }
-        ///
-        float far( float v ) in { assert(v>0); }
-        body { _far = v; recalc(); return _far; }
-
-        ///
-        mat4 matrix() const { return self_mtr; }
+        float fov( float v )
+        in { assert( v !is float.nan ); } body
+        {
+            enum minfov = 1e-5;
+            enum maxfov = 180 - minfov;
+            if( v < minfov )
+            {
+                v = minfov;
+                logger.warning( "value < minfov, set to minfov: ", minfov );
+            }
+            if( v > maxfov )
+            {
+                v = maxfov;
+                logger.warning( "value > maxfov, set to maxfov: ", maxfov );
+            }
+            _fov = v;
+            recalc();
+            return v;
+        }
     }
 }
 
-/++ simple lookAt perspective camera +/
+///
+class OrthoTransform : ViewTransform
+{
+protected:
+
+    float _scale = 1;
+
+    invariant()
+    {
+        assert( _scale > 0 );
+    }
+
+    override void recalc()
+    {
+        self_mtr = mat4.init;
+        self_mtr[0][0] = _scale;
+        self_mtr[1][1] = _scale * _ratio;
+        self_mtr[2][2] = -2.0f / ( _far - _near );
+        self_mtr[3][2] = -( _far + _near ) / ( _far - _near );
+    }
+
+public:
+
+    @property
+    {
+        ///
+        float scale() const { return _scale; }
+        ///
+        float scale( float v )
+        in { assert( v !is float.nan ); } body
+        {
+            if( v < 1e-8 )
+            {
+                v = 1e-8;
+                logger.warning( "value < 1e-8, set to 1e-8" );
+            }
+            _scale = v;
+            recalc();
+            return v;
+        }
+    }
+}
+
+/++ simple lookAt perspective/ortho camera +/
 class SimpleCamera : Camera
 {
 protected:
+    ///
     LookAtTransform look_tr;
+    ///
     PerspectiveTransform perspective;
+    ///
+    OrthoTransform ortho;
 
 public:
 
@@ -130,28 +273,56 @@ public:
         look_tr.up = vec3(0,0,1);
         transform = look_tr;
         perspective = new PerspectiveTransform;
+        ortho = new OrthoTransform;
         projection = perspective;
     }
+
+    ///
+    void setPerspective() { projection = perspective; }
+    ///
+    void setOrtho() { projection = ortho; }
 
     @property
     {
         ///
-        void fov( float val ) { perspective.fov = val; }
+        bool isPerspective() const { return projection is perspective; }
         ///
+        bool isOrtho() const { return projection is ortho; }
+
+        /// for perspective
+        void fov( float val ) { perspective.fov = val; }
+        /// ditto
         float fov() const { return perspective.fov; }
 
+        /// for ortho
+        void scale( float val ) { ortho.scale = val; }
+        /// ditto
+        float scale() const { return ortho.scale; }
+
         ///
-        void ratio( float val ) { perspective.ratio = val; }
+        void ratio( float val )
+        {
+            perspective.ratio = val;
+            ortho.ratio = val;
+        }
         ///
         float ratio() const { return perspective.ratio; }
 
         ///
-        void near( float val ) { perspective.near = val; }
+        void near( float val )
+        {
+            perspective.near = val;
+            ortho.near = val;
+        }
         ///
         float near() const { return perspective.near; }
 
         ///
-        void far( float val ) { perspective.far = val; }
+        void far( float val )
+        {
+            perspective.far = val;
+            ortho.far = val;
+        }
         ///
         float far() const { return perspective.far; }
 
