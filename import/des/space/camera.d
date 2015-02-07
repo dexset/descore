@@ -108,12 +108,12 @@ public:
             if( v <= 0 )
             {
                 v = 1 / lim;
-                logger.warning( "value <= 0, set to: ", 1 / lim );
+                logger.warn( "value <= 0, set to: ", 1 / lim );
             }
             if( v > lim )
             {
                 v = lim;
-                logger.warning( "value > %s, set to: %s", lim, lim );
+                logger.warn( "value > %s, set to: %s", lim, lim );
             }
             _ratio = v;
             recalc();
@@ -129,12 +129,12 @@ public:
             if( v > _far )
             {
                 _far = v + nflim;
-                logger.warning( "value > far, far set to 'value + nflim': ", v + nflim );
+                logger.warn( "value > far, far set to 'value + nflim': ", v + nflim );
             }
             if( v < 0 )
             {
                 v = 0;
-                logger.warning( "value < 0, set to: 0" );
+                logger.warn( "value < 0, set to: 0" );
             }
             _near = v;
             recalc();
@@ -150,12 +150,12 @@ public:
             if( v < nflim * 2 )
             {
                 v = nflim * 2;
-                logger.warning( "value < nflim * 2, set to: ", nflim * 2 );
+                logger.warn( "value < nflim * 2, set to: ", nflim * 2 );
             }
             if( v < _near )
             {
                 _near = v - nflim;
-                logger.warning( "value < near, near set to 'value - nflim': ", v - nflim );
+                logger.warn( "value < near, near set to 'value - nflim': ", v - nflim );
             }
             _far = v;
             recalc();
@@ -195,12 +195,12 @@ public:
             if( v < minfov )
             {
                 v = minfov;
-                logger.warning( "value < minfov, set to minfov: ", minfov );
+                logger.warn( "value < minfov, set to minfov: ", minfov );
             }
             if( v > maxfov )
             {
                 v = maxfov;
-                logger.warning( "value > maxfov, set to maxfov: ", maxfov );
+                logger.warn( "value > maxfov, set to maxfov: ", maxfov );
             }
             _fov = v;
             recalc();
@@ -243,7 +243,7 @@ public:
             if( v < 1e-8 )
             {
                 v = 1e-8;
-                logger.warning( "value < 1e-8, set to 1e-8" );
+                logger.warn( "value < 1e-8, set to 1e-8" );
             }
             _scale = v;
             recalc();
@@ -285,9 +285,9 @@ public:
     @property
     {
         ///
-        bool isPerspective() const { return projection is perspective; }
+        bool isPerspective() const { return projection == perspective; }
         ///
-        bool isOrtho() const { return projection is ortho; }
+        bool isOrtho() const { return projection == ortho; }
 
         /// for perspective
         void fov( float val ) { perspective.fov = val; }
