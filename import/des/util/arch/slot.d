@@ -2,6 +2,7 @@ module des.util.arch.slot;
 
 import des.util.arch.emm;
 
+///
 package interface SignalLeverage
 { void disconnect( SlotController ); }
 

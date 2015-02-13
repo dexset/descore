@@ -104,11 +104,13 @@ interface DesBase : ExternalMemoryManager, SlotHandler
     { return newEMM!(Slot!Args)( this, fnc ); }
 
     ///
-    final void connect(Args...)( Signal!Args sig, void delegate(Args) fnc )
+    final auto connect(Args...)( Signal!Args sig, void delegate(Args) fnc )
     in { assert( sig !is null, "signal is null" ); } body
     {
-        sig.connect( newSlot!Args( fnc ) );
+        auto ret = newSlot!Args( fnc );
+        sig.connect( ret );
         logger.Debug( "sig: %s, fnc: %s", sig, fnc );
+        return ret;
     }
 }
 
