@@ -394,6 +394,18 @@ struct ArrayData
     size_t size;
     ///
     void* ptr;
+
+    this(T)( size_t size, T* data )
+    {
+        this.size = size;
+        ptr = cast(void*)data;
+    }
+
+    this(T)( size_t size, in T* data ) const
+    {
+        this.size = size;
+        ptr = cast(void*)data;
+    }
 }
 
 ///
@@ -410,8 +422,13 @@ union AlienArray(T)
 }
 
 ///
-auto getTypedArray(T)( size_t sz, void* addr ) pure nothrow
-{ return AlienArray!T( ArrayData( sz, addr ) ); }
+auto getTypedArray(T,X)( size_t sz, X* addr ) pure nothrow
+{
+    static if( is( Unqual!(X) == X ) )
+        return AlienArray!T( ArrayData( sz, addr ) );
+    else
+        return const AlienArray!T( const ArrayData( sz, addr ) );
+}
 
 ///
 unittest
@@ -422,6 +439,27 @@ unittest
     assert( eq( a, [2.2, 3.3] ) );
     a[0] = 10;
     assert( eq( buf, [1.1, 10, 3.3, 4.4, 5.5] ) );
+}
+
+///
+unittest
+{
+
+    ubyte[] buf = [ 1, 2, 3, 4 ];
+    auto a = getTypedArray!void( 4, cast(void*)buf );
+    assert( eq( cast(ubyte[])a, buf ) );
+}
+
+///
+unittest
+{
+    static struct TT { ubyte val; }
+
+    ubyte[] fnc( in TT[] data ) pure
+    { return getTypedArray!ubyte( data.length, data.ptr ).arr.dup; }
+
+    auto tt = [ TT(0), TT(1), TT(3) ];
+    assert( eq( fnc( tt ), cast(ubyte[])[0,1,3] ) );
 }
 
 ///
