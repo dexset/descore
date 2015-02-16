@@ -110,7 +110,7 @@ pure:
         {
             /++
                 Length of elements. 
-                Enum, if vector is static.
+                Enum, if vector `isStatic`.
             +/
             auto length() const { return data.length; }
 
@@ -187,8 +187,6 @@ pure:
 
     /++
      + Any binary operations execs per element
-     + See_Also:
-     + [isValidOp](des/math/linear/vector/isValidOp.html)
      +/
     auto opBinary(string op,size_t K,E)( in Vector!(K,E) b ) const
         if( isValidOp!(op,T,E) && (K==N||K==0||N==0) )
@@ -253,7 +251,7 @@ pure:
 
             static if( is( typeof( this / len ) == typeof(this) ) )
             {
-                /++ Unit length of the vector
+                /++ normalized vector
 
                     only:
                     if( is( typeof( this / len ) == typeof(this) ) )
