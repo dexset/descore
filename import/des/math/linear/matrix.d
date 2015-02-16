@@ -622,6 +622,33 @@ pure:
         if( op=="*" && isVector!(typeof(selftype.init.T * typeof(v).init)) )
     { return this.T * v; }
 
+    static if( W==4 && ( H==4 || H==3 ) && isFloatingPoint!E )
+    {
+        /++ transform vector, equals `( m * vec4( v, fc ) ).xyz`
+
+            only:
+            W==4 && ( H==4 || H==3 ) && isFloatingPoint!E
+         +/
+        Vector!(3,E) tr(X)( in Vector!(3,X) v, E fc ) const
+        { return ( this * Vector!(4,E)( v, fc ) ).xyz; }
+
+        /++ project vector
+         +
+         + equals:
+         + ---
+         + auto r = m * vec4( v, fc );
+         + return r.xyz / r.w;
+         + ---
+         + only:
+         +    W==4 && ( H==4 || H==3 ) && isFloatingPoint!E
+         +/
+        Vector!(3,E) prj(X)( in Vector!(3,X) v, E fc ) const
+        {
+            auto r = this * Vector!(4,E)( v, fc );
+            return r.xyz / r.w;
+        }
+    }
+
     static private size_t[] getIndexesWithout(size_t max, in size_t[] arr)
     {
         size_t[] ret;
