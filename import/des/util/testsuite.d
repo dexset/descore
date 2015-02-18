@@ -4,6 +4,11 @@ import std.traits;
 import std.typetuple;
 import std.math;
 
+import std.stdio;
+import std.string;
+import std.exception;
+import core.exception : AssertError;
+
 ///
 template isElemHandler(A)
 {
@@ -119,3 +124,24 @@ unittest
     assert( !mustExcept!Exception( { throw new Throwable("test"); } ) );
     assert( !mustExcept!Exception( { auto a = 4; } ) );
 }
+
+auto assertError(Args...)( string file, size_t line, string fmt, Args args )
+{ return new AssertError( format( fmt, args ), file, line ); }
+
+///
+void assertEq(A,B,string file=__FILE__,size_t line=__LINE__)( in A a, in B b )
+if( is( typeof( eq(a,b) ) ) )
+{ enforce( eq(a,b), assertError( file, line, "fails: %s != %s", a, b ) ); }
+
+///
+void assertNotEq(A,B,string file=__FILE__,size_t line=__LINE__)( in A a, in B b )
+if( is( typeof( eq(a,b) ) ) )
+{ enforce( !eq(a,b), assertError( file, line, "fails: %s == %s", a, b ) ); }
+
+///
+void assertNull(A,string file=__FILE__,size_t line=__LINE__)( in A a )
+{ enforce( a is null, assertError( file, line, "fails: %s !is null", a ) ); }
+
+///
+void assertNotNull(A,string file=__FILE__,size_t line=__LINE__)( in A a )
+{ enforce( a !is null, assertError( file, line, "fails: %s is null", a ) ); }
