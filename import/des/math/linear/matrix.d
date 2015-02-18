@@ -647,6 +647,17 @@ pure:
             auto r = this * Vector!(4,E)( v, fc );
             return r.xyz / r.w;
         }
+       
+        @property
+        {
+            ///
+            Vector!(3,E) offset() const
+            { return Vector!(3,E)( cast(E[3])( col(3).data[0..3] ) ); }
+
+            ///
+            Vector!(3,X) offset(X)( in Vector!(3,X) v )
+            { setCol(3, Vector!(4,E)( v, data[3][3] ) ); return v; }
+        }
     }
 
     static private size_t[] getIndexesWithout(size_t max, in size_t[] arr)
@@ -1392,6 +1403,16 @@ unittest
     assert( stm );
     auto dnm = matD();
     assert( dnm );
+}
+
+unittest
+{
+    auto t = mat4.diag(1,2,3,4);
+    assertEq( t.offset, vec3(0) );
+    t.setCol( 3, vec4(3,2,1,1) );
+    assertEq( t.offset, vec3(3,2,1) );
+    t.offset = vec3(1,2,3);
+    assertEq( t.offset, vec3(1,2,3) );
 }
 
 ///
