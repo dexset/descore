@@ -75,4 +75,6 @@ unittest
     tsn.offset = vec3( 1, 2, 3 );
 
     assertEq( vec4( tsn.matrix.col(3) ), vec4(1,2,3,1) );
+    tsn.matrix = mat4.init;
+    assertEq( tsn.offset, vec3(0,0,0) );
 }
