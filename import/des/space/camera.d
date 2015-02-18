@@ -27,12 +27,21 @@ class Camera: SpaceNode
 
     const
     {
-        ///
+        /// get transform matrix from obj local coord system to camera coord system
         mat4 resolve( const(SpaceNode) obj ) { return resolver(obj, this); }
-        ///
-        mat4 matrix() @property { return getMatrix( transform ); }
-        ///
-        vec3 offset() @property { return vec3( matrix.col(3).data[0..3] ); }
+
+        /// `projectMatrix * resolve`
+        mat4 view( const(SpaceNode) obj ) { return projectMatrix * resolve( obj ); }
+
+        @property
+        {
+            ///
+            mat4 matrix() { return getMatrix( transform ); }
+            ///
+            mat4 projectMatrix() { return getMatrix( projection ); }
+            ///
+            vec3 offset() { return vec3( matrix.col(3).data[0..3] ); }
+        }
     }
 }
 
@@ -153,10 +162,7 @@ protected:
 
     override void recalc() { self_mtr = calcPerspective( _fov, _ratio, _near, _far ); }
 
-    invariant()
-    {
-        assert( _fov > 0 );
-    }
+    invariant() { assert( _fov > 0 ); }
 
 public:
 
