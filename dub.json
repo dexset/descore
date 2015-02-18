@@ -1,5 +1,5 @@
 {
-    "name": "descore",
+	"name": "descore",
     "description": "D Extended Set Core: math, multithread, images, logsystem, localization, signal-slot, etc",
     "authors": ["Oleg Butko(deviator)", "Anton Akzhigitov(Akzwar)"],
     "license": "MIT",
