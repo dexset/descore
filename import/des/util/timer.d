@@ -3,64 +3,78 @@ module des.util.timer;
 import std.datetime;
 import core.thread;
 
+import des.util.arch;
+
 ///
-struct TimerCallback
+class TimeSignal : Signal!()
 {
-    double time=0; ///
-    double tick=0; ///
-    void delegate() func; ///
+protected:
+    double el=0, tr=0;
+
+public:
+
+    this( double tr )
+    in { assert( tr > 0 ); }
+    body { this.tr = tr; }
+
+    @property
+    {
+        ///
+        double trigger() const { return tr; }
+        ///
+        double trigger( double v )
+        in { assert( v > 0 ); }
+        body { tr = v; return v; }
+
+        ///
+        double elapsed() const { return el; }
+    }
 
     ///
-    void reset() { time = 0; }
+    void reset() { el = 0; }
 
     ///
     void update( double dt )
     {  
-        time += dt;
-        if( time > tick )
-        {
-            time = 0;
-            if( func ) func();
-        }
+        el += dt;
+        if( el < tr ) return;
+        reset();
+        opCall();
     }
 }
 
 ///
-class Timer
+class Timer : DesObject
 {
-    StopWatch sw; ///
-    double time=0; ///
-    double all_time=0; ///
-    size_t cbindex=0; ///
+    mixin DES;
 
-    TimerCallback[string] callback; ///
+    ///
+    StopWatch sw;
+    ///
+    double time=0;
+    ///
+    double all_time=0;
+    ///
+    size_t cbindex=0;
+
+    TimeSignal[] signals;
 
     ///
     this() { sw.start(); }
 
     ///
-    string every( double dt, void delegate() fnc )
-    { 
-        import std.string;
-        auto key = format( "__auto_gen_callback_%04d", cbindex++ );
-        callback[key] = TimerCallback( 0, dt, fnc ); 
-        return key;
+    TimeSignal signalEvery( double trigger )
+    {
+        auto s = newEMM!TimeSignal( trigger );
+        signals ~= s;
+        return s;
     }
-
-    ///
-    void every( double dt, string key, void delegate() fnc )
-    { callback[key] = TimerCallback( 0, dt, fnc ); }
-
-    ///
-    void removeCallback( string key )
-    { callback.remove(key); }
 
     ///
     double reset()
     {
         auto r = time;
         time = 0;
-        foreach( cb; callback ) cb.reset();
         return r;
     }
 
@@ -77,6 +91,7 @@ class Timer
         auto r = all_time;
         all_time = 0;
         reset();
+        foreach( s; signals ) s.reset();
         return r;
     }
 
@@ -89,7 +104,8 @@ class Timer
         sw.start();
         time += dt;
         all_time += dt;
-        foreach( cb; callback ) cb.update( dt );
+        foreach( s; signals )
+            s.update( dt );
         return dt;
     }
 }
