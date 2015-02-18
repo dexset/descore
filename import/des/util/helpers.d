@@ -2,13 +2,20 @@ module des.util.helpers;
 
 import core.runtime, std.file, std.path;
 
-/++
-code:
-    return buildNormalizedPath( dirName( thisExePath ) ~ elems );
- +/
-string appPath( string[] elems... ) 
-{ return buildNormalizedPath( dirName( thisExePath ) ~ elems ); }
+/// `buildNormalizedPath`
+string bnPath( string[] path... ) 
+{ return buildNormalizedPath( path ); }
 
-/// buildNormalizedPath
-string bnPath( string[] elems... ) 
-{ return buildNormalizedPath( elems ); }
+/++
+normalized path from executable dir,
+no matter where the program was launched, result stable
+
+code:
+    return bnPath( dirName( thisExePath ) ~ path );
+ +/
+string appPath( string[] path... ) 
+{ return bnPath( dirName( thisExePath ) ~ path ); }
+
+/// read text from app path file
+string readAPF( string[] path... )
+{ return readText( appPath( path ) ); }
