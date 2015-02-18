@@ -31,6 +31,8 @@ class Camera: SpaceNode
         mat4 resolve( const(SpaceNode) obj ) { return resolver(obj, this); }
         ///
         mat4 matrix() @property { return getMatrix( transform ); }
+        ///
+        vec3 offset() @property { return vec3( matrix.col(3).data[0..3] ); }
     }
 }
 
