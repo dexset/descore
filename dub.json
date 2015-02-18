@@ -1,6 +1,6 @@
 {
 	"name": "descore",
-    "description": "D Extended Set Core",
+    "description": "D Extended Set Core: linear algebra, multithread wrap, images, utils (logsystem, localization, signal-slot)",
     "authors": ["Oleg Butko(deviator)", "Anton Akzhigitov(Akzwar)"],
     "license": "MIT",
 	"targetType": "sourceLibrary",
