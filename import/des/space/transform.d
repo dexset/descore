@@ -252,11 +252,15 @@ protected:
 
     override void recalc()
     {
-        self_mtr = mat4.init;
-        self_mtr[0][0] = _scale;
-        self_mtr[1][1] = _scale * _ratio;
-        self_mtr[2][2] = -2.0f / ( _far - _near );
-        self_mtr[3][2] = -( _far + _near ) / ( _far - _near );
+        auto s = 1.0 / _scale;
+        auto r = s * _ratio;
+        auto z = -2.0f / ( _far - _near );
+        auto o = -( _far + _near ) / ( _far - _near );
+
+        self_mtr = mat4( s, 0, 0, 0,
+                         0, r, 0, 0,
+                         0, 0, z, o,
+                         0, 0, 0, 1 );
     }
 
 public:
