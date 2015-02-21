@@ -30,7 +30,7 @@ class TNodeNullChildException : TNodeException
 
 private
 {
-    pure string replaceWords(alias fun)( string s )
+    string replaceWords(alias fun)( string s ) pure
     {
         string ret;
         string buf;
@@ -125,30 +125,33 @@ interface TNode
         void %detachCallback( %NodeType[] det );
     }
 
-    void %setParent( %NodeType p );
+    void __%simpleSetParent( %NodeType p );
 
-    mixin template %TNodeHelper(bool __%with_empty_callback=true,
-                                bool __%release_cycle_check=false,
+    mixin template %TNodeHelper(bool __%release_cycle_check=false,
                                 bool __%release_nullchild_check=false )
     {
         protected
         {
-            static if( __%with_empty_callback )
+            import std.traits;
+            override
             {
-                void %attachCallback( %NodeType[] att ){}
-                void %detachCallback( %NodeType[] det ){}
+                static if( isAbstractFunction!%attachCallback )
+                    void %attachCallback( %NodeType[] att ){}
+                static if( isAbstractFunction!%detachCallback )
+                    void %detachCallback( %NodeType[] det ){}
             }
 
             %NodeType __%parent_node;
             %NodeType[] __%childs_list;
-
         }
-        void %setParent( %NodeType p ) { __%parent_node = p; }
+
+        void __%simpleSetParent( %NodeType p ) { __%parent_node = p; }
 
         public @property
         {
             %NodeType %parent() { return __%parent_node; }
             const(%NodeType) %parent() const { return __%parent_node; }
+
             %NodeType %parent( %NodeType p )
             {
                 if( __%parent_node !is null )
@@ -185,8 +188,14 @@ interface TNode
                 static if( __%release_cycle_check || DEBUG )
                     enforce( %cycleCheck( att ), new TNodeCycleException );
 
-                __%childs_list ~= att;
-                foreach( el; att ) el.%setParent( this );
+                foreach( el; att )
+                {
+                    if( %findInChilds( el ) ) continue;
+                    if( el.%parent !is null )
+                        el.%parent.%detachChilds( el );
+                    __%childs_list ~= el;
+                    el.__%simpleSetParent( this );
+                }
                 %attachCallback( att );
             }
 
@@ -198,7 +207,7 @@ interface TNode
                         if( ch != d )
                             buf ~= ch;
                 foreach( d; det )
-                    d.%setParent( null );
+                    d.__%simpleSetParent( null );
                 %childs = buf;
                 %detachCallback( det );
             }
@@ -226,9 +235,9 @@ interface TNode
 ///
 unittest
 {
-    static class Test : TNode!(Test,"pre_","Suff")
+    static class Test : TNode!(Test,"","XX")
     {
-        mixin pre_TNodeHelperSuff!(true,true,true);
+        mixin TNodeHelperXX!(true,true);
 
         string name;
         this( string name ) { this.name = name; }
@@ -236,7 +245,7 @@ unittest
         void append( string kk )
         {
             name ~= kk;
-            foreach( ch; pre_childsSuff )
+            foreach( ch; childsXX )
                 ch.append( kk );
         }
     }
@@ -246,18 +255,18 @@ unittest
     auto e2 = new Test("c");
     auto e3 = new Test("d");
 
-    e1.pre_parentSuff = e0;
-    e2.pre_parentSuff = e1;
+    e1.parentXX = e0;
+    e2.parentXX = e1;
 
     e0.append( "ok" );
 
-    e1.pre_attachChildsSuff( e3 );
+    e1.attachChildsXX( e3 );
 
-    assert( e0.pre_childsSuff == [ e1 ] );
-    assert( e0.name == "aok" );
-    assert( e1.name == "bok" );
-    assert( e3.name == "d" );
-    assert( e3.pre_parentSuff == e1 );
+    assertEq( e0.childsXX, [ e1 ] );
+    assertEq( e0.name, "aok" );
+    assertEq( e1.name, "bok" );
+    assertEq( e3.name, "d" );
+    assertEq( e3.parentXX, e1 );
 }
 
 ///
@@ -265,8 +274,8 @@ unittest
 {
     static class Test : TNode!(Test,"a_"), TNode!(Test,"b_")
     {
-        mixin a_TNodeHelper!(true,true,true);
-        mixin b_TNodeHelper!(true,true,true);
+        mixin a_TNodeHelper!(true,true);
+        mixin b_TNodeHelper!(true,true);
 
         string name;
         this( string name ) { this.name = name; }
@@ -331,7 +340,7 @@ unittest
 ///
 unittest
 {
-    static class Test : TNode!Test { mixin TNodeHelper!(true, true, true); }
+    static class Test : TNode!Test { mixin TNodeHelper!(true, true); }
 
     auto a0 = new Test;
     auto a1 = new Test;
@@ -353,7 +362,7 @@ unittest
 
 unittest
 {
-    static class Test : TNode!(Test,"a") { mixin aTNodeHelper!(true, true, true); }
+    static class Test : TNode!(Test,"a") { mixin aTNodeHelper!(true, true); }
     auto a0 = new Test;
     assert( a0.aParent is null );
 }

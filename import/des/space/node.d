@@ -20,7 +20,7 @@ interface SpaceNode : Transform, TNode!(SpaceNode,"space")
      +/
     mixin template SpaceNodeHelper(bool with_matrix_field=true)
     {
-        mixin spaceTNodeHelper!(true,true,true);
+        mixin spaceTNodeHelper!(true,true);
 
         static if( with_matrix_field )
         {
