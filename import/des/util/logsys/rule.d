@@ -19,7 +19,12 @@ package:
 public:
 
     ///
-    this( shared Rule parent = null ) { this.parent = parent; }
+    this( shared Rule parent = null )
+    {
+        this.parent = parent;
+        if( parent )
+            this.level = parent.level;
+    }
 
     ///
     @property bool useMinimal() const
