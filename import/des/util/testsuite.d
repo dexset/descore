@@ -39,6 +39,9 @@ bool eq(A,B)( in A a, in B b ) pure
             if( !eq(a[i],b[i]) ) return false;
         return true;
     }
+    else static if( ( is( A == class ) || is( A == interface ) ) &&
+                    ( is( B == class ) || is( B == interface ) ) )
+        return a is b;
     else static if( allSatisfy!(isNumeric,A,B) && anySatisfy!(isFloatingPoint,A,B) )
     {
         static if( isFloatingPoint!A && !isFloatingPoint!B )
@@ -125,23 +128,55 @@ unittest
     assert( !mustExcept!Exception( { auto a = 4; } ) );
 }
 
+import std.conv : to;
+
+string toSF(T)( in T val )
+{
+    static if( is( typeof( to!string( val ) )) )
+        return to!string( val );
+    else static if( isArray!T )
+    {
+        string[] rr;
+        foreach( v; val )
+            rr ~= toSF( v );
+        return "[ " ~ rr.join(", ") ~ " ]";
+    }
+    else static if( is( T == typeof(null) ) ) return null;
+    else static if( is( T == interface ) || is( T == class ) )
+    {
+        if( val is null ) return "null";
+        else return to!string( cast(void*)val );
+    }
+    else return val.stringof;
+}
+
+unittest
+{
+    assert( eq( toSF([0,4]), "[0, 4]" ) );
+    assert( eq( toSF(null), "null" ) );
+    assert( eq( toSF(0), "0" ) );
+
+    Object a = null;
+    assert( eq( toSF(a), "null" ) );
+}
+
 auto assertError(Args...)( string file, size_t line, string fmt, Args args )
 { return new AssertError( format( fmt, args ), file, line ); }
 
 ///
 void assertEq(A,B,string file=__FILE__,size_t line=__LINE__)( in A a, in B b )
 if( is( typeof( eq(a,b) ) ) )
-{ enforce( eq(a,b), assertError( file, line, "fails: %s != %s", a, b ) ); }
+{ enforce( eq(a,b), assertError( file, line, "assertEq fails: %s != %s", toSF(a), toSF(b) ) ); }
 
 ///
 void assertNotEq(A,B,string file=__FILE__,size_t line=__LINE__)( in A a, in B b )
 if( is( typeof( eq(a,b) ) ) )
-{ enforce( !eq(a,b), assertError( file, line, "fails: %s == %s", a, b ) ); }
+{ enforce( !eq(a,b), assertError( file, line, "assertNotEq fails: %s == %s", toSF(a), toSF(b) ) ); }
 
 ///
 void assertNull(A,string file=__FILE__,size_t line=__LINE__)( in A a )
-{ enforce( a is null, assertError( file, line, "fails: %s !is null", a ) ); }
+{ enforce( a is null, assertError( file, line, "assertNull fails: %s !is null", toSF(a) ) ); }
 
 ///
 void assertNotNull(A,string file=__FILE__,size_t line=__LINE__)( in A a )
-{ enforce( a !is null, assertError( file, line, "fails: %s is null", a ) ); }
+{ enforce( a !is null, assertError( file, line, "assertNotNull fails: %s is null", toSF(a) ) ); }
