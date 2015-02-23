@@ -160,23 +160,39 @@ unittest
     assert( eq( toSF(a), "null" ) );
 }
 
-auto assertError(Args...)( string file, size_t line, string fmt, Args args )
+auto throwError(Args...)( string file, size_t line, string fmt, Args args )
 { return new AssertError( format( fmt, args ), file, line ); }
 
 ///
-void assertEq(A,B,string file=__FILE__,size_t line=__LINE__)( in A a, in B b )
+void assertEq(A,B,string file=__FILE__,size_t line=__LINE__)( in A a, in B b, lazy string fmt="" )
 if( is( typeof( eq(a,b) ) ) )
-{ enforce( eq(a,b), assertError( file, line, "assertEq fails: %s != %s", toSF(a), toSF(b) ) ); }
+{
+    enforce( eq(a,b), throwError( file, line,
+                ( fmt.length ? fmt : "assertEq fails: %s != %s" ),
+                toSF(a), toSF(b) ) );
+}
 
 ///
-void assertNotEq(A,B,string file=__FILE__,size_t line=__LINE__)( in A a, in B b )
+void assertNotEq(A,B,string file=__FILE__,size_t line=__LINE__)( in A a, in B b, lazy string fmt="" )
 if( is( typeof( eq(a,b) ) ) )
-{ enforce( !eq(a,b), assertError( file, line, "assertNotEq fails: %s == %s", toSF(a), toSF(b) ) ); }
+{
+    enforce( !eq(a,b), throwError( file, line,
+                ( fmt.length ? fmt : "assertNotEq fails: %s == %s" ),
+                toSF(a), toSF(b) ) );
+}
 
 ///
-void assertNull(A,string file=__FILE__,size_t line=__LINE__)( in A a )
-{ enforce( a is null, assertError( file, line, "assertNull fails: %s !is null", toSF(a) ) ); }
+void assertNull(A,string file=__FILE__,size_t line=__LINE__)( in A a, lazy string fmt="" )
+{
+    enforce( a is null, throwError( file, line,
+                ( fmt.length ? fmt : "assertNull fails: %s !is null" ),
+                toSF(a) ) );
+}
 
 ///
-void assertNotNull(A,string file=__FILE__,size_t line=__LINE__)( in A a )
-{ enforce( a !is null, assertError( file, line, "assertNotNull fails: %s is null", toSF(a) ) ); }
+void assertNotNull(A,string file=__FILE__,size_t line=__LINE__)( in A a, lazy string fmt="" )
+{
+    enforce( a !is null, throwError( file, line,
+                ( fmt.length ? fmt : "assertNotNull fails: %s is null" ),
+                toSF(a) ) );
+}
