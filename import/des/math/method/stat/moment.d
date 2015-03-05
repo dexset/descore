@@ -1,5 +1,7 @@
 module des.math.method.stat.moment;
 
+import des.util.testsuite;
+
 /// expected value
 T mean(T)( in T[] arr ) pure nothrow @property @nogc
 if( is( typeof( T.init + T.init ) == T ) && is( typeof( T.init / 1UL ) == T ) )
@@ -171,4 +173,62 @@ unittest
     assert( a.centralMoment(1) == 0 );
     assert( a.centralMoment(2) == 1.25 );
     assert( a.centralMoment(3) == 0 );
+}
+
+///
+class MovingAverage(T) if( is(typeof(T[].init.mean)) )
+{
+    ///
+    T[] array;
+    ///
+    size_t cur_index = 0;
+    ///
+    size_t max_length = 1;
+
+    ///
+    this( size_t mlen ) { max_length = mlen; }
+
+    invariant()
+    {
+        assert( array.length <= max_length );
+    }
+
+    ///
+    void append( in T val )
+    {
+        if( array.length < max_length ) array ~= val;
+        else array[cur_index++%max_length] = val;
+    }
+
+    @property
+    {
+        ///
+        size_t maxLength() const { return max_length; }
+        ///
+        void maxLength( size_t mlen )
+        {
+            max_length = mlen;
+            if( array.length > mlen )
+                array.length = mlen;
+        }
+
+        ///
+        T avg() const { return array.mean; }
+    }
+}
+
+unittest
+{
+    auto ma = new MovingAverage!float( 3 );
+    mustExcept({ ma.avg; });
+    ma.append( 1 );
+    assertEq( ma.avg, 1 );
+    ma.append( 1 );
+    assertEq( ma.avg, 1 );
+    ma.append( 4 );
+    assertEq( ma.avg, 2 );
+    ma.append( 4 );
+    ma.append( 4 );
+    assertEq( ma.avg, 4 );
+    assertEq( ma.array.length, 3 );
 }
