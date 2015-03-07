@@ -6,7 +6,7 @@ import core.thread;
 import des.util.arch;
 
 ///
-class TimeSignal : Signal!()
+class TimeSignal : Signal!(double)
 {
 protected:
     double el=0, tr=0;
@@ -31,15 +31,15 @@ public:
     }
 
     ///
-    void reset() { el = 0; }
+    void reset( double initial=0 ) { el = initial; }
 
     ///
     void update( double dt )
     {  
         el += dt;
         if( el < tr ) return;
-        reset();
-        opCall();
+        opCall( el );
+        reset( el - tr );
     }
 }
 
