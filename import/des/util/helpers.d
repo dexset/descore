@@ -24,7 +24,7 @@ string appPath( string[] path... )
 string readAPF( string[] path... )
 { return readText( appPath( path ) ); }
 
-/// convert array of values to bitmask
-auto buildFlags(T)( T[] list... )
+/// convert array of values to bit fields
+auto packBitMask(T)( T[] list... )
 { return reduce!((a,b)=>a|=b)(list); }
 
