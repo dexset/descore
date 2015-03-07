@@ -42,20 +42,20 @@ enum DataType
 /// data types that has direct correspondence with Dlang data types
 enum StoreDataType : DataType
 {
-    BYTE   = DataType.BYTE,  ///
-    UBYTE  = DataType.UBYTE, ///
+    BYTE   = DataType.BYTE,  /// `DataType.BYTE`
+    UBYTE  = DataType.UBYTE, /// `DataType.UBYTE`
 
-    SHORT  = DataType.SHORT, ///
-    USHORT = DataType.USHORT,///
+    SHORT  = DataType.SHORT, /// `DataType.SHORT`
+    USHORT = DataType.USHORT,/// `DataType.USHORT`
 
-    INT    = DataType.INT,   ///
-    UINT   = DataType.UINT,  ///
+    INT    = DataType.INT,   /// `DataType.INT`
+    UINT   = DataType.UINT,  /// `DataType.UINT`
 
-    LONG   = DataType.LONG,  ///
-    ULONG  = DataType.ULONG, ///
+    LONG   = DataType.LONG,  /// `DataType.LONG`
+    ULONG  = DataType.ULONG, /// `DataType.ULONG`
 
-    FLOAT  = DataType.FLOAT, ///
-    DOUBLE = DataType.DOUBLE ///
+    FLOAT  = DataType.FLOAT, /// `DataType.FLOAT`
+    DOUBLE = DataType.DOUBLE /// `DataType.DOUBLE`
 }
 
 /++
