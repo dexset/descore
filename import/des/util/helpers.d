@@ -26,5 +26,16 @@ string readAPF( string[] path... )
 
 /// convert array of values to bit fields
 auto packBitMask(T)( T[] list... )
-{ return reduce!((a,b)=>a|=b)(list); }
+{ return reduce!((a,b)=>a|=b)(0,list); }
+
+unittest
+{
+    assert( packBitMask() == 0 );
+    auto a = 0b0001;
+    assert( packBitMask(a) == a );
+    auto b = 0b0010;
+    assert( packBitMask(b) == a );
+    auto c = 0b0011;
+    assert( packBitMask(a,b) == c );
+}
 
