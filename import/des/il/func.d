@@ -10,124 +10,34 @@ import des.il.region;
 
 import des.math.linear.vector;
 
-import std.c.string : memcpy;
+import std.c.string : memcpy, memset;
 
+///
 enum ImRepack
 {
-    NONE,
-    ROT90,
-    ROT180,
-    ROT270,
-    HORMIR,
-    VERMIR
+    NONE,  ///
+    ROT90, ///
+    ROT180,///
+    ROT270,///
+    MIRHOR,///
+    MIRVER ///
 }
 
-auto imRepackRegion(T)( in Image2 img, Region!(2,T) reg, ImRepack tr )
+///
+Image1 imCopy(T)( in Image1 orig, Region!(1,T) reg )
     if( isIntegral!T )
 {
-    Image2 ret;
+    auto ret = Image1( reg.size, orig.info );
+    auto crop = CrdRegion!1( CrdVector!1(0), orig.size ).overlapLocal( reg );
+    auto bpe = orig.info.bpe;
 
-    if( tr == ImRepack.NONE ) return imCopy( img, reg );
+    auto len = crop.size[0] * bpe;
 
-    ret = Image2( imGetResultTrSize( CrdVector!2(reg.size), tr ), img.info );
+    auto orig_offset = crop.pos[0];
+    auto ret_offset = orig_offset - reg.pos[0];
 
-    auto trfunc = imGetTrCrdFunc( tr );
-
-    size_t H = reg.size.x, W = reg.size.y;
-    size_t rW = ret.size.y;
-    size_t bpe = img.info.bpe;
-
-    size_t rx, ry;
-    foreach( y; 0 .. H )
-        foreach( x; 0 .. W )
-        {
-            auto src = ((y+reg.pos.y)*img.size.x+x+reg.pos.x) * bpe;
-            trfunc( x, y, W, H, rx, ry );
-            auto dst = (ry*rW+rx) * bpe;
-            ret.data[dst..dst+bpe] = img.data[src..src+bpe];
-        }
-
-    return ret;
-}
-
-CrdVector!2 imGetResultTrSize( CrdVector!2 size, ImRepack tr )
-{
-    switch( tr )
-    {
-        case ImRepack.ROT90:
-        case ImRepack.ROT270:
-            return size.yx;
-        default: return size;
-    }
-}
-
-void function( size_t, size_t, size_t, size_t,
-               ref size_t, ref size_t ) imGetTrCrdFunc( ImRepack tr )
-{
-    final switch( tr )
-    {
-        case ImRepack.ROT90:  return &imRotCrd90;
-        case ImRepack.ROT180: return &imRotCrd180;
-        case ImRepack.ROT270: return &imRotCrd270;
-        case ImRepack.HORMIR: return &imHorMirCrd;
-        case ImRepack.VERMIR: return &imVerMirCrd;
-        case ImRepack.NONE: assert( 0, "WTF? ImRepack.NONE must process before" );
-    }
-}
-
-void imNoneTrCrd( size_t px, size_t py, size_t sx, size_t sy,
-                  ref size_t rx, ref size_t ry )
-{ rx=px; ry=py; }
-
-void imRotCrd90( size_t px, size_t py, size_t sx, size_t sy,
-                  ref size_t rx, ref size_t ry )
-{ rx=py; ry=sx-1-px; }
-
-void imRotCrd180( size_t px, size_t py, size_t sx, size_t sy,
-                  ref size_t rx, ref size_t ry )
-{ rx=sx-1-px; ry=sy-1-py; }
-
-void imRotCrd270( size_t px, size_t py, size_t sx, size_t sy,
-                  ref size_t rx, ref size_t ry )
-{ rx=sy-1-py; ry=px; }
-
-void imHorMirCrd( size_t px, size_t py, size_t sx, size_t sy,
-                  ref size_t rx, ref size_t ry )
-{ rx=sx-1-px; ry=py; }
-
-void imVerMirCrd( size_t px, size_t py, size_t sx, size_t sy,
-                  ref size_t rx, ref size_t ry )
-{ rx=px; ry=sy-1-py; }
-
-auto imRepack( in Image!3 img, ImRepack tr )
-{
-    pragma(msg,"TODO THIS: ",__FILE__," ",__LINE__);
-}
-
-/// copy image region to new image
-auto imCopy(size_t N,T)( in Image!N img, in Region!(N,T) r )
-if( isIntegral!T )
-{
-    auto ret = Image!N( r.size, img.info );
-
-    alias Reg = Region!(N,ptrdiff_t);
-    alias SV = CrdVector!N;
-
-    auto crop = Reg( SV(), img.size ).overlapLocal(r);
-    auto bpe = img.info.bpe;
-
-    auto count = reduce!((s,v)=>s*=v)( crop.size );
-
-    foreach( i; 0 .. count )
-    {
-        auto lccrd = CrdVector!N( getCoord( crop.size, i ) );
-        auto ret_crd = -SV(r.pos) + crop.pos + lccrd;
-        auto img_crd =  crop.pos + lccrd;
-        auto ret_offset = getIndex( ret.size, ret_crd );
-        auto img_offset = getIndex( img.size, img_crd );
-        memcpy( ret.data.ptr + ret_offset * bpe,
-                img.data.ptr + img_offset * bpe, bpe );
-    }
+    memcpy( ret.data.ptr + ret_offset * bpe,
+            orig.data.ptr + orig_offset * bpe, len );
 
     return ret;
 }
@@ -141,6 +51,54 @@ unittest
     auto b = imCopy( a, Region!(1,int)(3,2) );
     assert( b.pixel!vec2(0) == a.pixel!vec2(3) );
     assert( b.pixel!vec2(1) == a.pixel!vec2(4) );
+}
+
+/// copy and repack image from region to new image
+auto imCopy(size_t N,T)( in Image!N orig, Region!(N,T) reg, ImRepack tr=ImRepack.NONE, size_t[2] cn=[0,1] )
+    if( isIntegral!T && N > 1 )
+in
+{
+    assert( cn[0] < N );
+    assert( cn[1] < N );
+    assert( cn[0] != cn[1] );
+}
+body
+{
+    alias CReg = CrdRegion!N;
+    alias CVec = CrdVector!N;
+
+    auto rSize = imPermutateComp( reg.size, tr, cn );
+
+    auto ret = Image!N( rSize, orig.info );
+
+    auto crop = CReg( CVec(0), orig.size ).overlapLocal( reg );
+    auto bpe = orig.info.bpe;
+
+    auto copy_count = reduce!((s,v)=>s*=v)( crop.size );
+
+    auto tr_func = imGetTrCrdFunc(tr);
+
+    coord_t A = reg.size[cn[0]], B = reg.size[cn[1]];
+
+    foreach( i; 0 .. copy_count )
+    {
+        auto local_crop_crd = CVec( getCoord( crop.size, i ) );
+
+        auto orig_crd = crop.pos + local_crop_crd;
+
+        auto reg_crd = orig_crd - reg.pos;
+
+        auto ret_crd = reg_crd;
+        tr_func( reg_crd[cn[0]], reg_crd[cn[1]], A, B, ret_crd[cn[0]], ret_crd[cn[1]] );
+
+        auto ret_offset = getIndex( ret.size, ret_crd );
+        auto orig_offset = getIndex( orig.size, orig_crd );
+
+        memcpy( ret.data.ptr + ret_offset * bpe,
+                orig.data.ptr + orig_offset * bpe, bpe );
+    }
+
+    return ret;
 }
 
 ///
@@ -227,6 +185,115 @@ unittest
     auto imv6 = Image2( ivec2(4,4), DataType.UBYTE, 1, datav6 );
     assert( imCopy( orig, iRegion2( 2, 2, 4, 4 ) ) == imv6 );
 }
+
+
+///
+unittest
+{
+    ubyte[] imgdata = [
+        1, 2, 3, 4,
+        5, 6, 7, 8,
+        9,10,11,12,
+       13,14,15,16
+    ];
+
+    auto img = Image2( ivec2(4,4), DataType.UBYTE, 1, imgdata );
+
+    {
+        ubyte[] r1data = [
+            0, 0, 0, 0,
+            8,12,16, 0,
+            7,11,15, 0,
+        ];
+
+        auto r1 = Image2( ivec2(4,3), DataType.UBYTE, 1, r1data );
+        assert( imCopy( img, iRegion2(2,1,3,4), ImRepack.ROT90 ) == r1 );
+    }
+
+    {
+        ubyte[] r2data = [ 11,10,9,0, 7,6,5,0 ];
+        auto r2 = Image2( ivec2(4,2), DataType.UBYTE, 1, r2data );
+        assert( imCopy( img, iRegion2(-1,1,4,2), ImRepack.ROT180 ) == r2 );
+    }
+
+    {
+        ubyte[] r3data = [ 0,14,10,6, 0,15,11,7 ];
+        auto r3 = Image2( ivec2(4,2), DataType.UBYTE, 1, r3data );
+        assert( imCopy( img, iRegion2(1,1,2,4), ImRepack.ROT270 ) == r3 );
+    }
+
+    {
+        ubyte[] r4data = [ 3,2,1, 7,6,5 ];
+        auto r4 = Image2( ivec2(3,2), DataType.UBYTE, 1, r4data );
+        assert( imCopy( img, iRegion2(0,0,3,2), ImRepack.MIRHOR ) == r4 );
+    }
+
+    {
+        ubyte[] r5data = [ 5,6,7, 1,2,3 ];
+        auto r5 = Image2( ivec2(3,2), DataType.UBYTE, 1, r5data );
+        assert( imCopy( img, iRegion2(0,0,3,2), ImRepack.MIRVER ) == r5 );
+    }
+}
+
+CrdVector!N imPermutateComp(size_t N,T)( in Vector!(N,T) v, ImRepack tr, size_t[2] crdNum )
+    if( isIntegral!T )
+in
+{
+    assert( crdNum[0] < N );
+    assert( crdNum[1] < N );
+    assert( crdNum[0] != crdNum[1] );
+}
+body
+{
+    switch( tr )
+    {
+        case ImRepack.ROT90: case ImRepack.ROT270:
+            auto ret = CrdVector!N(v);
+            ret[crdNum[0]] = v[crdNum[1]];
+            ret[crdNum[1]] = v[crdNum[0]];
+            return ret;
+        default: return CrdVector!N(v);
+    }
+}
+
+void function( coord_t, coord_t, coord_t, coord_t,
+               ref coord_t, ref coord_t ) imGetTrCrdFunc( ImRepack tr )
+out(fnc) { assert( fnc !is null ); } body
+{
+    final switch( tr )
+    {
+        case ImRepack.NONE:   return &imNoneTrCrd;
+        case ImRepack.ROT90:  return &imRotCrd90;
+        case ImRepack.ROT180: return &imRotCrd180;
+        case ImRepack.ROT270: return &imRotCrd270;
+        case ImRepack.MIRHOR: return &imMirHorCrd;
+        case ImRepack.MIRVER: return &imMirVerCrd;
+    }
+}
+
+void imNoneTrCrd( coord_t px, coord_t py, coord_t sx, coord_t sy,
+                  ref coord_t rx, ref coord_t ry )
+{ rx=px; ry=py; }
+
+void imRotCrd90( coord_t px, coord_t py, coord_t sx, coord_t sy,
+                  ref coord_t rx, ref coord_t ry )
+{ rx=py; ry=sx-1-px; }
+
+void imRotCrd180( coord_t px, coord_t py, coord_t sx, coord_t sy,
+                  ref coord_t rx, ref coord_t ry )
+{ rx=sx-1-px; ry=sy-1-py; }
+
+void imRotCrd270( coord_t px, coord_t py, coord_t sx, coord_t sy,
+                  ref coord_t rx, ref coord_t ry )
+{ rx=sy-1-py; ry=px; }
+
+void imMirHorCrd( coord_t px, coord_t py, coord_t sx, coord_t sy,
+                  ref coord_t rx, ref coord_t ry )
+{ rx=sx-1-px; ry=py; }
+
+void imMirVerCrd( coord_t px, coord_t py, coord_t sx, coord_t sy,
+                  ref coord_t rx, ref coord_t ry )
+{ rx=px; ry=sy-1-py; }
 
 /// paste in image other image
 void imPaste(size_t N,V)( ref Image!N img, in Vector!(N,V) pos, in Image!N pim )

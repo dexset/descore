@@ -11,6 +11,8 @@ import des.util.testsuite;
 import des.math.linear.vector;
 import des.math.util.accessstring;
 
+import des.il.region;
+
 ///
 class ImageException : Exception
 {
@@ -76,7 +78,9 @@ unittest
     static assert( isCompatibleArrayAccessStrings( 4, volumeAccessString(2), " ", "|" ) ); 
 }
 
-alias CrdVector(size_t N) = Vector!(N,ptrdiff_t);
+alias coord_t = ptrdiff_t;
+alias CrdVector(size_t N) = Vector!(N,coord_t);
+alias CrdRegion(size_t N) = Region!(N,coord_t);
 
 /++ checks all components
  Returns:
