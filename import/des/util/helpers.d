@@ -28,13 +28,14 @@ string readAPF( string[] path... )
 auto packBitMask(T)( T[] list... )
 { return reduce!((a,b)=>a|=b)(0,list); }
 
+///
 unittest
 {
-    assert( packBitMask() == 0 );
+    assert( packBitMask!uint() == 0 );
     auto a = 0b0001;
     assert( packBitMask(a) == a );
     auto b = 0b0010;
-    assert( packBitMask(b) == a );
+    assert( packBitMask(b) == b );
     auto c = 0b0011;
     assert( packBitMask(a,b) == c );
 }
