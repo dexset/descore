@@ -66,7 +66,7 @@ struct Region(size_t N,T)
     ///
     bool opBinaryRight(string op, E)( in Vector!(N,E) p ) const
         if( op == "in" && is(typeof(typeof(p).init[0] > rtype.init[0])) )
-    { 
+    {
         foreach( i; 0 .. N )
             if( p[i] < vr[i] || p[i] >= vr[i] + vr[i+N] )
                 return false;

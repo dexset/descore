@@ -12,6 +12,98 @@ import des.math.linear.vector;
 
 import std.c.string : memcpy;
 
+enum ImRepack
+{
+    NONE,
+    ROT90,
+    ROT180,
+    ROT270,
+    HORMIR,
+    VERMIR
+}
+
+auto imRepackRegion(T)( in Image2 img, Region!(2,T) reg, ImRepack tr )
+    if( isIntegral!T )
+{
+    Image2 ret;
+
+    if( tr == ImRepack.NONE ) return imCopy( img, reg );
+
+    ret = Image2( imGetResultTrSize( CrdVector!2(reg.size), tr ), img.info );
+
+    auto trfunc = imGetTrCrdFunc( tr );
+
+    size_t H = reg.size.x, W = reg.size.y;
+    size_t rW = ret.size.y;
+    size_t bpe = img.info.bpe;
+
+    size_t rx, ry;
+    foreach( y; 0 .. H )
+        foreach( x; 0 .. W )
+        {
+            auto src = ((y+reg.pos.y)*img.size.x+x+reg.pos.x) * bpe;
+            trfunc( x, y, W, H, rx, ry );
+            auto dst = (ry*rW+rx) * bpe;
+            ret.data[dst..dst+bpe] = img.data[src..src+bpe];
+        }
+
+    return ret;
+}
+
+CrdVector!2 imGetResultTrSize( CrdVector!2 size, ImRepack tr )
+{
+    switch( tr )
+    {
+        case ImRepack.ROT90:
+        case ImRepack.ROT270:
+            return size.yx;
+        default: return size;
+    }
+}
+
+void function( size_t, size_t, size_t, size_t,
+               ref size_t, ref size_t ) imGetTrCrdFunc( ImRepack tr )
+{
+    final switch( tr )
+    {
+        case ImRepack.ROT90:  return &imRotCrd90;
+        case ImRepack.ROT180: return &imRotCrd180;
+        case ImRepack.ROT270: return &imRotCrd270;
+        case ImRepack.HORMIR: return &imHorMirCrd;
+        case ImRepack.VERMIR: return &imVerMirCrd;
+        case ImRepack.NONE: assert( 0, "WTF? ImRepack.NONE must process before" );
+    }
+}
+
+void imNoneTrCrd( size_t px, size_t py, size_t sx, size_t sy,
+                  ref size_t rx, ref size_t ry )
+{ rx=px; ry=py; }
+
+void imRotCrd90( size_t px, size_t py, size_t sx, size_t sy,
+                  ref size_t rx, ref size_t ry )
+{ rx=py; ry=sx-1-px; }
+
+void imRotCrd180( size_t px, size_t py, size_t sx, size_t sy,
+                  ref size_t rx, ref size_t ry )
+{ rx=sx-1-px; ry=sy-1-py; }
+
+void imRotCrd270( size_t px, size_t py, size_t sx, size_t sy,
+                  ref size_t rx, ref size_t ry )
+{ rx=sy-1-py; ry=px; }
+
+void imHorMirCrd( size_t px, size_t py, size_t sx, size_t sy,
+                  ref size_t rx, ref size_t ry )
+{ rx=sx-1-px; ry=py; }
+
+void imVerMirCrd( size_t px, size_t py, size_t sx, size_t sy,
+                  ref size_t rx, ref size_t ry )
+{ rx=px; ry=sy-1-py; }
+
+auto imRepack( in Image!3 img, ImRepack tr )
+{
+    pragma(msg,"TODO THIS: ",__FILE__," ",__LINE__);
+}
+
 /// copy image region to new image
 auto imCopy(size_t N,T)( in Image!N img, in Region!(N,T) r )
 if( isIntegral!T )
