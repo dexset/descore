@@ -69,7 +69,7 @@ unittest
     auto a = new SimpleAttribute( "test", data );
 
     assert( a.stride == vec2.sizeof );
-    assert( a.info.comp == DataType.FLOAT );
-    assert( a.info.channels == 2 );
+    assert( a.info.type == DataType.FLOAT );
+    assert( a.info.comp == 2 );
     assert( a.data == cast(void[])data );
 }
