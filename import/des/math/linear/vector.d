@@ -152,7 +152,21 @@ pure:
         else data = flatData!T(vals);
     }
 
-    static if( isDynamic ) this(this) { data = data.dup; }
+    static if( isDynamic )
+    {
+        this(this) { data = data.dup; }
+
+        ///
+        static selftype fill(E...)( size_t K, in E vals )
+        {
+            selftype ret;
+            auto d = flatData!T(vals);
+            ret.length = K;
+            static if( isNumeric!T ) ret.data[] = 0;
+            foreach( i, ref val; ret.data ) val = d[i%$];
+            return ret;
+        }
+    }
 
     ///
     auto opAssign(size_t K,E)( in Vector!(K,E) b )
@@ -839,3 +853,9 @@ unittest
     assert( b.far == 20 );
 }
 
+unittest
+{
+    auto a = Vector!(0,float).fill(5,1,2);
+    assertEq( a.length, 5 );
+    assertEq( a.data, [1,2,1,2,1] );
+}

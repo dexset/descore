@@ -305,13 +305,13 @@ unittest
  +/
 struct ElemInfo
 {
-    /// type of one component
-    DataType comp = DataType.RAWBYTE;
-
     /// count of components in element
-    size_t channels = 1;
+    size_t comp = 1;
 
-    invariant() { assert( channels > 0 ); }
+    /// type of one component
+    DataType type = DataType.RAWBYTE;
+
+    invariant() { assert( comp > 0 ); }
 
     pure @safe nothrow @nogc
     {
@@ -327,23 +327,23 @@ struct ElemInfo
             if( !hasIndirections!T )
         {
             static if( isNumeric!T )
-                return ElemInfo( assocDataType!T, 1 );
+                return ElemInfo( 1, assocDataType!T );
             else static if( isStaticArray!T )
-                return ElemInfo( assocDataType!( typeof(T.init[0]) ), T.length );
+                return ElemInfo( T.length, assocDataType!( typeof(T.init[0]) ) );
             else static if( isStaticVector!T )
-                return ElemInfo( assocDataType!( T.datatype ), T.length );
+                return ElemInfo( T.length, assocDataType!( T.datatype ) );
             else static if( isStaticMatrix!T )
-                return ElemInfo( assocDataType!( T.datatype ), T.width * T.height );
+                return ElemInfo( T.width * T.height, assocDataType!( T.datatype ) );
             else static assert(0,"unsupported type");
         }
 
         ///
         unittest
         {
-            static assert( ElemInfo.fromType!vec2 == ElemInfo( DataType.FLOAT, 2 ) );
-            static assert( ElemInfo.fromType!mat4 == ElemInfo( DataType.FLOAT, 16 ) );
-            static assert( ElemInfo.fromType!(int[2]) == ElemInfo( DataType.INT, 2 ) );
-            static assert( ElemInfo.fromType!float == ElemInfo( DataType.FLOAT, 1 ) );
+            static assert( ElemInfo.fromType!vec2 == ElemInfo( 2, DataType.FLOAT ) );
+            static assert( ElemInfo.fromType!mat4 == ElemInfo( 16, DataType.FLOAT ) );
+            static assert( ElemInfo.fromType!(int[2]) == ElemInfo( 2, DataType.INT ) );
+            static assert( ElemInfo.fromType!float == ElemInfo( 1, DataType.FLOAT ) );
 
             static class A{}
 
@@ -353,29 +353,29 @@ struct ElemInfo
         }
 
         ///
-        this( DataType ict, size_t channels )
+        this( size_t comp, DataType type=DataType.RAWBYTE )
         {
-            comp = ict;
-            this.channels = channels;
+            this.comp = comp;
+            this.type = type;
         }
 
-        /// comp = `DataType.RAWBYTE`
-        this( size_t channels )
+        ///
+        this( in ElemInfo ei )
         {
-            comp = DataType.RAWBYTE;
-            this.channels = channels;
+            this.comp = ei.comp;
+            this.type = ei.type;
         }
 
         const @property
         {
             /++ bytes per element
                 returns:
-                    compSize * channels
+                    typeSize * comp
              +/
-            size_t bpe() { return compSize * channels; }
+            size_t bpe() { return typeSize * comp; }
 
             /// size of component
-            size_t compSize() { return dataTypeSize(comp); }
+            size_t typeSize() { return dataTypeSize(type); }
         }
     }
 }
@@ -569,22 +569,22 @@ unittest
 }
 
 /// untyped data assign
-void utDataAssign(T...)( in ElemInfo info, void* buffer, in T vals ) pure
+void utDataAssign(T...)( in ElemInfo elem, void* buffer, in T vals ) pure
     if( is(typeof(flatData!real(vals))) )
 in
 {
     assert( buffer !is null );
-    assert( info.channels == flatData!real(vals).length );
+    assert( elem.comp == flatData!real(vals).length );
 }
 body
 {
     enum fmt = q{
-        auto dst = getTypedArray!(storeDataType!(%1$s))( info.channels, buffer );
+        auto dst = getTypedArray!(storeDataType!(%1$s))( elem.comp, buffer );
         auto src = flatData!real(vals);
         foreach( i, ref t; dst )
             t = convertValue!(%1$s)( src[i] );
     };
-    mixin( getSwitchDataType( "info.comp", fmt, ["RAWBYTE": "can't operate RAWBYTE"] ) );
+    mixin( getSwitchDataType( "elem.type", fmt, ["RAWBYTE": "can't operate RAWBYTE"] ) );
 }
 
 ///
@@ -592,7 +592,7 @@ unittest
 {
     float[] buf = [ 1.1, 2.2, 3.3, 4.4, 5.5, 6.6 ];
 
-    utDataAssign( ElemInfo( DataType.FLOAT, 3 ), cast(void*)buf.ptr, vec3(8,9,10) );
+    utDataAssign( ElemInfo( 3, DataType.FLOAT ), cast(void*)buf.ptr, vec3(8,9,10) );
 
     assert( eq( buf, [8,9,10,4.4,5.5,6.6] ) );
 }
@@ -606,7 +606,7 @@ unittest
         uta = buffer ptr A
         utb = buffer ptr B
  +/
-void utDataOp(string op)( in ElemInfo info, void* dst, void* utb ) pure
+void utDataOp(string op)( in ElemInfo elem, void* dst, void* utb ) pure
 if( ( op == "+" || op == "-" || op == "*" || op == "/" ) )
 in
 {
@@ -617,12 +617,12 @@ body
 {
     enum fmt = format( q{
         alias SDT = storeDataType!(%%1$s);
-        auto ta = getTypedArray!SDT( info.channels, dst );
-        auto tb = getTypedArray!SDT( info.channels, utb );
+        auto ta = getTypedArray!SDT( elem.comp, dst );
+        auto tb = getTypedArray!SDT( elem.comp, utb );
         foreach( i, ref r; ta )
             r = cast(SDT)( ta[i] %s tb[i] );
     }, op );
-    mixin( getSwitchDataType( "info.comp", fmt, ["RAWBYTE": "can't operate RAWBYTE"] ) );
+    mixin( getSwitchDataType( "elem.type", fmt, ["RAWBYTE": "can't operate RAWBYTE"] ) );
 }
 
 ///
@@ -631,11 +631,11 @@ unittest
     ubyte[] a = [ 10, 20, 30, 40 ];
     ubyte[] b = [ 60, 70, 40, 20 ];
 
-    utDataOp!"+"( ElemInfo( DataType.UNORM_QUART, 4 ), a.ptr, b.ptr );
+    utDataOp!"+"( ElemInfo( 4, DataType.UNORM_QUART ), a.ptr, b.ptr );
 
     assert( eq( a, [70,90,70,60] ) );
 
-    utDataOp!"+"( ElemInfo( DataType.UBYTE, 2 ), a.ptr, a.ptr + 2 );
+    utDataOp!"+"( ElemInfo( 2, DataType.UBYTE ), a.ptr, a.ptr + 2 );
 
     assert( eq( a, [140,150,70,60] ) );
 }
@@ -649,25 +649,25 @@ except = exception in selected cases
 
 Example:
     enum fmt = q{
-        auto dst = getTypedArray!(storeDataType!(%1$s))( info.channels, buffer );
+        auto dst = getTypedArray!(storeDataType!(%1$s))( info.comp, buffer );
         auto src = flatData!real(vals);
         foreach( i, ref t; dst )
             t = convertValue!(%1$s)( src[i] );
     };
-    writeln( genSwitchDataType( "info.comp", fmt, ["RAWBYTE": "can't operate RAWBYTE"] ) );
+    writeln( genSwitchDataType( "info.type", fmt, ["RAWBYTE": "can't operate RAWBYTE"] ) );
 
 Output like this:
 
-    final switch( info.comp ) {
+    final switch( info.type ) {
     case DataType.RAWBYTE: throw new DataTypeException( "can't operate RAWBYTE" );
-    case DataType.BYTE: 
-            auto dst = getTypedArray!(storeDataType!(DataType.BYTE))( info.channels, buffer );
+    case DataType.BYTE:
+            auto dst = getTypedArray!(storeDataType!(DataType.BYTE))( info.comp, buffer );
             auto src = flatData!real(vals);
             foreach( i, ref t; dst )
                 t = convertValue!(DataType.BYTE)( src[i] );
     break;
-    case DataType.UBYTE: 
-            auto dst = getTypedArray!(storeDataType!(DataType.UBYTE))( info.channels, buffer );
+    case DataType.UBYTE:
+            auto dst = getTypedArray!(storeDataType!(DataType.UBYTE))( info.comp, buffer );
             auto src = flatData!real(vals);
             foreach( i, ref t; dst )
                 t = convertValue!(DataType.UBYTE)( src[i] );

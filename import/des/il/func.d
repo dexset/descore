@@ -8,6 +8,8 @@ import des.il.util;
 import des.il.image;
 import des.il.region;
 
+import des.util.testsuite;
+
 import des.math.linear.vector;
 
 import std.c.string : memcpy, memset;
@@ -23,55 +25,29 @@ enum ImRepack
     MIRVER ///
 }
 
-///
-Image1 imCopy(T)( in Image1 orig, Region!(1,T) reg )
-    if( isIntegral!T )
-{
-    auto ret = Image1( reg.size, orig.info );
-    auto crop = CrdRegion!1( CrdVector!1(0), orig.size ).overlapLocal( reg );
-    auto bpe = orig.info.bpe;
-
-    auto len = crop.size[0] * bpe;
-
-    auto orig_offset = crop.pos[0];
-    auto ret_offset = orig_offset - reg.pos[0];
-
-    memcpy( ret.data.ptr + ret_offset * bpe,
-            orig.data.ptr + orig_offset * bpe, len );
-
-    return ret;
-}
-
-///
-unittest
-{
-    auto a = Image1( ivec!1(5), ElemInfo( DataType.FLOAT, 2 ) );
-    a.pixel!vec2(3) = vec2(1,1);
-    a.pixel!vec2(4) = vec2(2,2);
-    auto b = imCopy( a, Region!(1,int)(3,2) );
-    assert( b.pixel!vec2(0) == a.pixel!vec2(3) );
-    assert( b.pixel!vec2(1) == a.pixel!vec2(4) );
-}
-
 /// copy and repack image from region to new image
-auto imCopy(size_t N,T)( in Image!N orig, Region!(N,T) reg, ImRepack tr=ImRepack.NONE, size_t[2] cn=[0,1] )
-    if( isIntegral!T && N > 1 )
+auto imCopy(size_t N,T)( in Image orig, Region!(N,T) reg, ImRepack tr=ImRepack.NONE, size_t[2] cn=[0,1] )
+    if( isIntegral!T )
 in
 {
-    assert( cn[0] < N );
-    assert( cn[1] < N );
+    assert( orig.dims == reg.dims );
+    assert( cn[0] < orig.dims );
+    if( orig.dims > 1 )
+        assert( cn[1] < orig.dims );
     assert( cn[0] != cn[1] );
 }
 body
 {
-    alias CReg = CrdRegion!N;
-    alias CVec = CrdVector!N;
+    if( orig.dims == 1 ) cn[1] = cn[0];
+
+    alias CReg = CrdRegion!0;
+    alias CVec = CrdVector!0;
 
     auto rSize = imPermutateComp( reg.size, tr, cn );
 
-    auto ret = Image!N( rSize, orig.info );
+    auto ret = Image( rSize, orig.info );
 
-    auto crop = CReg( CVec(0), orig.size ).overlapLocal( reg );
+    auto crop = CReg( CVec.fill(orig.dims,0).data ~ orig.size.data ).overlapLocal( reg );
     auto bpe = orig.info.bpe;
 
     auto copy_count = reduce!((s,v)=>s*=v)( crop.size );
@@ -102,29 +78,40 @@ body
 }
 
 ///
-unittest 
+unittest
 {
-    ubyte[] data = 
+    auto a = Image( ivec!1(5), ElemInfo( 2, DataType.FLOAT ) );
+    a.pixel!vec2(3) = vec2(1,1);
+    a.pixel!vec2(4) = vec2(2,2);
+    auto b = imCopy( a, Region!(1,int)(3,2) );
+    assert( b.pixel!vec2(0) == a.pixel!vec2(3) );
+    assert( b.pixel!vec2(1) == a.pixel!vec2(4) );
+}
+
+///
+unittest
+{
+    ubyte[] data =
     [
         2, 1, 3, 5, 2,
         9, 1, 2, 6, 0,
         2, 5, 2, 9, 1,
         8, 3, 6, 3, 0,
-        6, 2, 8, 1, 5 
+        6, 2, 8, 1, 5
     ];
 
     ubyte[] datav1 =
     [
-        0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 0,
         0, 2, 1, 3, 5, 2, 0,
         0, 9, 1, 2, 6, 0, 0,
         0, 2, 5, 2, 9, 1, 0,
         0, 8, 3, 6, 3, 0, 0,
         0, 6, 2, 8, 1, 5, 0,
-        0, 0, 0, 0, 0, 0, 0 
+        0, 0, 0, 0, 0, 0, 0
     ];
 
-    ubyte[] datav2 = 
+    ubyte[] datav2 =
     [
         1, 2, 6,
         5, 2, 9,
@@ -141,7 +128,7 @@ unittest
 
     ubyte[] datav4 =
     [
-        0, 0, 0, 0, 
+        0, 0, 0, 0,
         3, 5, 2, 0,
         2, 6, 0, 0,
         2, 9, 1, 0
@@ -160,29 +147,29 @@ unittest
         2, 9, 1, 0,
         6, 3, 0, 0,
         8, 1, 5, 0,
-        0, 0, 0, 0 
+        0, 0, 0, 0
     ];
 
-    auto orig = Image2( ivec2(5,5), DataType.UBYTE, 1, data );
+    auto orig = Image( ivec2(5,5), 1, DataType.UBYTE, data );
     auto im = imCopy( orig, iRegion2( 0, 0, 5, 5 ) );
     assert( orig == im );
-    
-    auto imv1 = Image2( ivec2( 7, 7 ), DataType.UBYTE, 1, datav1 );
+
+    auto imv1 = Image( ivec2( 7, 7 ), 1, DataType.UBYTE, datav1 );
     assert( imCopy( orig, iRegion2( -1, -1, 7, 7 ) ) == imv1 );
 
-    auto imv2 = Image2( ivec2(3,3), DataType.UBYTE, 1, datav2 );
+    auto imv2 = Image( ivec2(3,3), 1, DataType.UBYTE, datav2 );
     assert( imCopy( orig, iRegion2( 1, 1, 3, 3 ) ) == imv2 );
 
-    auto imv3 = Image2( ivec2(4,4), DataType.UBYTE, 1, datav3 );
+    auto imv3 = Image( ivec2(4,4), 1, DataType.UBYTE, datav3 );
     assert( imCopy( orig, iRegion2( -1, -1, 4, 4 ) ) == imv3 );
 
-    auto imv4 = Image2( ivec2(4,4), DataType.UBYTE, 1, datav4 );
+    auto imv4 = Image( ivec2(4,4), 1, DataType.UBYTE, datav4 );
     assert( imCopy( orig, iRegion2( 2, -1, 4, 4 ) ) == imv4 );
 
-    auto imv5 = Image2( ivec2(4,4), DataType.UBYTE, 1, datav5 );
+    auto imv5 = Image( ivec2(4,4), 1, DataType.UBYTE, datav5 );
     assert( imCopy( orig, iRegion2( -1, 2, 4, 4 ) ) == imv5 );
 
-    auto imv6 = Image2( ivec2(4,4), DataType.UBYTE, 1, datav6 );
+    auto imv6 = Image( ivec2(4,4), 1, DataType.UBYTE, datav6 );
     assert( imCopy( orig, iRegion2( 2, 2, 4, 4 ) ) == imv6 );
 }
 
@@ -197,7 +184,7 @@ unittest
        13,14,15,16
     ];
 
-    auto img = Image2( ivec2(4,4), DataType.UBYTE, 1, imgdata );
+    auto img = Image( ivec2(4,4), 1, DataType.UBYTE, imgdata );
 
     {
         ubyte[] r1data = [
@@ -206,31 +193,31 @@ unittest
             7,11,15, 0,
         ];
 
-        auto r1 = Image2( ivec2(4,3), DataType.UBYTE, 1, r1data );
+        auto r1 = Image( ivec2(4,3), 1, DataType.UBYTE, r1data );
         assert( imCopy( img, iRegion2(2,1,3,4), ImRepack.ROT90 ) == r1 );
     }
 
     {
         ubyte[] r2data = [ 11,10,9,0, 7,6,5,0 ];
-        auto r2 = Image2( ivec2(4,2), DataType.UBYTE, 1, r2data );
+        auto r2 = Image( ivec2(4,2), 1, DataType.UBYTE, r2data );
         assert( imCopy( img, iRegion2(-1,1,4,2), ImRepack.ROT180 ) == r2 );
     }
 
     {
         ubyte[] r3data = [ 0,14,10,6, 0,15,11,7 ];
-        auto r3 = Image2( ivec2(4,2), DataType.UBYTE, 1, r3data );
+        auto r3 = Image( ivec2(4,2), 1, DataType.UBYTE, r3data );
         assert( imCopy( img, iRegion2(1,1,2,4), ImRepack.ROT270 ) == r3 );
     }
 
     {
         ubyte[] r4data = [ 3,2,1, 7,6,5 ];
-        auto r4 = Image2( ivec2(3,2), DataType.UBYTE, 1, r4data );
+        auto r4 = Image( ivec2(3,2), 1, DataType.UBYTE, r4data );
         assert( imCopy( img, iRegion2(0,0,3,2), ImRepack.MIRHOR ) == r4 );
     }
 
     {
         ubyte[] r5data = [ 5,6,7, 1,2,3 ];
-        auto r5 = Image2( ivec2(3,2), DataType.UBYTE, 1, r5data );
+        auto r5 = Image( ivec2(3,2), 1, DataType.UBYTE, r5data );
         assert( imCopy( img, iRegion2(0,0,3,2), ImRepack.MIRVER ) == r5 );
     }
 }
@@ -239,9 +226,8 @@ CrdVector!N imPermutateComp(size_t N,T)( in Vector!(N,T) v, ImRepack tr, size_t[
     if( isIntegral!T )
 in
 {
-    assert( crdNum[0] < N );
-    assert( crdNum[1] < N );
-    assert( crdNum[0] != crdNum[1] );
+    assert( crdNum[0] < v.length );
+    assert( crdNum[1] < v.length );
 }
 body
 {
@@ -296,26 +282,27 @@ void imMirVerCrd( coord_t px, coord_t py, coord_t sx, coord_t sy,
 { rx=px; ry=sy-1-py; }
 
 /// paste in image other image
-void imPaste(size_t N,V)( ref Image!N img, in Vector!(N,V) pos, in Image!N pim )
+void imPaste(size_t N,V)( ref Image img, in Vector!(N,V) pos, in Image pim )
     if( isIntegral!V )
 {
-    enforce( pim.info == img.info,
-        new ImageException( "Image info is wrong for paste." ) );
+    enforce( pim.dims == img.dims, new ImageException( "image dims mismatch" ) );
+    enforce( pim.dims == pos.length, new ImageException( "wrong pos dimensions" ) );
+    enforce( pim.info == img.info, new ImageException( "image infos mismatch" ) );
 
-    alias Reg = Region!(N,ptrdiff_t);
-    alias SV = CrdVector!N;
+    alias CReg = CrdRegion!0;
+    alias CVec = CrdVector!0;
 
-    auto pim_reg = Reg( pos, pim.size );
+    auto pim_reg = CReg( pos, pim.size );
 
-    auto crop = Reg( SV(), img.size ).overlapLocal( pim_reg );
+    auto crop = CReg( CVec.fill(img.dims,0), img.size ).overlapLocal( pim_reg );
     auto bpe = img.info.bpe;
 
     auto count = reduce!((s,v)=>s*=v)( crop.size );
 
     foreach( i; 0 .. count )
     {
-        auto lccrd = getCoord( crop.size, i );
-        auto pim_crd = -SV(pos) + crop.pos + lccrd;
+        auto lccrd = CVec( getCoord( crop.size, i ) );
+        auto pim_crd = -CVec(pos) + crop.pos + lccrd;
         auto img_crd =  crop.pos + lccrd;
         auto pim_offset = getIndex( pim.size, pim_crd );
         auto img_offset = getIndex( img.size, img_crd );
@@ -325,48 +312,48 @@ void imPaste(size_t N,V)( ref Image!N img, in Vector!(N,V) pos, in Image!N pim )
 }
 
 ///
-unittest 
+unittest
 {
-    ubyte[] data = 
+    ubyte[] data =
     [
         2, 1, 3, 5, 2,
         9, 1, 2, 6, 3,
         2, 5, 2, 9, 1,
         8, 3, 6, 3, 0,
-        6, 2, 8, 1, 5 
+        6, 2, 8, 1, 5
     ];
 
-    ubyte[] datav1 = 
+    ubyte[] datav1 =
     [
         1, 2, 6, 3, 0, 0, 0,
         5, 2, 9, 1, 0, 0, 0,
         3, 6, 3, 0, 0, 0, 0,
-        2, 8, 1, 5, 0, 0, 0,  
+        2, 8, 1, 5, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0
     ];
 
-    ubyte[] datav2 = 
+    ubyte[] datav2 =
     [
         0, 0, 0, 0, 0, 0, 0,
         0, 2, 1, 3, 5, 2, 0,
         0, 9, 1, 2, 6, 3, 0,
-        0, 2, 5, 2, 9, 1, 0,  
+        0, 2, 5, 2, 9, 1, 0,
         0, 8, 3, 6, 3, 0, 0,
         0, 6, 2, 8, 1, 5, 0,
         0, 0, 0, 0, 0, 0, 0
     ];
 
 
-    auto orig = Image2( ivec2( 7, 7 ), ElemInfo( DataType.UBYTE, 1 ) );
-    auto im = Image2( ivec2( 5, 5 ), DataType.UBYTE, 1, data );
+    auto orig = Image( ivec2( 7, 7 ), ElemInfo( 1, DataType.UBYTE ) );
+    auto im = Image( ivec2( 5, 5 ), 1, DataType.UBYTE, data );
 
-    auto res = Image2(orig);
+    auto res = Image(orig);
     imPaste( res, ivec2(-1,-1), im );
     assert( res.data == datav1 );
 
-    res = Image2(orig);
+    res = Image(orig);
     imPaste( res, ivec2(1,1), im );
     assert( res.data == datav2 );
 }
@@ -407,13 +394,13 @@ unittest
         0,9,0
         ];
 
-    auto src = Image2( ivec2(3,3), ElemInfo( DataType.UBYTE, 1 ), src_data );
-    auto dst = Image3( ivec3(3,3,3), ElemInfo( DataType.UBYTE, 1 ) );
-    imPaste( dst, ivec3(0,0,1), Image3( src ) );
+    auto src = Image( ivec2(3,3), ElemInfo( 1, DataType.UBYTE ), src_data );
+    auto dst = Image( ivec3(3,3,3), ElemInfo( 1, DataType.UBYTE ) );
+    imPaste( dst, ivec3(0,0,1), Image( ivec3(3,3,1), src.info, src.data ) );
     assert( dst.data == dst1_data );
     dst.clear();
-    imPaste( dst, ivec3(1,0,0), Image3(src,0) );
-    assert( dst.data == dst2_data );
+    imPaste( dst, ivec3(1,0,0), Image.external( ivec3(1,3,3), src.info, src.data ) );
+    assertEq( dst.data, dst2_data );
 }
 
 ///
@@ -425,7 +412,7 @@ unittest
         0,0,0,0,
         0,0,0,0,
         0,0,0,0,
-        
+
         0,0,0,0,
         0,1,2,0,
         0,3,4,0,
@@ -442,7 +429,7 @@ unittest
         0,0,0,0
         ];
 
-    ubyte[] cp = 
+    ubyte[] cp =
         [
         1,2,1,2,
         3,4,3,4,
@@ -465,7 +452,7 @@ unittest
         7,8,7,8,
         ];
 
-    ubyte[] rs = 
+    ubyte[] rs =
         [
             8,7,
             6,5,
@@ -475,9 +462,11 @@ unittest
 
     ubyte[] nnd = [ 0,0, 0,0, 0,0, 0,8 ];
 
-    auto a = Image3( ivec3(4,4,4), ElemInfo( DataType.UBYTE, 1 ), dt );
-    auto b = Image3( ivec3(4,4,4), ElemInfo( DataType.UBYTE, 1 ), cp );
-    auto c = Image3( ivec3(4,4,4), ElemInfo( DataType.UBYTE, 1 ) );
+    auto EType = ElemInfo( 1, DataType.UBYTE );
+
+    auto a = Image( ivec3(4,4,4), EType, dt );
+    auto b = Image( ivec3(4,4,4), EType, cp );
+    auto c = Image( ivec3(4,4,4), EType );
 
     auto part = imCopy( a, iRegion3( ivec3(1,1,1), ivec3(2,2,2) ) );
 
@@ -494,32 +483,35 @@ unittest
     assert( b == c );
 
     auto part2 = imCopy( b, iRegion3(ivec3(1,1,1), ivec3(2,2,2)) );
-    auto rr = Image3( ivec3(2,2,2), ElemInfo( DataType.UBYTE, 1 ), rs );
+    auto rr = Image( ivec3(2,2,2), EType, rs );
     assert( rr == part2 );
 
     auto nn = imCopy( rr, iRegion3( ivec3(-1,-1,-1), ivec3(2,2,2) ) );
-    auto nndi = Image3( ivec3(2,2,2), ElemInfo( DataType.UBYTE,1 ), nnd );
+    auto nndi = Image( ivec3(2,2,2), EType, nnd );
 
     assert( nn == nndi );
 }
 
-/++ get histogram convolution 
+/++ get histogram convolution
     +/
-Image!(N-1) imHistoConv(size_t N)( in Image!N img, size_t K ) pure
-if( N > 1 )
-in { assert( K < N ); } body
+Image imHistoConv( in Image img, size_t dim ) pure
+in
 {
-    auto ret = Image!(N-1)( ivec!(N-1)( removeStat( img.size, K ) ), img.info );
+    assert( dim < img.dims );
+}
+body
+{
+    auto ret = Image( ivecD( cut( img.size, dim ) ), img.info );
 
     auto bpe = img.info.bpe;
 
-    foreach( i; 0 .. ret.header.pixelCount )
+    foreach( i; 0 .. ret.pixelCount )
     {
         auto buf = ret.data.ptr + i * bpe;
         utDataAssign( img.info, buf, 0 );
-        foreach( j; 0 .. img.size[K] )
+        foreach( j; 0 .. img.size[dim] )
             utDataOp!"+"( img.info, buf,
-            cast(void*)( img.data.ptr + getOrigIndexByLayerCoord( img.size, K, i, j ) * bpe ) );
+            cast(void*)( img.data.ptr + getOrigIndexByLayerCoord( img.size, dim, i, j ) * bpe ) );
     }
 
     return ret;
@@ -537,22 +529,27 @@ unittest
     ubyte[] hi_x_data = [ 16, 9 ];
     ubyte[] hi_y_data = [ 5, 5, 6, 9 ];
 
-    auto img = Image2( ivec2(4,2), ElemInfo( DataType.UBYTE, 1 ), img_data );
-    auto hi_x = Image1( ivec!1(2), ElemInfo( DataType.UBYTE, 1 ), hi_x_data );
-    auto hi_y = Image1( ivec!1(4), ElemInfo( DataType.UBYTE, 1 ), hi_y_data );
+    auto img = Image( ivec2(4,2), ElemInfo( 1, DataType.UBYTE ), img_data );
+    auto hi_x = Image( ivec!1(2), ElemInfo( 1, DataType.UBYTE ), hi_x_data );
+    auto hi_y = Image( ivec!1(4), ElemInfo( 1, DataType.UBYTE ), hi_y_data );
 
     assert( imHistoConv(img,0) == hi_x );
     assert( imHistoConv(img,1) == hi_y );
 }
 
-/++ get layer of image
-    +/
-Image!(N-1) imLayer(size_t N)( Image!N img, size_t K, size_t lno ) pure
+/// get layer of image
+Image imLayer( Image img, size_t dim, size_t lno ) pure
+in
 {
-    auto ret = Image!(N-1)( ivec!(N-1)( removeStat( img.size, K ) ), img.info );
+    assert( dim < img.dims );
+    assert( lno < img.size[dim] );
+}
+body
+{
+    auto ret = Image( ivecD( cut( img.size, dim ) ), img.info );
     auto bpe = img.info.bpe;
-    foreach( i; 0 .. ret.header.pixelCount )
-        memcpy( ret.data.ptr + i * bpe, img.data.ptr + getOrigIndexByLayerCoord(img.size,K,i,lno) * bpe, bpe );
+    foreach( i; 0 .. ret.pixelCount )
+        memcpy( ret.data.ptr + i * bpe, img.data.ptr + getOrigIndexByLayerCoord(img.size,dim,i,lno) * bpe, bpe );
     return ret;
 }
 
@@ -563,12 +560,12 @@ unittest
     [
         1,2,3,
         4,5,6,
-        
+
         7,8,9,
         10,11,12,
     ];
 
-    auto info = ElemInfo( DataType.UBYTE, 1 );
+    auto info = ElemInfo( 1, DataType.UBYTE );
 
     ubyte[] d2l0 = [ 1,2,3,4,5,6 ];
     ubyte[] d2l1 = [ 7,8,9,10,11,12 ];
@@ -579,13 +576,13 @@ unittest
     ubyte[] d0l0 = [ 1, 4, 7, 10 ];
     ubyte[] d0l1 = [ 2, 5, 8, 11 ];
 
-    auto img = Image3( ivec3(3,2,2), info, img_data );
-    auto id2l0 = Image2( ivec2(3,2), info, d2l0 );
-    auto id2l1 = Image2( ivec2(3,2), info, d2l1 );
-    auto id1l0 = Image2( ivec2(3,2), info, d1l0 );
-    auto id1l1 = Image2( ivec2(3,2), info, d1l1 );
-    auto id0l0 = Image2( ivec2(2,2), info, d0l0 );
-    auto id0l1 = Image2( ivec2(2,2), info, d0l1 );
+    auto img = Image( ivec3(3,2,2), info, img_data );
+    auto id2l0 = Image( ivec2(3,2), info, d2l0 );
+    auto id2l1 = Image( ivec2(3,2), info, d2l1 );
+    auto id1l0 = Image( ivec2(3,2), info, d1l0 );
+    auto id1l1 = Image( ivec2(3,2), info, d1l1 );
+    auto id0l0 = Image( ivec2(2,2), info, d0l0 );
+    auto id0l1 = Image( ivec2(2,2), info, d0l1 );
 
     assert( imLayer(img,2,0) == id2l0 );
     assert( imLayer(img,2,1) == id2l1 );
