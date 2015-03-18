@@ -30,7 +30,6 @@ auto imCopy(size_t N,T)( in Image orig, Region!(N,T) reg, ImRepack tr=ImRepack.N
     if( isIntegral!T )
 in
 {
-    assert( orig.dims == reg.dims );
     assert( cn[0] < orig.dims );
     if( orig.dims > 1 )
         assert( cn[1] < orig.dims );
@@ -38,6 +37,7 @@ in
 }
 body
 {
+    enforce( orig.dims == reg.dims, "image and region dimension mismatch" );
     if( orig.dims == 1 ) cn[1] = cn[0];
 
     alias CReg = CrdRegion!0;
@@ -47,7 +47,7 @@ body
 
     auto ret = Image( rSize, orig.info );
 
-    auto crop = CReg( CVec.fill(orig.dims,0).data ~ orig.size.data ).overlapLocal( reg );
+    auto crop = CReg( CVec.fill(orig.dims,0), orig.size ).overlapLocal( reg );
     auto bpe = orig.info.bpe;
 
     auto copy_count = reduce!((s,v)=>s*=v)( crop.size );
@@ -282,29 +282,60 @@ void imMirVerCrd( coord_t px, coord_t py, coord_t sx, coord_t sy,
 { rx=px; ry=sy-1-py; }
 
 /// paste in image other image
-void imPaste(size_t N,V)( ref Image img, in Vector!(N,V) pos, in Image pim )
+void imPaste(size_t N,V)( ref Image img, in Vector!(N,V) pos, in Image pim, ImRepack tr=ImRepack.NONE, size_t[2] cn=[0,1] )
     if( isIntegral!V )
+in
 {
-    enforce( pim.dims == img.dims, new ImageException( "image dims mismatch" ) );
-    enforce( pim.dims == pos.length, new ImageException( "wrong pos dimensions" ) );
+    assert( cn[0] < img.dims );
+    if( img.dims > 1 )
+        assert( cn[1] < img.dims );
+    assert( cn[0] != cn[1] );
+}
+body
+{
+    enforce( pim.dims <= img.dims, new ImageException( "pim.dims > img.dims" ) );
+    enforce( img.dims == pos.length, new ImageException( "wrong pos dimensions" ) );
     enforce( pim.info == img.info, new ImageException( "image infos mismatch" ) );
+
+    if( img.dims == 1 ) cn[1] = cn[0];
+
+    auto pim_size = pim.robSize(img.dims);
+
+    auto pp_size = imPermutateComp( pim_size, tr, cn );
 
     alias CReg = CrdRegion!0;
     alias CVec = CrdVector!0;
 
-    auto pim_reg = CReg( pos, pim.size );
+    auto pp_reg = CReg( pos, pp_size );
 
-    auto crop = CReg( CVec.fill(img.dims,0), img.size ).overlapLocal( pim_reg );
+    auto crop = CReg( CVec.fill(img.dims,0), img.size ).overlapLocal( pp_reg );
     auto bpe = img.info.bpe;
 
-    auto count = reduce!((s,v)=>s*=v)( crop.size );
+    auto copy_count = reduce!((s,v)=>s*=v)( crop.size );
 
-    foreach( i; 0 .. count )
+    // not reversable operations
+         if( tr == ImRepack.ROT90 ) tr = ImRepack.ROT270;
+    else if( tr == ImRepack.ROT270 ) tr = ImRepack.ROT90;
+
+    // get reversed ( ROT90 -> ROT270, ROT270 -> ROT90 )
+    auto tr_func = imGetTrCrdFunc(tr);
+
+    coord_t A = pp_size[cn[0]], B = pp_size[cn[1]];
+
+    foreach( i; 0 .. copy_count )
     {
-        auto lccrd = CVec( getCoord( crop.size, i ) );
-        auto pim_crd = -CVec(pos) + crop.pos + lccrd;
-        auto img_crd =  crop.pos + lccrd;
-        auto pim_offset = getIndex( pim.size, pim_crd );
+        auto local_crop_crd = CVec( getCoord( crop.size, i ) );
+
+        auto img_crd = crop.pos + local_crop_crd;
+
+        auto pp_crd = img_crd - CVec(pos);
+        auto pim_crd = pp_crd;
+
+        // warning: work as reversed
+        tr_func( pp_crd[cn[0]], pp_crd[cn[1]], A, B,
+                 pim_crd[cn[0]], pim_crd[cn[1]] );
+
+        auto pim_offset = getIndex( pim_size, pim_crd );
         auto img_offset = getIndex( img.size, img_crd );
         memcpy( img.data.ptr + img_offset * bpe,
                 pim.data.ptr + pim_offset * bpe, bpe );
@@ -490,6 +521,43 @@ unittest
     auto nndi = Image( ivec3(2,2,2), EType, nnd );
 
     assert( nn == nndi );
+}
+
+///
+unittest
+{
+    auto type = ElemInfo(1,DataType.UBYTE);
+
+    ubyte[] srcData =
+        [
+            1,2,3,
+            4,5,6,
+        ];
+
+    auto src = Image( ivec2(3,2), type, srcData );
+    auto dst = Image( ivec3(3,3,3), type );
+    imPaste( dst, ivec3(1,0,0), src, ImRepack.ROT180 );
+    imPaste( dst, ivec3(-1,-1,1), src, ImRepack.ROT90 );
+    imPaste( dst, ivec3(0,0,2), src, ImRepack.NONE );
+
+    auto expectedDstData =
+        [
+            0,6,5,
+            0,3,2,
+            0,0,0,
+
+            5,0,0,
+            4,0,0,
+            0,0,0,
+
+            1,2,3,
+            4,5,6,
+            0,0,0,
+        ];
+
+    import std.stdio;
+    stderr.writeln( expectedDstData, "\n", dst.mapAs!ubyte );
+    assertEq( expectedDstData, dst.mapAs!ubyte );
 }
 
 /++ get histogram convolution

@@ -138,6 +138,9 @@ pure:
         auto idup() { return immutable(Image)( this ); }
     }
 
+    CrdVector!0 robSize( size_t K ) const
+    { return CrdVector!(0).fillOne( K, size, 1 ); }
+
     ///
     immutable(void[]) dump() const
     {

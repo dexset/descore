@@ -8,6 +8,7 @@ import std.traits;
 import std.typetuple;
 import std.string;
 import std.math;
+import std.algorithm;
 
 import des.util.testsuite;
 
@@ -160,10 +161,34 @@ pure:
         static selftype fill(E...)( size_t K, in E vals )
         {
             selftype ret;
-            auto d = flatData!T(vals);
             ret.length = K;
-            static if( isNumeric!T ) ret.data[] = 0;
-            foreach( i, ref val; ret.data ) val = d[i%$];
+            if( E.length )
+            {
+                auto d = flatData!T(vals);
+                foreach( i, ref val; ret.data ) val = d[i%$];
+            }
+            else
+            {
+                static if( isNumeric!T ) ret.data[] = 0;
+            }
+            return ret;
+        }
+
+        ///
+        static selftype fillOne(E...)( size_t K, in E vals )
+        {
+            selftype ret;
+            ret.length = K;
+            if( E.length )
+            {
+                auto d = flatData!T(vals);
+                foreach( i; 0 .. K )
+                    ret.data[i] = d[min(i,$-1)];
+            }
+            else
+            {
+                static if( isNumeric!T ) ret.data[] = 0;
+            }
             return ret;
         }
     }
@@ -858,4 +883,8 @@ unittest
     auto a = Vector!(0,float).fill(5,1,2);
     assertEq( a.length, 5 );
     assertEq( a.data, [1,2,1,2,1] );
+
+    auto b = vecD.fillOne( 10, a, 666 );
+    assertEq( b.length, 10 );
+    assertEq( b.data, [1,2,1,2,1,666,666,666,666,666] );
 }
