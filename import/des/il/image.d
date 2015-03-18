@@ -226,7 +226,7 @@ pure:
     {
         assert( isAllCompPositive(crd), "negative coordinate" );
         assert( crd.length == size.length );
-        assert( all!"a[0]>a[1]"( zip( size.data, crd.data ) ), "range violation" );
+        assert( all!"a[0]>a[1]"( zip( size.data, crd.data.dup ) ), "range violation" );
     }
     body
     {
