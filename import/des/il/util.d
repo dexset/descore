@@ -21,9 +21,14 @@ class ImageException : Exception
     { super( msg, file, line ); }
 }
 
+void imEnforce(string file=__FILE__, size_t line=__LINE__)( bool val, lazy string msg )
+{ enforce( val, new ImageException( msg, file, line ) ); }
+
 alias coord_t = ptrdiff_t;
 alias CrdVector(size_t N) = Vector!(N,coord_t);
 alias CrdRegion(size_t N) = Region!(N,coord_t);
+alias CrdVectorD = CrdVector!0;
+alias CrdRegionD = CrdRegion!0;
 
 /++ checks all components
  Returns:
