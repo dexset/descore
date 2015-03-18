@@ -267,6 +267,9 @@ pure:
         return true;
     }
 
+    ///
+    const(E) opCast(E)() const if( is( T[] == E ) ) { return data.dup; }
+
     const @property
     {
         static if( is( typeof( dot( selftype.init, selftype.init ) ) ) )
