@@ -14,6 +14,8 @@ import des.math.linear.vector;
 
 import std.c.string : memcpy, memset;
 
+import std.stdio;
+
 ///
 enum ImRepack
 {
@@ -22,58 +24,309 @@ enum ImRepack
     ROT180,///
     ROT270,///
     MIRHOR,///
-    MIRVER ///
+    MIRVER,///
+    MTRANS,///
+    STRANS,///
 }
 
-/// copy and repack image from region to new image
-auto imCopy(size_t N,T)( in Image orig, Region!(N,T) reg, ImRepack tr=ImRepack.NONE, size_t[2] cn=[0,1] )
+private CrdVector!N permutateComp(size_t N,T)( in Vector!(N,T) v, ImRepack tr, size_t[2] crdNum ) pure
     if( isIntegral!T )
 in
 {
-    assert( cn[0] < orig.dims );
-    if( orig.dims > 1 )
-        assert( cn[1] < orig.dims );
-    assert( cn[0] != cn[1] );
+    assert( crdNum[0] < v.length );
+    assert( crdNum[1] < v.length );
 }
 body
 {
-    enforce( orig.dims == reg.dims, "image and region dimension mismatch" );
-    if( orig.dims == 1 ) cn[1] = cn[0];
+    switch( tr )
+    {
+        case ImRepack.ROT90:
+        case ImRepack.ROT270:
+        case ImRepack.MTRANS:
+        case ImRepack.STRANS:
+            auto ret = CrdVector!N(v);
+            ret[crdNum[0]] = v[crdNum[1]];
+            ret[crdNum[1]] = v[crdNum[0]];
+            return ret;
+        default: return CrdVector!N(v);
+    }
+}
 
-    alias CReg = CrdRegion!0;
-    alias CVec = CrdVector!0;
+private void function( coord_t, coord_t, coord_t, coord_t,
+               ref coord_t, ref coord_t ) getRepackCrdFunc( ImRepack repack )
+out(fnc) { assert( fnc !is null ); } body
+{
+    final switch( repack )
+    {
+        case ImRepack.NONE:   return &noRepackCrd;
+        case ImRepack.ROT90:  return &rotCrd90;
+        case ImRepack.ROT180: return &rotCrd180;
+        case ImRepack.ROT270: return &rotCrd270;
+        case ImRepack.MIRHOR: return &mirHorCrd;
+        case ImRepack.MIRVER: return &mirVerCrd;
+        case ImRepack.MTRANS: return &mTransCrd;
+        case ImRepack.STRANS: return &sTransCrd;
+    }
+}
 
-    auto rSize = imPermutateComp( reg.size, tr, cn );
+private
+{
+    void noRepackCrd( coord_t px, coord_t py, coord_t sx, coord_t sy,
+                        ref coord_t rx, ref coord_t ry )
+    { rx=px; ry=py; }
 
-    auto ret = Image( rSize, orig.info );
+    void rotCrd90( coord_t px, coord_t py, coord_t sx, coord_t sy,
+                    ref coord_t rx, ref coord_t ry )
+    { rx=sy-1-py; ry=px; }
 
-    auto crop = CReg( CVec.fill(orig.dims,0), orig.size ).overlapLocal( reg );
-    auto bpe = orig.info.bpe;
+    void rotCrd180( coord_t px, coord_t py, coord_t sx, coord_t sy,
+                    ref coord_t rx, ref coord_t ry )
+    { rx=sx-1-px; ry=sy-1-py; }
+
+    void rotCrd270( coord_t px, coord_t py, coord_t sx, coord_t sy,
+                    ref coord_t rx, ref coord_t ry )
+    { rx=py; ry=sx-1-px; }
+
+    void mirHorCrd( coord_t px, coord_t py, coord_t sx, coord_t sy,
+                    ref coord_t rx, ref coord_t ry )
+    { rx=sx-1-px; ry=py; }
+
+    void mirVerCrd( coord_t px, coord_t py, coord_t sx, coord_t sy,
+                    ref coord_t rx, ref coord_t ry )
+    { rx=px; ry=sy-1-py; }
+
+    void mTransCrd( coord_t px, coord_t py, coord_t sx, coord_t sy,
+                    ref coord_t rx, ref coord_t ry )
+    { rx=py; ry=px; }
+
+    void sTransCrd( coord_t px, coord_t py, coord_t sx, coord_t sy,
+                    ref coord_t rx, ref coord_t ry )
+    { rx=sy-1-py; ry=sx-1-px; }
+}
+
+/// copy `src` image from `copy_reg` to `dst` image in `paste_pos` with repack
+void imCopy( string file=__FILE__, size_t line=__LINE__, size_t A,
+            size_t B, T, E)( ref Image dst, in Vector!(A,T) paste_pos,
+                in Image src, in Region!(B,E) copy_reg,
+                ImRepack repack=ImRepack.NONE, size_t[2] repack_dim=[0,1] )
+if( isIntegral!T && isIntegral!E )
+{
+    auto dims = dst.dims;
+    imEnforce!(file,line)( dims > 0, "no dimensions in dst" );
+    imEnforce!(file,line)( src.dims > 0, "no dimensions in src" );
+    imEnforce!(file,line)( dims >= src.dims,
+            "too much source dimensions" );
+    imEnforce!(file,line)( dims == paste_pos.length,
+            "dst dims mismatch with dst_pos dims" );
+    imEnforce!(file,line)( dims == copy_reg.dims,
+            "dst dims mismatch with src_reg dims" );
+    imEnforce!(file,line)( repack_dim[0] < dims,
+            "repack_dim[0] not less what dst dims" );
+    imEnforce!(file,line)( dst.info == src.info,
+            "dst info mismatch with src info" );
+
+    auto rd0 = repack_dim[0];
+    auto rd1 = repack_dim[1];
+
+    if( dims == 1 ) rd1 = rd0;
+    else imEnforce!(file,line)( rd1 < dims,
+            "repack_dim[1] not less what dst dims" );
+
+    auto src_size = src.robSize(dims);
+
+    imEnforce!(file,line)( isAllCompPositive(copy_reg.pos),
+            "copy region must be in source image" );
+    imEnforce!(file,line)( isAllCompPositive(src_size-copy_reg.lim),
+            "copy region must be in source image" );
+
+    auto paste_reg = CrdRegionD( paste_pos,
+            permutateComp( copy_reg.size, repack, repack_dim ) );
+
+    auto crop = CrdRegionD.fromSize( dst.size ).overlapLocal( paste_reg );
 
     auto copy_count = reduce!((s,v)=>s*=v)( crop.size );
 
-    auto tr_func = imGetTrCrdFunc(tr);
+    auto repack_crd_func = getRepackCrdFunc( repack );
 
-    coord_t A = reg.size[cn[0]], B = reg.size[cn[1]];
+    auto bpe = dst.info.bpe;
 
     foreach( i; 0 .. copy_count )
     {
-        auto local_crop_crd = CVec( getCoord( crop.size, i ) );
+        auto local_crop_crd = CrdVectorD( getCoord( crop.size, i ) );
 
-        auto orig_crd = crop.pos + local_crop_crd;
+        auto dst_crd = crop.pos + local_crop_crd;
 
-        auto reg_crd = orig_crd - reg.pos;
+        auto dst_offset = getIndex( dst.size, dst_crd );
 
-        auto ret_crd = reg_crd;
-        tr_func( reg_crd[cn[0]], reg_crd[cn[1]], A, B, ret_crd[cn[0]], ret_crd[cn[1]] );
+        auto paste_crd = dst_crd - paste_reg.pos;
+        auto src_crd = CrdVectorD( paste_crd );
 
-        auto ret_offset = getIndex( ret.size, ret_crd );
-        auto orig_offset = getIndex( orig.size, orig_crd );
+        repack_crd_func( paste_crd[rd0], paste_crd[rd1],
+                         paste_reg.size[rd0], paste_reg.size[rd1],
+                         src_crd[rd0], src_crd[rd1] );
 
-        memcpy( ret.data.ptr + ret_offset * bpe,
-                orig.data.ptr + orig_offset * bpe, bpe );
+        auto src_offset = getIndex( src_size, src_crd + copy_reg.pos );
+
+        memcpy( dst.data.ptr + dst_offset * bpe,
+                src.data.ptr + src_offset * bpe, bpe );
     }
+}
 
+///
+unittest
+{
+    auto etype = ElemInfo( 1, DataType.INT );
+    auto dst = Image( ivec2(3,3), etype );
+
+    auto src = Image( ivec2(2,2), etype, [ 1,2, 3,4 ]);
+
+    imCopy( dst, ivec2(1,1), src, CrdRegionD(0,0,2,2), ImRepack.ROT90 );
+
+    assertEq( dst.data, [ 0,0,0,
+                          0,2,4,
+                          0,1,3 ] );
+
+    imCopy( dst, ivec2(0,0), src, CrdRegionD(0,0,2,2), ImRepack.ROT270 );
+
+    assertEq( dst.data, [ 3,1,0,
+                          4,2,4,
+                          0,1,3 ] );
+}
+
+///
+unittest
+{
+    auto etype = ElemInfo( 1, DataType.INT );
+    auto dst = Image( ivec3(3,3,3), etype );
+    auto src = Image( CrdVectorD(3), etype, [1,2,4] );
+
+    imCopy( dst, ivec3(0,0,0), src, CrdRegionD(0,0,0,3,1,1), ImRepack.ROT270 );
+    assertEq( dst.mapAs!int, [ 1,0,0,
+                               2,0,0,
+                               4,0,0, // z=0
+
+                               0,0,0,
+                               0,0,0,
+                               0,0,0, // z=1
+
+                               0,0,0,
+                               0,0,0,
+                               0,0,0, // z=2
+                             ] );
+
+    imCopy( dst, ivec3(1,0,0), src, CrdRegionD(0,0,0,3,1,1), ImRepack.ROT90, [0,2] );
+    assertEq( dst.mapAs!int, [ 1,4,0,
+                               2,0,0,
+                               4,0,0, // z=0
+
+                               0,2,0,
+                               0,0,0,
+                               0,0,0, // z=1
+
+                               0,1,0,
+                               0,0,0,
+                               0,0,0, // z=2
+                             ] );
+}
+
+///
+unittest
+{
+    auto etype = ElemInfo( 1, DataType.INT );
+    auto dst = Image( ivec3(3,3,3), etype );
+    auto src = Image( CrdVectorD(3), etype, [1,2,4] );
+
+    imCopy( dst, ivec3(1,0,0), src, CrdRegionD(1,0,0,2,1,1), ImRepack.ROT270 );
+    assertEq( dst.mapAs!int, [ 0,2,0,
+                               0,4,0,
+                               0,0,0, // z=0
+
+                               0,0,0,
+                               0,0,0,
+                               0,0,0, // z=1
+
+                               0,0,0,
+                               0,0,0,
+                               0,0,0, // z=2
+                             ] );
+}
+
+///
+void imCopy(string file=__FILE__, size_t line=__LINE__, size_t A,T)
+           ( ref Image dst, in Vector!(A,T) paste_pos,
+            in Image src, ImRepack repack=ImRepack.NONE,
+            size_t[2] repack_dim=[0,1] )
+if( isIntegral!T )
+{
+    imCopy!(file,line)( dst, paste_pos, src,
+            CrdRegionD.fromSize( src.robSize(dst.dims) ),
+            repack, repack_dim );
+}
+
+///
+unittest
+{
+    auto etype = ElemInfo( 1, DataType.INT );
+    auto dst = Image( ivec2(4,4), etype );
+    auto src = Image( ivec2(3,2), etype, [ 1,2,4, 5,6,8 ] );
+
+    imCopy( dst, ivec2(-1,-1), src, ImRepack.ROT90 );
+    assertEq( dst.mapAs!int, [ 6,0,0,0,
+                               5,0,0,0,
+                               0,0,0,0,
+                               0,0,0,0 ] );
+    imCopy( dst, ivec2(2,1), src, ImRepack.ROT180 );
+    assertEq( dst.mapAs!int, [ 6,0,0,0,
+                               5,0,8,6,
+                               0,0,4,2,
+                               0,0,0,0 ] );
+    imCopy( dst, ivec2(-1,3), src, ImRepack.MIRVER );
+    assertEq( dst.mapAs!int, [ 6,0,0,0,
+                               5,0,8,6,
+                               0,0,4,2,
+                               6,8,0,0 ] );
+}
+
+///
+unittest
+{
+    auto etype = ElemInfo( 1, DataType.INT );
+    auto dst = Image( ivec2(2,2), etype );
+    auto src = Image( ivec2(3,3), etype, [ 1,2,4, 5,6,8, 9,7,3 ] );
+
+    imCopy( dst, ivec2(-1,-1), src, CrdRegionD(0,0,3,3) );
+    assertEq( dst.mapAs!int, [ 6,8,
+                               7,3 ] );
+
+}
+
+///
+unittest
+{
+    auto etype = ElemInfo( 1, DataType.INT );
+    auto dst = Image( ivec3(2,2,2), etype );
+    auto src = Image( ivec!1(2), etype, [ 1,2 ] );
+
+    imCopy( dst, ivec3(0,0,0), src, ImRepack.NONE );
+    assertEq( dst.mapAs!int, [1,2, 0,0,  0,0, 0,0] );
+
+    imCopy( dst, ivec3(0,0,0), src, ImRepack.ROT270 );
+    assertEq( dst.mapAs!int, [1,2, 2,0,  0,0, 0,0] );
+
+    dst.clear();
+    imCopy( dst, ivec3(0,0,0), src, ImRepack.ROT90, [0,2] );
+    assertEq( dst.mapAs!int, [2,0, 0,0,  1,0, 0,0] );
+}
+
+/// copy and repack image from region to new image
+Image imGetCopy(string file=__FILE__,size_t line=__LINE__,size_t B,E)( in Image src, in Region!(B,E) copy_reg,
+                    ImRepack repack=ImRepack.NONE, size_t[2] repack_dim=[0,1] )
+if( isIntegral!E )
+{
+    if( src.dims == 1 ) repack_dim[1] = repack_dim[0];
+    auto sz = permutateComp( copy_reg.size, repack, repack_dim );
+    auto ret = Image( sz, src.info );
+    imCopy!(file,line)( ret, CrdVectorD.fill(src.dims,0), src, copy_reg, repack, repack_dim );
     return ret;
 }
 
@@ -83,96 +336,10 @@ unittest
     auto a = Image( ivec!1(5), ElemInfo( 2, DataType.FLOAT ) );
     a.pixel!vec2(3) = vec2(1,1);
     a.pixel!vec2(4) = vec2(2,2);
-    auto b = imCopy( a, Region!(1,int)(3,2) );
+    auto b = imGetCopy( a, Region!(1,int)(3,2) );
     assert( b.pixel!vec2(0) == a.pixel!vec2(3) );
     assert( b.pixel!vec2(1) == a.pixel!vec2(4) );
 }
-
-///
-unittest
-{
-    ubyte[] data =
-    [
-        2, 1, 3, 5, 2,
-        9, 1, 2, 6, 0,
-        2, 5, 2, 9, 1,
-        8, 3, 6, 3, 0,
-        6, 2, 8, 1, 5
-    ];
-
-    ubyte[] datav1 =
-    [
-        0, 0, 0, 0, 0, 0, 0,
-        0, 2, 1, 3, 5, 2, 0,
-        0, 9, 1, 2, 6, 0, 0,
-        0, 2, 5, 2, 9, 1, 0,
-        0, 8, 3, 6, 3, 0, 0,
-        0, 6, 2, 8, 1, 5, 0,
-        0, 0, 0, 0, 0, 0, 0
-    ];
-
-    ubyte[] datav2 =
-    [
-        1, 2, 6,
-        5, 2, 9,
-        3, 6, 3
-    ];
-
-    ubyte[] datav3 =
-    [
-        0, 0, 0, 0,
-        0, 2, 1, 3,
-        0, 9, 1, 2,
-        0, 2, 5, 2
-    ];
-
-    ubyte[] datav4 =
-    [
-        0, 0, 0, 0,
-        3, 5, 2, 0,
-        2, 6, 0, 0,
-        2, 9, 1, 0
-    ];
-
-    ubyte[] datav5 =
-    [
-        0, 2, 5, 2,
-        0, 8, 3, 6,
-        0, 6, 2, 8,
-        0, 0, 0, 0
-    ];
-
-    ubyte[] datav6 =
-    [
-        2, 9, 1, 0,
-        6, 3, 0, 0,
-        8, 1, 5, 0,
-        0, 0, 0, 0
-    ];
-
-    auto orig = Image( ivec2(5,5), 1, DataType.UBYTE, data );
-    auto im = imCopy( orig, iRegion2( 0, 0, 5, 5 ) );
-    assert( orig == im );
-
-    auto imv1 = Image( ivec2( 7, 7 ), 1, DataType.UBYTE, datav1 );
-    assert( imCopy( orig, iRegion2( -1, -1, 7, 7 ) ) == imv1 );
-
-    auto imv2 = Image( ivec2(3,3), 1, DataType.UBYTE, datav2 );
-    assert( imCopy( orig, iRegion2( 1, 1, 3, 3 ) ) == imv2 );
-
-    auto imv3 = Image( ivec2(4,4), 1, DataType.UBYTE, datav3 );
-    assert( imCopy( orig, iRegion2( -1, -1, 4, 4 ) ) == imv3 );
-
-    auto imv4 = Image( ivec2(4,4), 1, DataType.UBYTE, datav4 );
-    assert( imCopy( orig, iRegion2( 2, -1, 4, 4 ) ) == imv4 );
-
-    auto imv5 = Image( ivec2(4,4), 1, DataType.UBYTE, datav5 );
-    assert( imCopy( orig, iRegion2( -1, 2, 4, 4 ) ) == imv5 );
-
-    auto imv6 = Image( ivec2(4,4), 1, DataType.UBYTE, datav6 );
-    assert( imCopy( orig, iRegion2( 2, 2, 4, 4 ) ) == imv6 );
-}
-
 
 ///
 unittest
@@ -187,159 +354,57 @@ unittest
     auto img = Image( ivec2(4,4), 1, DataType.UBYTE, imgdata );
 
     {
-        ubyte[] r1data = [
-            0, 0, 0, 0,
-            8,12,16, 0,
-            7,11,15, 0,
-        ];
-
-        auto r1 = Image( ivec2(4,3), 1, DataType.UBYTE, r1data );
-        assert( imCopy( img, iRegion2(2,1,3,4), ImRepack.ROT90 ) == r1 );
+        ubyte[] r = [ 8,12,16, 7,11,15 ];
+        assertEq( imGetCopy( img, iRegion2(2,1,2,3), ImRepack.ROT90 ).mapAs!ubyte, r );
     }
 
     {
-        ubyte[] r2data = [ 11,10,9,0, 7,6,5,0 ];
-        auto r2 = Image( ivec2(4,2), 1, DataType.UBYTE, r2data );
-        assert( imCopy( img, iRegion2(-1,1,4,2), ImRepack.ROT180 ) == r2 );
+        ubyte[] r = [ 14,10,6, 15,11,7 ];
+        assertEq( imGetCopy( img, iRegion2(1,1,2,3), ImRepack.ROT270 ).mapAs!ubyte, r );
     }
 
     {
-        ubyte[] r3data = [ 0,14,10,6, 0,15,11,7 ];
-        auto r3 = Image( ivec2(4,2), 1, DataType.UBYTE, r3data );
-        assert( imCopy( img, iRegion2(1,1,2,4), ImRepack.ROT270 ) == r3 );
+        ubyte[] r= [ 3,2,1, 7,6,5 ];
+        assertEq( imGetCopy( img, iRegion2(0,0,3,2), ImRepack.MIRHOR ).mapAs!ubyte, r );
     }
 
     {
-        ubyte[] r4data = [ 3,2,1, 7,6,5 ];
-        auto r4 = Image( ivec2(3,2), 1, DataType.UBYTE, r4data );
-        assert( imCopy( img, iRegion2(0,0,3,2), ImRepack.MIRHOR ) == r4 );
-    }
-
-    {
-        ubyte[] r5data = [ 5,6,7, 1,2,3 ];
-        auto r5 = Image( ivec2(3,2), 1, DataType.UBYTE, r5data );
-        assert( imCopy( img, iRegion2(0,0,3,2), ImRepack.MIRVER ) == r5 );
+        ubyte[] r = [ 5,6,7, 1,2,3 ];
+        assert( imGetCopy( img, iRegion2(0,0,3,2), ImRepack.MIRVER ).mapAs!ubyte == r );
     }
 }
 
-CrdVector!N imPermutateComp(size_t N,T)( in Vector!(N,T) v, ImRepack tr, size_t[2] crdNum )
-    if( isIntegral!T )
-in
+///
+unittest
 {
-    assert( crdNum[0] < v.length );
-    assert( crdNum[1] < v.length );
-}
-body
-{
-    switch( tr )
-    {
-        case ImRepack.ROT90: case ImRepack.ROT270:
-            auto ret = CrdVector!N(v);
-            ret[crdNum[0]] = v[crdNum[1]];
-            ret[crdNum[1]] = v[crdNum[0]];
-            return ret;
-        default: return CrdVector!N(v);
-    }
-}
+    ubyte[] img_data =
+    [
+        1,2,3,
+        4,5,6,
 
-void function( coord_t, coord_t, coord_t, coord_t,
-               ref coord_t, ref coord_t ) imGetTrCrdFunc( ImRepack tr )
-out(fnc) { assert( fnc !is null ); } body
-{
-    final switch( tr )
-    {
-        case ImRepack.NONE:   return &imNoneTrCrd;
-        case ImRepack.ROT90:  return &imRotCrd90;
-        case ImRepack.ROT180: return &imRotCrd180;
-        case ImRepack.ROT270: return &imRotCrd270;
-        case ImRepack.MIRHOR: return &imMirHorCrd;
-        case ImRepack.MIRVER: return &imMirVerCrd;
-    }
-}
+        7,8,9,
+        10,11,12,
+    ];
 
-void imNoneTrCrd( coord_t px, coord_t py, coord_t sx, coord_t sy,
-                  ref coord_t rx, ref coord_t ry )
-{ rx=px; ry=py; }
+    ubyte[] d2l0 = [ 1,2,3,4,5,6 ];
+    ubyte[] d2l1 = [ 7,8,9,10,11,12 ];
 
-void imRotCrd90( coord_t px, coord_t py, coord_t sx, coord_t sy,
-                  ref coord_t rx, ref coord_t ry )
-{ rx=py; ry=sx-1-px; }
+    ubyte[] d1l0 = [ 1,2,3,7,8,9 ];
+    ubyte[] d1l1 = [ 4,5,6,10,11,12 ];
 
-void imRotCrd180( coord_t px, coord_t py, coord_t sx, coord_t sy,
-                  ref coord_t rx, ref coord_t ry )
-{ rx=sx-1-px; ry=sy-1-py; }
+    ubyte[] d0l0 = [ 1, 4, 7, 10 ];
+    ubyte[] d0l1 = [ 2, 5, 8, 11 ];
 
-void imRotCrd270( coord_t px, coord_t py, coord_t sx, coord_t sy,
-                  ref coord_t rx, ref coord_t ry )
-{ rx=sy-1-py; ry=px; }
+    auto img = Image( ivec3(3,2,2), 1, DataType.UBYTE, img_data );
 
-void imMirHorCrd( coord_t px, coord_t py, coord_t sx, coord_t sy,
-                  ref coord_t rx, ref coord_t ry )
-{ rx=sx-1-px; ry=py; }
+    assertEq( imGetCopy( img, CrdRegionD(0,0,0,3,2,1) ).mapAs!ubyte, d2l0 );
+    assertEq( imGetCopy( img, CrdRegionD(0,0,1,3,2,1) ).mapAs!ubyte, d2l1 );
 
-void imMirVerCrd( coord_t px, coord_t py, coord_t sx, coord_t sy,
-                  ref coord_t rx, ref coord_t ry )
-{ rx=px; ry=sy-1-py; }
+    assertEq( imGetCopy( img, CrdRegionD(0,0,0,3,1,2) ).mapAs!ubyte, d1l0 );
+    assertEq( imGetCopy( img, CrdRegionD(0,1,0,3,1,2) ).mapAs!ubyte, d1l1 );
 
-/// paste in image other image
-void imPaste(size_t N,V)( ref Image img, in Vector!(N,V) pos, in Image pim, ImRepack tr=ImRepack.NONE, size_t[2] cn=[0,1] )
-    if( isIntegral!V )
-in
-{
-    assert( cn[0] < img.dims );
-    if( img.dims > 1 )
-        assert( cn[1] < img.dims );
-    assert( cn[0] != cn[1] );
-}
-body
-{
-    enforce( pim.dims <= img.dims, new ImageException( "pim.dims > img.dims" ) );
-    enforce( img.dims == pos.length, new ImageException( "wrong pos dimensions" ) );
-    enforce( pim.info == img.info, new ImageException( "image infos mismatch" ) );
-
-    if( img.dims == 1 ) cn[1] = cn[0];
-
-    auto pim_size = pim.robSize(img.dims);
-
-    auto pp_size = imPermutateComp( pim_size, tr, cn );
-
-    alias CReg = CrdRegion!0;
-    alias CVec = CrdVector!0;
-
-    auto pp_reg = CReg( pos, pp_size );
-
-    auto crop = CReg( CVec.fill(img.dims,0), img.size ).overlapLocal( pp_reg );
-    auto bpe = img.info.bpe;
-
-    auto copy_count = reduce!((s,v)=>s*=v)( crop.size );
-
-    // not reversable operations
-         if( tr == ImRepack.ROT90 ) tr = ImRepack.ROT270;
-    else if( tr == ImRepack.ROT270 ) tr = ImRepack.ROT90;
-
-    // get reversed ( ROT90 -> ROT270, ROT270 -> ROT90 )
-    auto tr_func = imGetTrCrdFunc(tr);
-
-    coord_t A = pp_size[cn[0]], B = pp_size[cn[1]];
-
-    foreach( i; 0 .. copy_count )
-    {
-        auto local_crop_crd = CVec( getCoord( crop.size, i ) );
-
-        auto img_crd = crop.pos + local_crop_crd;
-
-        auto pp_crd = img_crd - CVec(pos);
-        auto pim_crd = pp_crd;
-
-        // warning: work as reversed
-        tr_func( pp_crd[cn[0]], pp_crd[cn[1]], A, B,
-                 pim_crd[cn[0]], pim_crd[cn[1]] );
-
-        auto pim_offset = getIndex( pim_size, pim_crd );
-        auto img_offset = getIndex( img.size, img_crd );
-        memcpy( img.data.ptr + img_offset * bpe,
-                pim.data.ptr + pim_offset * bpe, bpe );
-    }
+    assertEq( imGetCopy( img, CrdRegionD(0,0,0,1,2,2) ).mapAs!ubyte, d0l0 );
+    assertEq( imGetCopy( img, CrdRegionD(1,0,0,1,2,2) ).mapAs!ubyte, d0l1 );
 }
 
 ///
@@ -381,117 +446,70 @@ unittest
     auto im = Image( ivec2( 5, 5 ), 1, DataType.UBYTE, data );
 
     auto res = Image(orig);
-    imPaste( res, ivec2(-1,-1), im );
+    imCopy( res, ivec2(-1,-1), im );
     assert( res.data == datav1 );
 
     res = Image(orig);
-    imPaste( res, ivec2(1,1), im );
+    imCopy( res, ivec2(1,1), im );
     assert( res.data == datav2 );
 }
 
-///
 unittest
 {
-    ubyte[] src_data =
-        [
-        1,2,3,
-        4,5,6,
-        7,8,9
-        ];
+    ubyte[] src_data = [ 1,2,3, 4,5,6, 7,8,9 ];
 
     ubyte[] dst1_data =
         [
-        0,0,0,
-        0,0,0,
-        0,0,0,
-        1,2,3,
-        4,5,6,
-        7,8,9,
-        0,0,0,
-        0,0,0,
-        0,0,0
+        0,0,0, 0,0,0, 0,0,0,
+
+        1,2,3, 4,5,6, 7,8,9,
+
+        0,0,0, 0,0,0, 0,0,0
         ];
 
     ubyte[] dst2_data =
         [
-        0,1,0,
-        0,2,0,
-        0,3,0,
-        0,4,0,
-        0,5,0,
-        0,6,0,
-        0,7,0,
-        0,8,0,
-        0,9,0
+        0,1,0, 0,2,0, 0,3,0,
+
+        0,4,0, 0,5,0, 0,6,0,
+
+        0,7,0, 0,8,0, 0,9,0
         ];
 
     auto src = Image( ivec2(3,3), ElemInfo( 1, DataType.UBYTE ), src_data );
     auto dst = Image( ivec3(3,3,3), ElemInfo( 1, DataType.UBYTE ) );
-    imPaste( dst, ivec3(0,0,1), Image( ivec3(3,3,1), src.info, src.data ) );
+    imCopy( dst, ivec3(0,0,1), Image( ivec3(3,3,1), src.info, src.data ) );
     assert( dst.data == dst1_data );
     dst.clear();
-    imPaste( dst, ivec3(1,0,0), Image.external( ivec3(1,3,3), src.info, src.data ) );
+    imCopy( dst, ivec3(1,0,0), Image.external( ivec3(1,3,3), src.info, src.data ) );
     assertEq( dst.data, dst2_data );
 }
 
-///
 unittest
 {
     ubyte[] dt =
         [
-        0,0,0,0,
-        0,0,0,0,
-        0,0,0,0,
-        0,0,0,0,
+        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 
-        0,0,0,0,
-        0,1,2,0,
-        0,3,4,0,
-        0,0,0,0,
+        0,0,0,0, 0,1,2,0, 0,3,4,0, 0,0,0,0,
 
-        0,0,0,0,
-        0,5,6,0,
-        0,7,8,0,
-        0,0,0,0,
+        0,0,0,0, 0,5,6,0, 0,7,8,0, 0,0,0,0,
 
-        0,0,0,0,
-        0,0,0,0,
-        0,0,0,0,
-        0,0,0,0
+        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0
         ];
 
     ubyte[] cp =
         [
-        1,2,1,2,
-        3,4,3,4,
-        1,2,1,2,
-        3,4,3,4,
+        1,2,1,2, 3,4,3,4, 1,2,1,2, 3,4,3,4,
 
-        5,6,5,6,
-        7,8,7,8,
-        5,6,5,6,
-        7,8,7,8,
+        5,6,5,6, 7,8,7,8, 5,6,5,6, 7,8,7,8,
 
-        1,2,1,2,
-        3,4,3,4,
-        1,2,1,2,
-        3,4,3,4,
+        1,2,1,2, 3,4,3,4, 1,2,1,2, 3,4,3,4,
 
-        5,6,5,6,
-        7,8,7,8,
-        5,6,5,6,
-        7,8,7,8,
+        5,6,5,6, 7,8,7,8, 5,6,5,6, 7,8,7,8,
         ];
 
-    ubyte[] rs =
-        [
-            8,7,
-            6,5,
-            4,3,
-            2,1
-        ];
-
-    ubyte[] nnd = [ 0,0, 0,0, 0,0, 0,8 ];
+    ubyte[] rs = [ 8,7, 6,5, 4,3, 2,1 ];
 
     auto EType = ElemInfo( 1, DataType.UBYTE );
 
@@ -499,31 +517,25 @@ unittest
     auto b = Image( ivec3(4,4,4), EType, cp );
     auto c = Image( ivec3(4,4,4), EType );
 
-    auto part = imCopy( a, iRegion3( ivec3(1,1,1), ivec3(2,2,2) ) );
+    auto part = imGetCopy( a, iRegion3( ivec3(1,1,1), ivec3(2,2,2) ) );
 
-    imPaste( c, ivec3(0,0,0), part );
-    imPaste( c, ivec3(0,2,0), part );
-    imPaste( c, ivec3(2,0,0), part );
-    imPaste( c, ivec3(2,2,0), part );
+    imCopy( c, ivec3(0,0,0), part );
+    imCopy( c, ivec3(0,2,0), part );
+    imCopy( c, ivec3(2,0,0), part );
+    imCopy( c, ivec3(2,2,0), part );
 
-    imPaste( c, ivec3(0,0,2), part );
-    imPaste( c, ivec3(0,2,2), part );
-    imPaste( c, ivec3(2,0,2), part );
-    imPaste( c, ivec3(2,2,2), part );
+    imCopy( c, ivec3(0,0,2), part );
+    imCopy( c, ivec3(0,2,2), part );
+    imCopy( c, ivec3(2,0,2), part );
+    imCopy( c, ivec3(2,2,2), part );
 
     assert( b == c );
 
-    auto part2 = imCopy( b, iRegion3(ivec3(1,1,1), ivec3(2,2,2)) );
+    auto part2 = imGetCopy( b, iRegion3(ivec3(1,1,1), ivec3(2,2,2)) );
     auto rr = Image( ivec3(2,2,2), EType, rs );
     assert( rr == part2 );
-
-    auto nn = imCopy( rr, iRegion3( ivec3(-1,-1,-1), ivec3(2,2,2) ) );
-    auto nndi = Image( ivec3(2,2,2), EType, nnd );
-
-    assert( nn == nndi );
 }
 
-///
 unittest
 {
     auto type = ElemInfo(1,DataType.UBYTE);
@@ -536,38 +548,26 @@ unittest
 
     auto src = Image( ivec2(3,2), type, srcData );
     auto dst = Image( ivec3(3,3,3), type );
-    imPaste( dst, ivec3(1,0,0), src, ImRepack.ROT180 );
-    imPaste( dst, ivec3(-1,-1,1), src, ImRepack.ROT90 );
-    imPaste( dst, ivec3(0,0,2), src, ImRepack.NONE );
+    imCopy( dst, ivec3(1,0,0), src, ImRepack.ROT180 );
+    imCopy( dst, ivec3(-1,-1,1), src, ImRepack.ROT90 );
+    imCopy( dst, ivec3(0,0,2), src, ImRepack.NONE );
 
     auto expectedDstData =
         [
-            0,6,5,
-            0,3,2,
-            0,0,0,
+            0,6,5, 0,3,2, 0,0,0,
 
-            5,0,0,
-            4,0,0,
-            0,0,0,
+            5,0,0, 4,0,0, 0,0,0,
 
-            1,2,3,
-            4,5,6,
-            0,0,0,
+            1,2,3, 4,5,6, 0,0,0,
         ];
 
-    import std.stdio;
-    stderr.writeln( expectedDstData, "\n", dst.mapAs!ubyte );
     assertEq( expectedDstData, dst.mapAs!ubyte );
 }
 
 /++ get histogram convolution
     +/
 Image imHistoConv( in Image img, size_t dim ) pure
-in
-{
-    assert( dim < img.dims );
-}
-body
+in { assert( dim < img.dims ); } body
 {
     auto ret = Image( ivecD( cut( img.size, dim ) ), img.info );
 
@@ -603,61 +603,4 @@ unittest
 
     assert( imHistoConv(img,0) == hi_x );
     assert( imHistoConv(img,1) == hi_y );
-}
-
-/// get layer of image
-Image imLayer( Image img, size_t dim, size_t lno ) pure
-in
-{
-    assert( dim < img.dims );
-    assert( lno < img.size[dim] );
-}
-body
-{
-    auto ret = Image( ivecD( cut( img.size, dim ) ), img.info );
-    auto bpe = img.info.bpe;
-    foreach( i; 0 .. ret.pixelCount )
-        memcpy( ret.data.ptr + i * bpe, img.data.ptr + getOrigIndexByLayerCoord(img.size,dim,i,lno) * bpe, bpe );
-    return ret;
-}
-
-///
-unittest
-{
-    ubyte[] img_data =
-    [
-        1,2,3,
-        4,5,6,
-
-        7,8,9,
-        10,11,12,
-    ];
-
-    auto info = ElemInfo( 1, DataType.UBYTE );
-
-    ubyte[] d2l0 = [ 1,2,3,4,5,6 ];
-    ubyte[] d2l1 = [ 7,8,9,10,11,12 ];
-
-    ubyte[] d1l0 = [ 1,2,3,7,8,9 ];
-    ubyte[] d1l1 = [ 4,5,6,10,11,12 ];
-
-    ubyte[] d0l0 = [ 1, 4, 7, 10 ];
-    ubyte[] d0l1 = [ 2, 5, 8, 11 ];
-
-    auto img = Image( ivec3(3,2,2), info, img_data );
-    auto id2l0 = Image( ivec2(3,2), info, d2l0 );
-    auto id2l1 = Image( ivec2(3,2), info, d2l1 );
-    auto id1l0 = Image( ivec2(3,2), info, d1l0 );
-    auto id1l1 = Image( ivec2(3,2), info, d1l1 );
-    auto id0l0 = Image( ivec2(2,2), info, d0l0 );
-    auto id0l1 = Image( ivec2(2,2), info, d0l1 );
-
-    assert( imLayer(img,2,0) == id2l0 );
-    assert( imLayer(img,2,1) == id2l1 );
-
-    assert( imLayer(img,1,0) == id1l0 );
-    assert( imLayer(img,1,1) == id1l1 );
-
-    assert( imLayer(img,0,0) == id0l0 );
-    assert( imLayer(img,0,1) == id0l1 );
 }
