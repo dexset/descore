@@ -48,6 +48,15 @@ struct Region(size_t N,T) if( isNumeric!T )
         size = vec_t( vr.data[$/2..$] );
     }
 
+    ///
+    pure static self_t fromSize(E...)( in E vals )
+    {
+        auto size = Vector!(N,T)(vals);
+        auto pos = size;
+        foreach( ref v; pos.data ) v = 0;
+        return self_t( pos, size );
+    }
+
     @property
     {
         ///
@@ -128,8 +137,8 @@ struct Region(size_t N,T) if( isNumeric!T )
 
         foreach( i; 0 .. dims )
         {
-            r1[i] = min( max( pos[i], reg.pos[i] ), lll[i] );
-            r2[i] = max( min( lll[i], reg_lim[i] ), pos[i] );
+            r1[i] = cast(T)( min( max( pos[i], reg.pos[i] ), lll[i] ) );
+            r2[i] = cast(T)( max( min( lll[i], reg_lim[i] ), pos[i] ) );
         }
 
         return self_t( r1, r2 - r1 );
