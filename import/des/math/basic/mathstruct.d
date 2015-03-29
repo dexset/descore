@@ -196,7 +196,7 @@ private
 
     string basicMathCtor( string[] fields, string name )
     {
-        string args[];
+        string[] args;
         string cbody = "auto ret = cast(self)(this); ";
         foreach( field; fields )
         {
