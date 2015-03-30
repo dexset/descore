@@ -50,6 +50,51 @@ unittest
     assert( !isAllCompPositive( [-1,2,3] ) );
 }
 
+///
+coord_t[] redimSize(A)( size_t K, size_t N, in A[] size ) pure
+if( isIntegral!A )
+in
+{
+    assert( K >= N );
+    assert( isAllCompPositive( size ) );
+}
+body
+{
+    auto ret = new coord_t[](K);
+    ret[] = 1;
+    foreach( i; 0 .. min( N, size.length ) )
+        ret[i] = size[i];
+    if( size.length > N )
+        ret[N-1] *= reduce!((r,v)=>r*=v)( 1, size[N..$] );
+    return ret;
+}
+
+///
+unittest
+{
+    assertEq( [1,2,3], redimSize( 3, 3, [1,2,3] ) );
+    assertEq( [1,6,1], redimSize( 3, 2, [1,2,3] ) );
+    assertEq( [5,6,1], redimSize( 3, 2, [5,3,2] ) );
+    assertEq( [5,6], redimSize( 2, 2, [5,3,2] ) );
+    assertEq( [30,1,1,1], redimSize( 4, 1, [5,3,2] ) );
+}
+
+///
+coord_t[] redimSize(A)( size_t N, in A[] size ) pure
+if( isIntegral!A )
+in { assert( isAllCompPositive( size ) ); }
+body { return redimSize( N, N, size ); }
+
+///
+unittest
+{
+    assertEq( [1,2,3], redimSize( 3, [1,2,3] ) );
+    assertEq( [1,2,3,1,1], redimSize( 5, [1,2,3] ) );
+    assertEq( [1,6], redimSize( 2, [1,2,3] ) );
+    assertEq( [6], redimSize( 1, [1,2,3] ) );
+    assertEq( [1,1,1,1], redimSize( 4, cast(int[])[] ) );
+}
+
 /++ get index of element in 1-dim array by N-dim coordinate
 
  Params:
