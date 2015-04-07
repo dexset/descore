@@ -269,6 +269,8 @@ pure:
 
     ///
     const(E) opCast(E)() const if( is( T[] == E ) ) { return data.dup; }
+    ///
+    E opCast(E)() if( is( T[] == E ) ) { return data.dup; }
 
     const @property
     {

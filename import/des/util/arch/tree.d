@@ -28,63 +28,6 @@ class TNodeNullChildException : TNodeException
     { super( "can't append null child", file, line ); }
 }
 
-private
-{
-    string replaceWords(alias fun)( string s ) pure
-    {
-        string ret;
-        string buf;
-        size_t p0 = 0, p1 = 0;
-        while( p1 < s.length )
-        {
-            if( s[p1] == '%' )
-            {
-                ret ~= s[p0..p1];
-                p0 = ++p1;
-                while( p1 < s.length && identitySymbol(s[p1]) )
-                    p1++;
-                ret ~= fun(s[p0..p1]);
-                p0 = p1;
-            }
-            else if( p1 == s.length - 1 )
-                ret ~= s[p0..p1];
-            p1++;
-        }
-        return ret;
-    }
-
-    pure bool identitySymbol( char c )
-    {
-        switch(c)
-        {
-            case 'a': .. case 'z': case 'A': .. case 'Z':
-            case '_': case '0': .. case '9': return true;
-            default: return false;
-        }
-    }
-
-    pure bool identityString( string s )
-    {
-        foreach( c; s )
-            if( !identitySymbol(c) ) return false;
-        return true;
-    }
-
-    template wordWrapFunc(string pre, string suf)
-    {
-        import std.exception;
-        static assert( identityString(pre) );
-        static assert( identityString(suf) );
-        string wordWrapFunc( string a )
-        {
-            enforce( a.length );
-            if( pre.length && pre[$-1] != '_' )
-                a = (""~a[0]).toUpper ~ a[1..$];
-            return pre ~ a ~ suf;
-        }
-    }
-}
-
 ///
 template TNode(T,string prefix="",string suffix="")
 {
@@ -365,4 +308,61 @@ unittest
     static class Test : TNode!(Test,"a") { mixin aTNodeHelper!(true, true); }
     auto a0 = new Test;
     assert( a0.aParent is null );
+}
+
+private
+{
+    string replaceWords(alias fun)( string s ) pure
+    {
+        string ret;
+        string buf;
+        size_t p0 = 0, p1 = 0;
+        while( p1 < s.length )
+        {
+            if( s[p1] == '%' )
+            {
+                ret ~= s[p0..p1];
+                p0 = ++p1;
+                while( p1 < s.length && identitySymbol(s[p1]) )
+                    p1++;
+                ret ~= fun(s[p0..p1]);
+                p0 = p1;
+            }
+            else if( p1 == s.length - 1 )
+                ret ~= s[p0..p1];
+            p1++;
+        }
+        return ret;
+    }
+
+    pure bool identitySymbol( char c )
+    {
+        switch(c)
+        {
+            case 'a': .. case 'z': case 'A': .. case 'Z':
+            case '_': case '0': .. case '9': return true;
+            default: return false;
+        }
+    }
+
+    pure bool identityString( string s )
+    {
+        foreach( c; s )
+            if( !identitySymbol(c) ) return false;
+        return true;
+    }
+
+    template wordWrapFunc(string pre, string suf)
+    {
+        import std.exception;
+        static assert( identityString(pre) );
+        static assert( identityString(suf) );
+        string wordWrapFunc( string a )
+        {
+            enforce( a.length );
+            if( pre.length && pre[$-1] != '_' )
+                a = (""~a[0]).toUpper ~ a[1..$];
+            return pre ~ a ~ suf;
+        }
+    }
 }

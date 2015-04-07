@@ -84,6 +84,13 @@ struct Region(size_t N,T) if( isNumeric!T )
                 return ndim;
             }
         }
+
+        T volume() const
+        {
+            T ret = 1;
+            foreach( s; size ) ret *= s;
+            return ret;
+        }
     }
 
     ///
