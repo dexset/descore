@@ -3,6 +3,7 @@ module des.il.region;
 import std.algorithm;
 import std.string;
 import std.traits;
+import std.typetuple;
 import des.math.linear.vector;
 import des.util.testsuite;
 import std.exception;
@@ -57,7 +58,7 @@ struct Region(size_t N,T) if( isNumeric!T )
         return self_t( pos, size );
     }
 
-    @property
+    pure @property
     {
         ///
         vec_t lim() const { return pos + size; }
@@ -85,44 +86,67 @@ struct Region(size_t N,T) if( isNumeric!T )
             }
         }
 
+        /// multiplication of size components
         T volume() const
         {
             T ret = 1;
             foreach( s; size ) ret *= s;
             return ret;
         }
+
+        /// returns false if any of size components is zero
+        bool hasVolume() const
+        {
+            foreach( s; size )
+                if( s == 0 )
+                    return false;
+            return true;
+        }
     }
 
     ///
-    bool opBinaryRight(string op, size_t Z, E)( in Vector!(Z,E) pnt ) const
-        if( (Z==0||N==0||Z==N) && op == "in" && is(typeof(E.init>T.init)) )
+    bool contains(size_t Z,E)( in Vector!(Z,E) pnt ) pure const
+        if( (Z==0||N==0||Z==N) && is(typeof(E.init>T.init)) )
     {
         static if( N==0 || Z==0 )
             enforce( pnt.length == dims, "dimension mismatch" );
 
+        auto l = lim;
+
         foreach( i; 0 .. dims )
-            if( pnt[i] < pos[i] || pnt[i] >= pos[i] + size[i] )
+            if( pnt[i] < pos[i] || pnt[i] >= l[i] )
                 return false;
 
         return true;
     }
 
-    static if( N==1 )
+    ///
+    bool contains(size_t Z,E)( in Region!(Z,E) reg ) pure const
+        if( (Z==0||N==0||Z==N) && is(typeof(E.init>T.init)) )
     {
-        bool opBinaryRight(string op, E)( in E p ) const
-            if( isNumeric!E && op == "in" )
-        { return p >= pos[0] && p < pos[0] + size[0]; }
+        static if( N==0 || Z==0 )
+            enforce( reg.pos.length == dims, "dimension mismatch" );
+
+        return contains( reg.pos ) && contains( reg.lim );
+    }
+
+    ///
+    bool opBinaryRight(string op, size_t Z, E)( in Vector!(Z,E) pnt ) const
+        if( (Z==0||N==0||Z==N) && op == "in" && is(typeof(E.init>T.init)) )
+    { return contains( pnt ); }
+
+    static if( N>0 )
+    {
+        ///
+        bool contains(Args...)( Args args ) pure const
+            if( allSatisfy!( isNumeric, Args ) && Args.length == N )
+        { return contains( vec_t( args ) ); }
     }
 
     ///
     bool opBinaryRight(string op, size_t Z, E)( in Region!(Z,E) reg ) const
         if( (Z==0||N==0||Z==N) && op == "in" && is(typeof(E.init>T.init)) )
-    {
-        static if( N==0 || Z==0 )
-            enforce( reg.pos.length == dims, "dimension mismatch" );
-
-        return ( reg.pos in this ) && ( reg.lim in this );
-    }
+    { return contains( reg ); }
 
     /// logic and
     auto overlap(size_t Z, E)( in Region!(Z,E) reg ) const
@@ -233,8 +257,8 @@ alias Region!(3,int) iRegion3;
 unittest
 {
     auto a = fRegion1( 1, 5 );
-    assert( 2 in a );
-    assert( 8 !in a );
+    assert( a.contains(2) );
+    assert( !a.contains(8) );
     assert( a.lim[0] == 6 );
     auto b = fRegion1( 2, 3 );
     assert( b in a );
@@ -277,6 +301,13 @@ unittest
     alias MSR.vec_t msrvec;
     auto a = MSR( msrvec(1,0,3,4,3), msrvec(3,2,4,8,4) );
     assert( msrvec(2,1,4,5,5) in a );
+}
+
+///
+unittest
+{
+    auto a = fRegion2( vec2(1,1), vec2(2,2) );
+    assert( a.contains(2,2) );
 }
 
 ///
